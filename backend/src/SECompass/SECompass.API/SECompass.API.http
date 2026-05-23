@@ -1,0 +1,6 @@
+@SECompass.API_HostAddress = http://localhost:5134
+
+GET {{SECompass.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
