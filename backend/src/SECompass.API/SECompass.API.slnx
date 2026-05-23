@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SECompass.API/SECompass.API.csproj" />
+  <Project Path="SECompass.BusinessLogic/SECompass.BusinessLogic.csproj" />
+  <Project Path="SECompass.DataAccess/SECompass.DataAccess.csproj" />
+</Solution>
