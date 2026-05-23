@@ -1,0 +1,36 @@
+## Visual Studio / .NET
+.vs/
+.vscode/
+*.user
+*.suo
+
+## Build folders
+bin/
+obj/
+Debug/
+Release/
+
+## NuGet
+*.nupkg
+packages/
+
+## Rider
+.idea/
+
+## ASP.NET / app settings
+appsettings*.json
+secrets.json
+
+## Entity Framework local DB
+*.db
+*.mdf
+
+## Node
+node_modules/
+dist/
+
+## Logs
+*.log
+
+## Environment variables
+.env
