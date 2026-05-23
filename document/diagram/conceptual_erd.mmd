@@ -1,0 +1,33 @@
+erDiagram
+    JobTrend {}
+    User {}
+    Profile {}
+    Skill {}
+    GitHubRepository {}
+    ChatSession {}
+    ChatMessage {}
+    PersonalRoadmap {}
+    NodeProgress {}
+    CareerRole {}
+    CareerRoadmap {}
+    Node {}
+    LearningResource {}
+
+    %% Student profile management
+    User ||--|| Profile : ""
+    Profile }o--o{ Skill : ""
+    Profile }|--o{ GitHubRepository : ""
+
+    %% AI chat management
+    Profile }o--o{ ChatSession : ""
+    ChatSession ||--|{ ChatMessage : ""
+
+    %% Roadmap management
+    Profile ||--o{ PersonalRoadmap : ""
+    PersonalRoadmap ||--|| CareerRoadmap : ""
+    CareerRoadmap }o--|{ CareerRole: ""
+    CareerRoadmap }|--o{ Node : ""
+    PersonalRoadmap ||--o{ NodeProgress : ""
+    NodeProgress }o--|| Node : ""
+    Node }|--o{ LearningResource : ""
+

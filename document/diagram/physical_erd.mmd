@@ -1,0 +1,162 @@
+erDiagram
+    JobTrend {
+        UUID JobTrendId PK
+        NVARCHAR(255) TechSkill 
+        NVARCHAR(MAX) Description 
+        NVARCHAR(255) Source 
+        NVARCHAR(255) Region 
+        INT TrendScore 
+        DATETIME SnapshotDate 
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    User {
+        UUID UserId PK
+        NVARCHAR(255) FullName  
+        NVARCHAR(255) Email 
+        NVARCHAR(MAX) PasswordHashed 
+        INT Role
+        BIT IsActive 
+    }
+
+    Profile {
+        UUID UserId PK
+        NVARCHAR(MAX) BioDescription 
+        NVARCHAR(MAX) PhoneNumber 
+        NVARCHAR(255) University 
+        NVARCHAR(255) Major
+        INT StudiedYear 
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    Skill {
+        UUID SkillId PK
+        UUID ProfileId FK
+        NVARCHAR(MAX) Note 
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+    
+    GitHubRepository {
+        UUID GithubRepositoryId PK
+        UUID ProfileId FK
+        NVARCHAR(255) RepositoryName 
+        NVARCHAR(MAX) RepoUrl 
+        NVARCHAR(MAX) Description 
+        BIT IsPrivate
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    ChatSession {
+        UUID ChatSessionId PK
+        UUID ProfileId FK
+        NVARCHAR(255) Title 
+        NVARCHAR(MAX) Summary
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    ChatMessage {
+        UUID ChatMessageId PK
+        UUID ChatSessionId FK
+        NVARCHAR(100) Sender
+        NVARCHAR(MAX) MessageContent
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    PersonalRoadmap {
+        UUID PersonalRoadmapId PK
+        UUID CareerRoadmapId FK
+        NVARCHAR(MAX) Note 
+        DECIMAL ProgressPercentage 
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    NodeProgress {
+        UUID NodeProgressId PK
+        UUID NodeId  FK
+        UUID PersonalRoadmapId FK
+        INT Status
+        NVARCHAR(255) Note 
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    CareerRole {
+        UUID CareerRoleId PK
+        NVARCHAR(255) Name
+        NVARCHAR(MAX) Description 
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    CareerRoadmap {
+        UUID CareetRoadmapId PK
+        UUID CareerRoleId  FK
+        NVARCHAR(255) Name
+        NVARCHAR(MAX) Description 
+        BIT IsCustom
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    RoadmapNode {
+        UUID RoadmapNodeId PK
+        UUID PersonalRoadmapId FK
+        UUID NodeId FK
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    Node {
+        UUID NodeId PK
+        UUID ParentNodeId FK
+        NVARCHAR(255) Name
+        NVARCHAR(MAX) Description 
+        INT Order
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    NodeLearningResource {
+        UUID NodeLearningResourceId PK
+        UUID NodeId FK
+        UUID LearningResourceId FK
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt 
+    }
+
+    LearningResource {
+        UUID LearningResourceId PK
+        NVARCHAR(255) Name
+        NVARCHAR(MAX) ResourceUrl 
+        NVARCHAR(100) ResourceType 
+        NVARCHAR(255) Provider 
+        BIT IsFree
+        DATETIME CreatedAt 
+        DATETIME UpdatedAt  
+    }
+
+    %% Student profile management
+    User ||--|| Profile : ""
+    Profile }o--o{ Skill : ""
+    Profile }|--o{ GitHubRepository : ""
+
+    %% AI chat management
+    Profile }o--o{ ChatSession : ""
+    ChatSession ||--|{ ChatMessage : ""
+
+    %% Roadmap management
+    Profile ||--o{ PersonalRoadmap : ""
+    PersonalRoadmap ||--|| CareerRoadmap : ""
+    CareerRoadmap }o--|{ CareerRole: ""
+    CareerRoadmap ||--o{ RoadmapNode : ""
+    Node ||--|{ RoadmapNode : ""
+    PersonalRoadmap ||--o{ NodeProgress : ""
+    NodeProgress }o--|| Node : ""
+    Node ||--o{ NodeLearningResource: ""
