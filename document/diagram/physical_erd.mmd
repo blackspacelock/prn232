@@ -1,162 +1,203 @@
 erDiagram
     JobTrend {
         UUID JobTrendId PK
-        NVARCHAR(255) TechSkill 
-        NVARCHAR(MAX) Description 
-        NVARCHAR(255) Source 
-        NVARCHAR(255) Region 
-        INT TrendScore 
-        DATETIME SnapshotDate 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHAR255 TechSkill
+        NVARCHARMAX Description
+        NVARCHAR255 Source
+        NVARCHAR255 Region
+        INT TrendScore
+        DATETIME SnapshotDate
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     User {
         UUID UserId PK
-        NVARCHAR(255) FullName  
-        NVARCHAR(255) Email 
-        NVARCHAR(MAX) PasswordHashed 
+        NVARCHAR255 FullName
+        NVARCHAR255 Email
+        NVARCHARMAX PasswordHashed
         INT Role
-        BIT IsActive 
+        BIT IsActive
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     Profile {
         UUID UserId PK
-        NVARCHAR(MAX) BioDescription 
-        NVARCHAR(MAX) PhoneNumber 
-        NVARCHAR(255) University 
-        NVARCHAR(255) Major
-        INT StudiedYear 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHARMAX BioDescription
+        NVARCHARMAX PhoneNumber
+        NVARCHAR255 University
+        NVARCHAR255 Major
+        INT StudiedYear
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     Skill {
         UUID SkillId PK
         UUID ProfileId FK
-        NVARCHAR(MAX) Note 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHAR255 SkillName
+        NVARCHARMAX Note
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
-    
+
     GitHubRepository {
         UUID GithubRepositoryId PK
         UUID ProfileId FK
-        NVARCHAR(255) RepositoryName 
-        NVARCHAR(MAX) RepoUrl 
-        NVARCHAR(MAX) Description 
+        NVARCHAR255 RepositoryName
+        NVARCHARMAX RepoUrl
+        NVARCHARMAX Description
         BIT IsPrivate
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     ChatSession {
         UUID ChatSessionId PK
         UUID ProfileId FK
-        NVARCHAR(255) Title 
-        NVARCHAR(MAX) Summary
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHAR255 Title
+        NVARCHARMAX Summary
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     ChatMessage {
         UUID ChatMessageId PK
         UUID ChatSessionId FK
-        NVARCHAR(100) Sender
-        NVARCHAR(MAX) MessageContent
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHAR100 Sender
+        NVARCHARMAX MessageContent
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     PersonalRoadmap {
         UUID PersonalRoadmapId PK
+        UUID ProfileId FK
         UUID CareerRoadmapId FK
-        NVARCHAR(MAX) Note 
-        DECIMAL ProgressPercentage 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHARMAX Note
+        DECIMAL ProgressPercentage
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     NodeProgress {
         UUID NodeProgressId PK
-        UUID NodeId  FK
         UUID PersonalRoadmapId FK
+        UUID NodeId FK
         INT Status
-        NVARCHAR(255) Note 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHARMAX Note
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     CareerRole {
         UUID CareerRoleId PK
-        NVARCHAR(255) Name
-        NVARCHAR(MAX) Description 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHAR255 Name
+        NVARCHARMAX Description
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     CareerRoadmap {
-        UUID CareetRoadmapId PK
-        UUID CareerRoleId  FK
-        NVARCHAR(255) Name
-        NVARCHAR(MAX) Description 
+        UUID CareerRoadmapId PK
+        UUID CareerRoleId FK
+        NVARCHAR255 Name
+        NVARCHARMAX Description
         BIT IsCustom
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     RoadmapNode {
         UUID RoadmapNodeId PK
-        UUID PersonalRoadmapId FK
+        UUID CareerRoadmapId FK
         UUID NodeId FK
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     Node {
         UUID NodeId PK
         UUID ParentNodeId FK
-        NVARCHAR(255) Name
-        NVARCHAR(MAX) Description 
+        NVARCHAR255 Name
+        NVARCHARMAX Description
         INT Order
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
-    }
-
-    NodeLearningResource {
-        UUID NodeLearningResourceId PK
-        UUID NodeId FK
-        UUID LearningResourceId FK
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     LearningResource {
         UUID LearningResourceId PK
-        NVARCHAR(255) Name
-        NVARCHAR(MAX) ResourceUrl 
-        NVARCHAR(100) ResourceType 
-        NVARCHAR(255) Provider 
+        UUID NodeId FK
+        NVARCHAR255 Name
+        NVARCHARMAX ResourceUrl
+        NVARCHAR100 ResourceType
+        NVARCHAR255 Provider
         BIT IsFree
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt  
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
-    %% Student profile management
-    User ||--|| Profile : ""
-    Profile }o--o{ Skill : ""
-    Profile }|--o{ GitHubRepository : ""
+    %% ── User & Profile ──────────────────────────────
+    %% One User has exactly one Profile
+    User ||--|| Profile : "has"
 
-    %% AI chat management
-    Profile }o--o{ ChatSession : ""
-    ChatSession ||--|{ ChatMessage : ""
+    %% ── Profile → Skills ────────────────────────────
+    %% One Profile has zero or many Skills
+    Profile ||--o{ Skill : "has"
 
-    %% Roadmap management
-    Profile ||--o{ PersonalRoadmap : ""
-    PersonalRoadmap ||--|| CareerRoadmap : ""
-    CareerRoadmap }o--|{ CareerRole: ""
-    CareerRoadmap ||--o{ RoadmapNode : ""
-    Node ||--|{ RoadmapNode : ""
-    PersonalRoadmap ||--o{ NodeProgress : ""
-    NodeProgress }o--|| Node : ""
-    Node ||--o{ NodeLearningResource: ""
+    %% ── Profile → GitHub Repositories ───────────────
+    %% One Profile has one or many GitHubRepositories
+    Profile ||--|{ GitHubRepository : "has"
+
+    %% ── Profile → Chat ──────────────────────────────
+    %% One Profile has zero or many ChatSessions
+    Profile ||--o{ ChatSession : "has"
+    %% One ChatSession has one or many ChatMessages
+    ChatSession ||--|{ ChatMessage : "has"
+
+    %% ── Profile → Personal Roadmaps ─────────────────
+    %% One Profile has zero or many PersonalRoadmaps
+    Profile ||--o{ PersonalRoadmap : "has"
+
+    %% ── Career structure ────────────────────────────
+    %% One CareerRole has one or many CareerRoadmaps
+    CareerRole ||--|{ CareerRoadmap : "defines"
+
+    %% Many PersonalRoadmaps reference one CareerRoadmap
+    %% (many Profiles → many CareerRoadmaps via PersonalRoadmap)
+    CareerRoadmap ||--o{ PersonalRoadmap : "referenced by"
+
+    %% ── CareerRoadmap ↔ Node (via RoadmapNode) ──────
+    %% One CareerRoadmap has zero or many RoadmapNodes
+    CareerRoadmap ||--o{ RoadmapNode : "contains"
+    %% One Node appears in one or many RoadmapNodes
+    Node ||--|{ RoadmapNode : "referenced by"
+
+    %% ── PersonalRoadmap ↔ Node (via NodeProgress) ───
+    %% One PersonalRoadmap has zero or many NodeProgress entries
+    PersonalRoadmap ||--o{ NodeProgress : "tracks"
+    %% Many NodeProgress entries reference one Node
+    NodeProgress }o--|| Node : "for"
+
+    %% ── Node → Learning Resources (1:M) ─────────────
+    %% One Node has zero or many LearningResources directly
+    Node ||--o{ LearningResource : "has"
+
+    %% ── Node self-reference (hierarchy) ─────────────
+    Node ||--o{ Node : "parent of"
