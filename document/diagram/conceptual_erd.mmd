@@ -1,33 +1,27 @@
 erDiagram
-    JobTrend {}
-    User {}
-    Profile {}
-    Skill {}
-    GitHubRepository {}
-    ChatSession {}
-    ChatMessage {}
-    PersonalRoadmap {}
-    NodeProgress {}
-    CareerRole {}
-    CareerRoadmap {}
-    Node {}
-    LearningResource {}
+    %% Standalone Entity
+    JobTrend 
 
-    %% Student profile management
-    User ||--|| Profile : ""
-    Profile }o--o{ Skill : ""
-    Profile }|--o{ GitHubRepository : ""
+    %% Core User & Profile Entities
+    User ||--|| Profile : "1:1 (Shared PK)"
+    Profile ||--o{ Skill : "has many"
+    Profile ||--o{ GitHubRepository : "owns"
+    Profile ||--o{ ChatSession : "initiates"
+    ChatSession ||--o{ ChatMessage : "contains"
 
-    %% AI chat management
-    Profile }o--o{ ChatSession : ""
-    ChatSession ||--|{ ChatMessage : ""
+    %% Career & Roadmap Template Entities
+    CareerRole ||--o{ CareerRoadmap : "categorizes"
+    
+    %% Personalization Entities
+    CareerRoadmap ||--o{ PersonalRoadmap : "serves as template for"
+    Profile ||--o{ PersonalRoadmap : "owns"
 
-    %% Roadmap management
-    Profile ||--o{ PersonalRoadmap : ""
-    PersonalRoadmap ||--|| CareerRoadmap : ""
-    CareerRoadmap }o--|{ CareerRole: ""
-    CareerRoadmap }|--o{ Node : ""
-    PersonalRoadmap ||--o{ NodeProgress : ""
-    NodeProgress }o--|| Node : ""
-    Node }|--o{ LearningResource : ""
+    %% Hierarchy & Junction Entities
+    CareerRoadmap ||--o{ RoadmapNode : "has many"
+    Node ||--o{ RoadmapNode : "is mapped to"
+    
+    PersonalRoadmap ||--o{ NodeProgress : "tracks"
+    Node ||--o{ NodeProgress : "progress status for"
 
+    Node ||--o{ LearningResource : "directly owns (1:M)"
+    Node |o--o{ Node : "parent/child self-reference"
