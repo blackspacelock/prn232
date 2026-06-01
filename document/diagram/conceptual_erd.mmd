@@ -8,6 +8,7 @@ erDiagram
     Profile ||--o{ GitHubRepository : "owns"
     Profile ||--o{ ChatSession : "initiates"
     ChatSession ||--o{ ChatMessage : "contains"
+    User ||--|{ UserRefreshToken : "issues"
 
     %% Career & Roadmap Template Entities
     CareerRole ||--o{ CareerRoadmap : "categorizes"

@@ -155,12 +155,24 @@ erDiagram
         BIT IsDeleted
     }
 
+    UserRefreshToken {
+        UUID UserRefreshTokenId PK
+        UUID UserId FK
+        NVARCHAR(512) Token
+        DATETIME ExpiresAt
+        DATETIME RevokedAt
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
+    }
+
     %% Physical Relationships
     User ||--|| Profile : "UserId (1:1 Shared PK)"
     Profile ||--o{ Skill : "ProfileId"
     Profile ||--o{ GitHubRepository : "ProfileId"
     Profile ||--o{ ChatSession : "ProfileId"
     ChatSession ||--o{ ChatMessage : "ChatSessionId"
+    User ||--o{ UserRefreshToken : "UserId"
     
     CareerRole ||--o{ CareerRoadmap : "CareerRoleId"
     Profile ||--o{ PersonalRoadmap : "ProfileId"
