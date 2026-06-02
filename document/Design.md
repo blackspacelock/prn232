@@ -8,425 +8,506 @@
 
 **Name:** SECompass
 **Tagline:** *From Generalist to Job-Ready.*
-**Design Philosophy:** Utilitarian clarity over decoration. Dense technical content demands maximum readability. The interface is a precision tool — every visual decision serves comprehension and forward momentum. Inspired by the brutalist, high-contrast approach of roadmap.sh: hard edges, stark contrast, zero ambiguity.
+**Design System:** Google Material Design 3 (MD3)
+**Design Philosophy:** Clean, purposeful, and information-dense. MD3's elevation, color roles, and typographic hierarchy carry the interface — every visual decision supports comprehension and student forward momentum. The platform is a precision career tool, not a marketing site. The UI uses MD3's expressive-but-restrained language: tonal surfaces, pill-shaped interactive elements, floating labels, and role-based color tokens applied consistently across all 19 screens.
 
 ---
 
-## 2. Color Palette
+## 2. Design System — Google Material Design 3
 
-The color system is highly utilitarian. It relies on stark monochrome contrasts for readability, using bright accents primarily for state changes and progress tracking.
+The entire frontend is implemented against the MD3 specification using its official color role vocabulary, typography scale, shape scale, elevation system, and component patterns.
 
-| Role | Name | Hex | Usage |
+---
+
+## 3. Color System
+
+All colors are expressed as MD3 color roles. The primary brand color is Google Blue (#1A73E8), paired with a neutral gray surface family.
+
+### 3.1 Core Color Roles
+
+| MD3 Role | Hex | Primary Usage |
+|---|---|---|
+| Primary | `#1A73E8` | Filled buttons, FABs, active nav indicator, links, focus rings |
+| On Primary | `#FFFFFF` | Text and icons placed on Primary |
+| Primary Container | `#E8F0FE` | Chip backgrounds, tonal card fills, selected state backgrounds |
+| On Primary Container | `#041E49` | Text/icons on Primary Container |
+| Surface | `#FFFFFF` | Card backgrounds, modal backgrounds, panel backgrounds |
+| Surface Variant | `#F1F3F4` | Input field backgrounds, hover row fills, inactive tab backgrounds |
+| Surface Container | `#F8F9FA` | Page background, content area fill |
+| On Surface | `#202124` | Primary body text, headings |
+| On Surface Variant | `#5F6368` | Muted text, input labels, placeholders, secondary metadata |
+| Outline | `#DADCE0` | Input field borders, card borders, dividers |
+| Outline Variant | `#E8EAED` | Subtle separators, table row dividers |
+| Error | `#D93025` | Error states, validation failures, danger actions |
+| Error Container | `#FCE8E6` | Error background fills |
+| Scrim | `rgba(0,0,0,0.32)` | Modal/overlay backdrops |
+
+### 3.2 Semantic Semantic Colors
+
+| Role | Hex | Hex (Container) | Usage |
 |---|---|---|---|
-| Primary | Slate 900 | `#111827` | Brand identity, main text, node borders, dark buttons, connector lines, sidebar background |
-| Secondary | Blue 600 | `#2563EB` | Text links, primary interactive buttons, focus rings, active nav states |
-| Tertiary | Yellow 200 | `#FEF08A` | Default background for active/unstarted roadmap nodes — the platform's signature visual |
-| Neutral | Gray 50 | `#F9FAFB` | Base page backgrounds, standard containers, input fields |
-| Success | Green 500 | `#22C55E` | Background for "Completed" node status |
-| Skipped | Purple 500 | `#A855F7` | Background for "Skipped" node status |
-| In Progress | Blue 200 | `#BFDBFE` | Background for "InProgress" node status |
-| Paused | Orange 200 | `#FED7AA` | Background for "Paused" node status |
-| Not Started | White | `#FFFFFF` | Background for "NotStarted" nodes |
-| Border | Gray 200 | `#E5E7EB` | Subtle borders on containers, dividers, input outlines |
-| Text Muted | Gray 500 | `#6B7280` | Secondary text, timestamps, placeholders, metadata |
-| Text Body | Gray 700 | `#374151` | Standard body text, descriptions |
-| Surface | White | `#FFFFFF` | Card surfaces, modals, drawer backgrounds |
+| Success | `#1E8E3E` | `#E6F4EA` | Completion, positive states, green progress |
+| Warning | `#E37400` | `#FEF7E0` | Caution states, paused progress, alerts |
+| Info | `#1A73E8` | `#E8F0FE` | Informational chips and highlights |
+| Purple | `#7B1FA2` | `#F3E8FD` | Skipped node status, specialty accents |
 
-**No dark mode in v1.0.** The high-contrast monochrome palette provides sufficient differentiation without dual-theme overhead at this stage.
+### 3.3 Node Status Color Map
 
-### Node Status Color Map
+Node status is communicated through background fill, text color, and stroke. All five statuses map directly to `NodeProgressStatus` enum integer values.
 
-| `NodeProgressStatus` | Int | Node Background | Text | Label |
+| Status | Int | Node Fill | Text Color | Stroke |
 |---|---|---|---|---|
-| NotStarted | `0` | `#FFFFFF` | `#111827` | Not Started |
-| InProgress | `1` | `#BFDBFE` | `#1E3A8A` | In Progress |
-| Paused | `2` | `#FED7AA` | `#7C2D12` | Paused |
-| Skipped | `3` | `#A855F7` | `#FFFFFF` | Skipped |
-| Completed | `4` | `#22C55E` | `#FFFFFF` | Done |
-| Default (template) | — | `#FEF08A` | `#111827` | — |
+| NotStarted | `0` | `#F1F3F4` | `#5F6368` | `#DADCE0` |
+| InProgress | `1` | `#E8F0FE` | `#1A73E8` | `#4285F4` |
+| Paused | `2` | `#FEF7E0` | `#E37400` | `#FBBC04` |
+| Skipped | `3` | `#F3E8FD` | `#7B1FA2` | `#AB47BC` |
+| Completed | `4` | `#E6F4EA` | `#1E8E3E` | `#34A853` |
 
-All nodes share `border: 2px solid #111827` and `box-shadow: 4px 4px 0px 0px #111827` regardless of status. Status is communicated through background color only.
-
-### CSS Custom Properties
+### 3.4 CSS Custom Properties
 
 ```css
 :root {
-  /* Brand Colors */
-  --color-slate-900:  #111827;
-  --color-blue-600:   #2563EB;
-  --color-yellow-200: #FEF08A;
-  --color-gray-50:    #F9FAFB;
-  --color-green-500:  #22C55E;
-  --color-purple-500: #A855F7;
+  /* MD3 Color Roles */
+  --md-primary:              #1A73E8;
+  --md-on-primary:           #FFFFFF;
+  --md-primary-container:    #E8F0FE;
+  --md-on-primary-container: #041E49;
+  --md-surface:              #FFFFFF;
+  --md-surface-variant:      #F1F3F4;
+  --md-surface-container:    #F8F9FA;
+  --md-on-surface:           #202124;
+  --md-on-surface-variant:   #5F6368;
+  --md-outline:              #DADCE0;
+  --md-outline-variant:      #E8EAED;
+  --md-error:                #D93025;
+  --md-error-container:      #FCE8E6;
+  --md-scrim:                rgba(0, 0, 0, 0.32);
 
-  /* Extended Palette */
-  --color-blue-200:   #BFDBFE;
-  --color-orange-200: #FED7AA;
-  --color-gray-200:   #E5E7EB;
-  --color-gray-300:   #D1D5DB;
-  --color-gray-500:   #6B7280;
-  --color-gray-700:   #374151;
+  /* Semantic */
+  --md-success:              #1E8E3E;
+  --md-success-container:    #E6F4EA;
+  --md-warning:              #E37400;
+  --md-warning-container:    #FEF7E0;
+  --md-purple:               #7B1FA2;
+  --md-purple-container:     #F3E8FD;
+
+  /* Node Status */
+  --node-not-started-fill:   #F1F3F4;
+  --node-not-started-text:   #5F6368;
+  --node-not-started-stroke: #DADCE0;
+  --node-in-progress-fill:   #E8F0FE;
+  --node-in-progress-text:   #1A73E8;
+  --node-in-progress-stroke: #4285F4;
+  --node-paused-fill:        #FEF7E0;
+  --node-paused-text:        #E37400;
+  --node-paused-stroke:      #FBBC04;
+  --node-skipped-fill:       #F3E8FD;
+  --node-skipped-text:       #7B1FA2;
+  --node-skipped-stroke:     #AB47BC;
+  --node-completed-fill:     #E6F4EA;
+  --node-completed-text:     #1E8E3E;
+  --node-completed-stroke:   #34A853;
 
   /* Typography */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-
-  /* Node Signature Styles */
-  --node-border:  2px solid var(--color-slate-900);
-  --node-shadow:  4px 4px 0px 0px var(--color-slate-900);
-  --radius-sm:    4px;
-  --radius-md:    6px;
-
-  /* Connector Lines */
-  --line-thickness: 3px;
-  --line-color:     #111827;
-  --line-dash:      6px 4px;
-
-  /* Extended Shadows */
-  --shadow-node-hover:  6px 6px 0px 0px #111827;
-  --shadow-node-press:  2px 2px 0px 0px #111827;
-  --shadow-card:        2px 2px 0px 0px #E5E7EB;
-  --shadow-modal:       8px 8px 0px 0px #111827;
-  --shadow-button:      2px 2px 0px 0px #111827;
+  --font-sans: 'Google Sans', 'Roboto', system-ui, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
 }
 ```
 
 ---
 
-## 3. Typography
+## 4. Typography
 
-The platform uses clean, highly legible typefaces to handle dense technical content.
+The platform uses Google Sans for display and UI text and Roboto as the fallback. Roboto Mono is used exclusively for code content and technical tags.
 
-### Font Families
+### 4.1 Font Families
 
-**Inter (Sans-Serif)** — all UI text: titles, body, labels, buttons, nav, descriptions.
-Weights used: 400, 500, 600, 700, 800.
+| Family | Usage |
+|---|---|
+| Google Sans / Roboto | All UI text: display, headlines, titles, body, labels, buttons, nav |
+| Roboto Mono | Code blocks in chat, resource type badges, technical skill tags, IDs |
 
-**System Monospace** — `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`
-Usage: code blocks in chat, technical skill tags, node sub-labels, resource type badges, IDs.
-
-### Type Scale
+### 4.2 MD3 Type Scale
 
 | Token | Size | Weight | Line Height | Tracking | Usage |
 |---|---|---|---|---|---|
-| `display` | 36px | 800 | 1.1 | -0.03em | Roadmap title, hero |
-| `h1` | 28px | 700 | 1.2 | -0.02em | Page titles |
-| `h2` | 22px | 700 | 1.25 | -0.01em | Section headers |
-| `h3` | 18px | 600 | 1.3 | 0 | Card titles |
-| `h4` | 15px | 600 | 1.4 | 0 | Sub-section labels |
-| `body-lg` | 16px | 400 | 1.6 | 0 | Main body, descriptions |
-| `body` | 14px | 400 | 1.5 | 0 | Standard UI text |
-| `body-sm` | 13px | 400 | 1.5 | 0 | Metadata, secondary |
-| `label` | 13px | 500 | 1.4 | 0.01em | Buttons, nav, badges |
-| `caption` | 11px | 400 | 1.4 | 0.02em | Timestamps, IDs |
-| `node-title` | 14px | 600 | 1.3 | 0 | Roadmap node label |
-| `node-sub` | 11px | 500 mono | 1.4 | 0 | Node sub-label |
-| `code` | 13px mono | 500 | 1.5 | 0 | Code snippets |
+| Display Large | 48px | 700 | 1.1 | -0.25px | Landing page hero headline |
+| Display Medium | 36px | 700 | 1.15 | 0 | Roadmap canvas title, stats |
+| Headline Large | 32px | 600 | 1.2 | 0 | Page-level titles |
+| Headline Medium | 28px | 600 | 1.25 | 0 | Feature section titles |
+| Headline Small | 24px | 600 | 1.3 | 0 | Card titles, dialog headers |
+| Title Large | 22px | 500 | 1.35 | 0 | Section titles |
+| Title Medium | 16px | 500 | 1.4 | 0.15px | Card headers, nav items, breadcrumbs |
+| Title Small | 14px | 500 | 1.4 | 0.1px | Sub-section labels, node titles |
+| Body Large | 16px | 400 | 1.6 | 0.5px | Main body, descriptions |
+| Body Medium | 14px | 400 | 1.5 | 0.25px | Standard UI text, form fields |
+| Body Small | 12px | 400 | 1.5 | 0.4px | Metadata, timestamps, captions |
+| Label Large | 14px | 500 | 1.4 | 0.1px | Buttons, nav labels |
+| Label Medium | 12px | 500 | 1.5 | 0.5px | Chips, badges |
+| Label Small | 11px | 500 | 1.4 | 0.5px | Overlines, status labels, captions |
 
 ---
 
-## 4. Component Design System
+## 5. Elevation System
 
-### 4.1 Roadmap Nodes (Signature Component)
+MD3 uses drop-shadow layering to communicate elevation level. No colored tints on elevated surfaces.
 
-The node card is the platform's most critical element.
+| Level | CSS Value | Usage |
+|---|---|---|
+| Level 0 | none | Flat surfaces, page background |
+| Level 1 | `drop-shadow(0 1px 2px rgba(0,0,0,0.10))` | Cards, chips, input fields at rest |
+| Level 2 | `drop-shadow(0 1px 2px rgba(0,0,0,0.10)) drop-shadow(0 2px 6px rgba(0,0,0,0.08))` | Floating action buttons, auth cards |
+| Level 3 | `drop-shadow(0 4px 8px rgba(0,0,0,0.12)) drop-shadow(0 1px 3px rgba(0,0,0,0.08))` | Drawers, side sheets, nav rail |
+| Level 4 | `drop-shadow(0 6px 12px rgba(0,0,0,0.14))` | Modals, dialogs |
+
+---
+
+## 6. Shape Scale (Corner Radius)
+
+| Name | Value | Usage |
+|---|---|---|
+| Extra Small | 4px | Text fields, resource type badges, data table rows |
+| Small | 8px | Chips, filter chips, status badges, assist chips |
+| Medium | 12px | Cards, node detail drawer sections, snackbars |
+| Large | 16px | Public portfolio cards, feature cards |
+| Extra Large | 28px | Dialogs, auth cards, modals |
+| Full | 9999px | All buttons (pill shape), FABs, avatar circles |
+
+---
+
+## 7. Spacing Scale
+
+All layout spacing follows the MD3 4px base grid.
+
+`4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48 / 64px`
+
+---
+
+## 8. Component Design System
+
+### 8.1 Roadmap Nodes
+
+The roadmap node is the platform's most critical visual component. Unlike the previous brutalist style, nodes now use MD3 soft radius, subtle elevation, and status-driven fill colors.
 
 ```
-┌─────────────────────────┐
-│  Node Title             │  ← Inter 14px 600
-│  sub-label (optional)   │  ← Mono 11px 500, gray-500
-└─────────────────────────┘
+┌────────────────────────────┐
+│ ● Node Title               │  ← Title Small 14px/500, On Surface
+│   sub-label (optional)     │  ← Label Small 11px mono, On Surface Variant
+└────────────────────────────┘
 ```
 
 - Min-width: 160px, max-width: 220px, min-height: 44px
-- Padding: `10px 14px`
-- **Border:** `2px solid #111827`
-- **Border radius:** `4px`
-- **Shadow:** `box-shadow: 4px 4px 0px 0px #111827` — hard block, no blur
-- **Background:** determined by `NodeProgressStatus` (see color map)
-- Hover: `transform: translate(-1px, -1px)`, shadow → `6px 6px 0px 0px #111827`
-- Active/press: `transform: translate(2px, 2px)`, shadow → `2px 2px 0px 0px #111827`
-- Transition: `all 0.1s ease` (fast, snappy)
-- Status dot: 8px filled circle top-right, color matches status bg (hidden on NotStarted)
+- Padding: `12px 16px`
+- Border radius: `12px` (MD3 Medium)
+- Border stroke: `1.5px` matching status stroke color
+- Elevation: Level 1 at rest, Level 3 on selected
+- Status dot: 8px filled circle, top-right inside padding, fill matches status stroke color (hidden on NotStarted)
+- Background: determined by `NodeProgressStatus` color map (§3.3)
+- Hover: Elevation 2, cursor pointer
+- Selected: Elevation 3, stroke 2px Primary `#1A73E8`
+- Transition: `all 150ms ease-out`
 
-### 4.2 Connector Lines
+### 8.2 Connector Lines (React Flow Edges)
 
-- **Main path (required):** solid, `3px`, `#111827`, orthogonal routing
-- **Optional path:** dashed `6px 4px`, `2px`, `#111827`
-- **Arrowhead:** small filled triangle, `#111827`, at target end
-- React Flow edge type: `step` (right-angle turns, not bezier)
+- **Main edge:** 2px, `#DADCE0`, smooth bezier curve, arrowhead (small triangle `#DADCE0`) at target end
+- **Active edge (to InProgress node):** 2px, `#1A73E8`
+- Edge type: `smoothstep` (soft right-angle, not hard orthogonal)
 
-### 4.3 Buttons
+### 8.3 Buttons
 
-All: `border-radius: 4px`, Inter 13px 500, padding `8px 16px`, transition `all 0.1s ease`.
+All buttons are pill-shaped (`border-radius: 9999px`), height 40px. Label Large 14px/500.
 
-| Variant | Background | Text | Border | Hover |
+| Variant | Fill | Text | Border | Usage |
 |---|---|---|---|---|
-| Primary Dark | `#111827` | White | none | `bg: #1f2937` + `shadow: 2px 2px 0px 0px #374151` |
-| Primary Blue | `#2563EB` | White | none | `bg: #1d4ed8` + shadow |
-| Secondary | `#F3F4F6` | `#111827` | none | `bg: #E5E7EB` |
-| Outlined | transparent | `#111827` | `1px solid #D1D5DB` | border `#111827`, bg `#F9FAFB` |
-| Danger | `#EF4444` | White | none | `bg: #DC2626` |
+| Filled | `#1A73E8` | `#FFFFFF` | none | Primary CTA, save, generate |
+| Tonal | `#E8F0FE` | `#1A73E8` | none | Secondary actions, "Open", "Edit" |
+| Outlined | transparent | `#1A73E8` | `1px solid #DADCE0` | "Export", "Cancel", tertiary |
+| Text | transparent | `#1A73E8` | none | Inline links, "View all", "Reset" |
+| Danger Filled | `#D93025` | `#FFFFFF` | none | Destructive: Deactivate, Delete |
+| Disabled Filled | `#F1F3F4` | `#DADCE0` | none | Loading or no-selection states |
 
-Active press on all: `transform: translate(1px, 1px)`.
+FAB (Floating Action Button):
+- Extended FAB: `border-radius: 28px`, height 56px, padding `0 20px`, fill `#1A73E8`, icon + label, Elevation 3
+- Mini FAB: 40px circle, fill `#1A73E8`, Elevation 3
 
-### 4.4 Form Inputs
+### 8.4 Text Fields — MD3 Outlined Variant
 
-- Background: `#F9FAFB`, border: `1px solid #E5E7EB`, radius: `4px`
-- Font: Inter 14px 400, color `#111827`, placeholder `#9CA3AF`
-- Height: 40px standard, padding `8px 12px`
-- Focus: `border: 1px solid #2563EB`, `outline: 2px solid #BFDBFE`
-- Error: `border: 1px solid #EF4444`, bg `#FEF2F2`
+- Container: `border-radius: 4px`, height 56px, padding `8px 12px`
+- Stroke: `1px solid #DADCE0` at rest
+- Floating label: Body Large 16px `#5F6368`, scales to Label Small 12px on focus/filled
+- Focus stroke: `2px solid #1A73E8`, label color `#1A73E8`
+- Error stroke: `2px solid #D93025`, label color `#D93025`, helper text below
+- Background: `#FFFFFF`
+- Leading icon: 20px, `#5F6368`
+- Trailing icon (eye, check, error): 20px, color by state
 
-**Search bar:** same input specs + left icon slot (16px magnifying glass SVG, `#9CA3AF`), left-padding 36px.
+### 8.5 Cards
 
-### 4.5 Cards
+| Variant | Fill | Border | Elevation | Radius | Usage |
+|---|---|---|---|---|---|
+| Elevated | `#FFFFFF` | none | Level 1 | 12px | Dashboard widgets, roadmap cards |
+| Outlined | `#FFFFFF` | `1px solid #DADCE0` | none | 12px | Repo cards, skill rows |
+| Public Portfolio | `#FFFFFF` | none | Level 1 | 16px | Public-facing cards |
+| Auth Card | `#FFFFFF` | none | Level 2 | 28px | Login / Register form card |
 
-| Variant | Border | Shadow | Radius | Use |
-|---|---|---|---|---|
-| Standard | `1px solid #E5E7EB` | none | `6px` | Dashboard widgets, lists |
-| Feature | `2px solid #111827` | `4px 4px 0px 0px #111827` | `4px` | Roadmap cards, repo cards |
-| Modal | `2px solid #111827` | `8px 8px 0px 0px #111827` | `6px` | Modals, dialogs |
+### 8.6 Chips
 
-Feature card hover: shadow → `6px 6px 0px 0px #111827`, `transform: translate(-1px, -1px)`.
+| Variant | Fill | Stroke | Text | Radius | Usage |
+|---|---|---|---|---|---|
+| Filter — Selected | `#E8F0FE` | `#4285F4` | `#1A73E8` | 8px | Active filter, selected state; includes leading check icon |
+| Filter — Unselected | `#F1F3F4` | `#DADCE0` | `#5F6368` | 8px | Inactive filter option |
+| Assist | `#F1F3F4` | `#DADCE0` | `#202124` | 8px | Non-interactive informational tags |
+| Input | `#E8F0FE` | `#4285F4` | `#1A73E8` | 8px | Skills with × delete icon |
+| Status | status-based | — | status-based | 8px | NodeProgress status display |
 
-### 4.6 Badges & Tags
+### 8.7 Navigation Rail (Authenticated Shell)
 
-**Status badge** — `border-radius: 4px`, padding `2px 8px`, Inter 11px 600:
+- Width: 80px fixed, full height
+- Fill: `#FFFFFF`, right border `1px solid #E8EAED`
+- Logo: compass icon 24px `#1A73E8` + "SE" Label Small `#1A73E8`, top centered, padding-top 16px
+- Nav items: icon 24px + label Body Small 12px, centered column, gap 4px
+  - **Active:** 56×32px indicator pill fill `#E8F0FE` behind icon, icon `#1A73E8`, label `#1A73E8` Label Small 12px/500
+  - **Inactive:** icon `#5F6368`, label `#5F6368`
+  - Hover: background `#F1F3F4`, radius 8px
+- Bottom: user avatar 32px circle + settings icon 20px `#5F6368`, padding-bottom 16px
+- `position: fixed; left: 0; z-index: 20`
 
-| Status | Background | Text |
-|---|---|---|
-| Not Started | `#F3F4F6` | `#374151` |
-| In Progress | `#BFDBFE` | `#1E3A8A` |
-| Paused | `#FED7AA` | `#7C2D12` |
-| Skipped | `#A855F7` | `#FFFFFF` |
-| Completed | `#22C55E` | `#FFFFFF` |
+### 8.8 Top App Bar
 
-**Skill tag:** `bg: #FEF08A`, `border: 1px solid #111827`, `color: #111827`, `radius: 4px`
-
-**Resource type tag:** mono font, `bg: #F3F4F6`, `color: #374151`, `radius: 4px`
-
-**Role badge:**
-- Admin: `bg: #FEE2E2`, text `#991B1B`
-- Manager: `bg: #FEF3C7`, text `#92400E`
-- RoadmapUser: `bg: #DBEAFE`, text `#1E40AF`
-
-All badges: `4px` radius, Inter 11px 600.
-
-### 4.7 Navigation Sidebar
-
-- Width: 240px expanded / 56px icon-only
-- Background: `#111827` (always dark)
-- Logo: Inter 700 16px, white
-- Section labels: `#6B7280`, Inter 11px 600, UPPERCASE, `letter-spacing: 0.08em`
-- Nav items: Inter 14px 500, `#D1D5DB` default, white hover
-  - Hover: `bg: rgba(255,255,255,0.08)`
-  - Active: `bg: rgba(37,99,235,0.20)`, text `#93C5FD`, `border-left: 2px solid #2563EB`
-- Divider: `1px solid rgba(255,255,255,0.08)`
-- Bottom: user strip — avatar + name + logout icon
-- Collapse toggle: chevron, `rgba(255,255,255,0.4)`
-
-### 4.8 Header Bar
-
-- Height: 52px, bg `#FFFFFF`, `border-bottom: 1px solid #E5E7EB`
-- Content: breadcrumb (Inter 14px `#374151`), flex spacer, search bar (240px), bell icon (Lucide 20px), user avatar (28px)
+- Height: 64px, fill `#FFFFFF`, Elevation Level 1
 - `position: sticky; top: 0; z-index: 10`
+- Left: breadcrumb, Title Medium 16px/500 `#202124`
+- Right (gap 12px): search icon 24px `#5F6368` → bell icon 24px `#5F6368` with error badge → avatar 36px circle fill `#E8F0FE`
 
-### 4.9 Progress Indicators
+### 8.9 Auth Drawer (Left Panel — Auth Pages)
 
-**Linear bar:** container `#E5E7EB`, height `6px`, radius `3px`, fill `#22C55E` (completion) / `#2563EB` (general), `transition: width 400ms ease`.
+- Width: 360px, full height
+- Fill: `linear-gradient(160deg, #1A73E8 0%, #0D47A1 100%)`
+- Subtle diagonal line mesh overlay: white 5% opacity
+- Content: logo row (compass icon 48px white + "SECompass" 28px/700 white) + tagline Body Large white/85% + 4 feature rows (check icon 20px white + Body Medium 14px white/90%) + social proof Body Small 12px white/70%
 
-**Fraction text:** Inter 14px 600 `#111827` — "12 / 24 nodes"
+### 8.10 Progress Indicators
 
-### 4.10 Toasts
+**Linear Progress Bar:**
+- Track: `#E8EAED`, height 4px (compact) / 6px (standard), radius 3px
+- Fill: `#1E8E3E` for completion / `#1A73E8` for general progress
+- `transition: width 400ms ease`
 
-- Position: bottom-right
-- Container: `bg: #111827`, `border-radius: 6px`, `padding: 12px 16px`, white text, Inter 13px
-- Left accent bar: `3px solid` (green/red/blue/amber by type)
+**Circular Progress:** 48px MD3 circular, `#1A73E8`, used in loading states (generate roadmap modal)
+
+### 8.11 Dialogs
+
+- Fill: `#FFFFFF`, radius 28px, Elevation Level 4, padding 24px
+- Backdrop: Scrim `rgba(0,0,0,0.32)`
+- Header: Headline Small 24px/600 `#202124` + × close icon top-right (40px touch target)
+- Footer: Text "Cancel" + Filled "Save/Confirm", right-aligned, padding-top 24px
+- Animation: `scale(0.97 → 1)` + fade, 150ms ease-out
+
+**Confirm Delete Dialog:** adds `fill #FCE8E6` warning box with warning text inside
+
+### 8.12 Snackbars
+
+- Fill: `#202124`, text white, radius 4px, Elevation Level 3
+- Position: bottom-center
+- Left accent bar: 3px (Success `#4CAF50` / Error `#FF5252` / Info `#4285F4` / Warning `#FBBC04`)
+- Optional action: Text button `#80BAFF` right-aligned
 - Auto-dismiss: 3 seconds
-- Enter: `translateY(8px) → 0` + fade, 150ms
+- Animation: `translateY(8px) → 0` + fade, 150ms ease-out
 
-### 4.11 Modals
+### 8.13 Segmented Button Group
 
-- Backdrop: `rgba(0,0,0,0.5)`, no blur
-- Container: `bg: #FFFFFF`, `border: 2px solid #111827`, `box-shadow: 8px 8px 0px 0px #111827`, `border-radius: 6px`
-- Header: Inter 18px 700, bottom border `1px solid #E5E7EB`, padding `20px 24px`
-- Footer: top border `1px solid #E5E7EB`, padding `16px 24px`, buttons right-aligned
-- Animation: `scale(0.97) → scale(1)` + fade, 150ms ease-out
+Used on the Node Details Drawer for status selection:
+- Pill container, full-width, `border-radius: 9999px`
+- 5 segments: "Not Started" | "In Progress" | "Paused" | "Skipped" | "Done"
+- **Active segment:** fill matching status color (`#E8F0FE` for InProgress), stroke `2px #4285F4`, text `#1A73E8`, leading check icon
+- **Inactive:** fill transparent, stroke `#DADCE0`, text `#5F6368`
 
-### 4.12 Skeleton Loaders
+### 8.14 Badges (Role & Status)
 
-- Color: `#F3F4F6`, shimmer gradient `#F3F4F6 → #E5E7EB → #F3F4F6`
-- Animation: 1.5s infinite sweep
-- Shapes match content they replace, radius matches component
+| Badge | Fill | Text | Radius |
+|---|---|---|---|
+| Admin | `#FCE8E6` | `#D93025` | 8px |
+| Manager | `#FEF7E0` | `#E37400` | 8px |
+| RoadmapUser / Student | `#E8F0FE` | `#1A73E8` | 8px |
+| Verified | `#E6F4EA` | `#1E8E3E` | 8px |
+| Connected | `#E6F4EA` | `#1E8E3E` | 8px |
+| Private | `#F1F3F4` | `#5F6368` | 8px |
+| Free | `#E6F4EA` | `#1E8E3E` | 8px |
+| Paid | `#F1F3F4` | `#5F6368` | 8px |
+
+All badges: Label Small 11px/500, padding `2px 8px`.
+
+### 8.15 Skeleton Loaders
+
+- Base fill: `#F1F3F4`
+- Shimmer: gradient sweep `#F1F3F4 → #E5E7EB → #F1F3F4`, 1.5s infinite
+- Shape radius matches the component being replaced
+
+### 8.16 Data Tables (Admin)
+
+- Header row: fill `#F8F9FA`, stroke-bottom `2px #E8EAED`, Label Large 14px/500 `#5F6368` uppercase
+- Data rows: alternating `#FFFFFF` / `#FAFAFA`, stroke-bottom `1px #E8EAED`, hover fill `#F1F3F4`
+- Container: fill `#FFFFFF`, radius 12px, Elevation Level 1, `overflow: hidden`
+
+### 8.17 Empty States
+
+- 64px circle fill `#F1F3F4`, icon 32px `#DADCE0` inside
+- Headline Small 24px/600 `#202124`
+- Body Medium 14px `#5F6368`
+- Filled CTA button below
 
 ---
 
-## 5. Layout System
+## 9. Layout System
 
-### 5.1 Application Shell
+### 9.1 Application Shell — Authenticated
 
 ```
-┌──────────────────────────────────────────────────────┐
-│ Sidebar (240px)  │ Header (sticky 52px)              │
-│ bg: #111827      ├───────────────────────────────────┤
-│                  │ Page Content                      │
-│ [Logo]           │ padding: 32px                     │
-│ [Nav]            │ max-width: 1280px                 │
-│ [User]           │                                   │
-└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ Navigation Rail (80px fixed)  │ Top App Bar (64px sticky) │
+│ fill #FFFFFF                  ├──────────────────────────┤
+│                               │ Page Content Area         │
+│  [Logo]                       │ fill #F8F9FA              │
+│  [Nav Items]                  │ padding: 24px             │
+│  [Avatar]                     │                           │
+└──────────────────────────────────────────────────────────┘
 ```
 
-- Sidebar: `position: fixed`, full height, `z-index: 20`
-- Main: `margin-left: 240px` (56px collapsed)
-- Content: `padding: 32px`, bg `#F9FAFB`
+- Rail: `position: fixed; left: 0; width: 80px; height: 100vh; z-index: 20`
+- Main content: `margin-left: 80px; padding-top: 64px`
+- Content inner: `padding: 24px; background: #F8F9FA`
 
-### 5.2 Responsive Breakpoints
+### 9.2 Auth Pages Shell (No Rail, No Bar)
+
+- Full-viewport two-panel horizontal layout
+- Left: AuthDrawer 360px, full height, fixed gradient
+- Right: `flex: 1`, fill `#F8F9FA`, form card centered horizontally and vertically
+
+### 9.3 Roadmap Canvas
+
+- Full bleed: viewport minus rail (80px) and top bar (64px)
+- Background: `#F8F9FA` + SVG dot-grid (`1px dots #DADCE0`, 24px spacing)
+- React Flow fills the remaining space, no additional padding
+- Node Details Drawer: 400px, slides in from right, full height of content area
+
+### 9.4 Chat Layout
+
+- Two-panel, full height
+- Left (ChatSidebar): 280px, fill `#FFFFFF`, stroke-right `1px #E8EAED`
+- Right (ChatMainArea): `flex: 1`, fill `#F8F9FA`
+- Input bar: sticky bottom of right panel
+
+### 9.5 Responsive Breakpoints
 
 | Breakpoint | Change |
 |---|---|
-| < 768px | Sidebar hidden, hamburger top bar, full-width content |
-| 768px–1024px | Sidebar collapsed to icon-only (56px) |
-| > 1024px | Sidebar full (240px) |
+| < 768px | Navigation Rail hidden; hamburger top bar; full-width content |
+| 768px – 1024px | Rail collapses to icon-only (no labels) |
+| > 1024px | Full Rail (80px with labels) |
 
-### 5.3 Page Templates
+### 9.6 Content Max-Widths
 
-- **Dashboard:** `grid-cols-4` KPI strip → `grid-cols-3` widgets
-- **Roadmap canvas:** full bleed (viewport minus sidebar + header), no padding, React Flow fills space
-- **Chat:** fixed 2-panel — 260px sessions list left, flex-1 messages right
-- **Admin tables:** full-width with filter bar above, pagination below
-- **Profile/Settings:** centered single-column, `max-width: 640px`
-
----
-
-## 6. Module UI Designs
-
-### 6.1 Auth Pages
-
-**Login / Register** — centered card (`max-width: 400px`):
-- Card: `border: 2px solid #111827`, `box-shadow: 8px 8px 0px 0px #111827`, `border-radius: 6px`, white bg
-- Logo + Inter 22px 700 heading
-- Standard inputs (40px)
-- Primary dark button, full-width — "Sign in" / "Create account"
-- `or` divider with gray lines
-- Google button: white bg, `border: 1px solid #D1D5DB`, full-width
-- Link below card (blue-600)
-
-### 6.2 Dashboard
-
-**KPI strip (4 cards):** white bg, `border: 1px solid #E5E7EB`, `radius: 6px`, padding 16px 20px. Large Inter 700 number + label per card.
-
-**Below KPI (col-span-2 / col-span-1):**
-- Left: Recharts `AreaChart` — `#BFDBFE` fill, `#2563EB` stroke, gray-200 grid lines
-- Right: mini radar chart teaser + "View full analysis" blue link
-
-**Recent activity:** session list, gray-700 text, timestamps right. Quick Actions row: 4 dark (`#111827`) buttons.
-
-### 6.3 Roadmap Module
-
-**List page:** Feature cards with hard shadow. "Generate Roadmap" dark button top-right.
-
-**Generator modal:** Career Role grid — `border: 2px solid #111827`, selected = `bg: #FEF08A`. Confirm step shows node count.
-
-**Roadmap canvas:**
-- Background: `#F9FAFB` + SVG dot grid (`#E5E7EB`, 20px spacing)
-- Nodes: brutalist spec from §4.1
-- Edges: `step` type, `3px`, `#111827`
-- Floating controls (top-left): zoom in/out/fit, white bg, `border: 1px solid #E5E7EB`, stacked
-- Node legend (bottom-left): color swatches + labels, white bg, `border: 1px solid #E5E7EB`
-
-**Node Details Drawer (400px, right slide-over):**
-- bg white, `border-left: 2px solid #111827`
-- Node name Inter 18px 700 + × close
-- Status: segmented button group (5 options) — selected `bg: #111827, text: white`
-- Note textarea (standard input styles)
-- Save button: dark full-width
-- Resources: cards with `border: 1px solid #E5E7EB`, type tag (mono), IsFree chip, "Open →" blue link
-- Slide-in: `translateX(100%) → 0`, 200ms ease-out
-
-### 6.4 Chat
-
-**Sessions panel (260px):** white bg, `border-right: 1px solid #E5E7EB`. "+ New" outlined button top. Session rows: Inter 13px 500, active = `bg: #DBEAFE`, `border-left: 2px solid #2563EB`.
-
-**Messages panel:** bg `#F9FAFB`. User bubble: right, `bg: #111827`, white text, `radius: 6px`. Assistant bubble: left, white bg, `border: 1px solid #E5E7EB`. Code blocks: `bg: #111827`, mono font, `radius: 4px`. Input bar: white bg, `border-top: 1px solid #E5E7EB`. Send button dark.
-
-### 6.5 Skill Gap Analysis
-
-Career Role cards — selected = `bg: #FEF08A`. Radar chart: current skills (`fill: #BFDBFE, stroke: #2563EB`) vs required (`fill: rgba(254,240,138,0.6), stroke: #111827`). Gap list below with priority badges.
-
-### 6.6 Market Pulse
-
-Recharts `AreaChart` — `#BFDBFE` fill, `#2563EB` stroke, Inter 12px axes. Skills card grid: Inter 15px 700 skill name, TrendScore large number, `#2563EB` progress bar, mono source tag.
-
-### 6.7 E-Portfolio
-
-Repo cards: `border: 2px solid #111827`, `shadow: 4px 4px 0px 0px #111827`. AI summary section: `bg: #F9FAFB`, italic Inter 13px. Public view (`/portfolio/{userId}`): no sidebar, skill tags `bg: #FEF08A`, `border: 1px solid #111827`.
+| Context | Max-Width |
+|---|---|
+| Marketing/landing sections | 1200px |
+| Dashboard, admin tables | Full content area |
+| Settings, profile | 720px centered |
+| Public portfolio | 860px centered |
+| Auth form card | 480px |
+| Dialogs | 560–640px |
 
 ---
 
-## 7. Interaction & Motion
+## 10. Page Inventory
 
-**Guiding principle:** Motion is functional, not decorative. Transitions confirm actions.
+| Frame | Name | Size | Auth |
+|---|---|---|---|
+| 00_Landing | Landing Page | 1440 × 5200px | Public |
+| 01_Login | Login | 1440 × 900px | Public |
+| 02_Register | Register | 1440 × 900px | Public |
+| 03_Dashboard | Dashboard | 1440 × 900px | Auth |
+| 04_Roadmaps | My Roadmaps List | 1440 × 900px | Auth |
+| 05_RoadmapCanvas | Roadmap Canvas | 1440 × 900px | Auth |
+| 06_Mentor | AI Virtual Mentor (Chat) | 1440 × 900px | Auth |
+| 07_SkillGap | Skill Gap Analysis | 1440 × 900px | Auth |
+| 08_Market | Market Pulse | 1440 × 900px | Auth |
+| 09_Portfolio | E-Portfolio & GitHub | 1440 × 900px | Auth |
+| 10_PublicPortfolio | Public Portfolio | 1440 × 3200px | Public |
+| 11_Settings | Profile & Settings | 1440 × 900px | Auth |
+| 12_AdminCareerRoles | Admin — Career Roles | 1440 × 900px | Auth (Admin) |
+| 13_AdminRoadmaps | Admin — Roadmap Templates | 1440 × 900px | Auth (Admin) |
+| 14_AdminNodes | Admin — Node Library | 1440 × 900px | Auth (Admin) |
+| 15_AdminJobTrends | Admin — Job Trends | 1440 × 900px | Auth (Admin) |
+| 16_GenerateModal | Generate Roadmap Modal | 1440 × 900px | Overlay |
+| 17_NodeProgress | Node Progress Reference | 1440 × 2800px | Reference |
+| 18_UIReference | UI States Reference | 1440 × 3600px | Reference |
+
+---
+
+## 11. Shared Component Library
+
+The following master components are defined once in the Figma "Design System" page and used across all authenticated frames:
+
+`NavigationRail` · `TopAppBar` · `AuthDrawer` · `StatCard` · `RoadmapCard` · `StatusChip` · `LinearProgress` · `Snackbar` · `ConfirmDialog` · `EmptyState` · `Skeleton` · `RoadmapNode` · `NodeDetailsDrawer` · `ChatBubble` · `TrendSkillCard` · `RepoCard`
+
+---
+
+## 12. Motion & Interaction
 
 | Pattern | Duration | Easing | Effect |
 |---|---|---|---|
-| Button press | 100ms | ease | `translate(1px,1px)` + shadow shrink |
-| Node hover | 100ms | ease | `translate(-1px,-1px)` + shadow grow |
-| Node click | 100ms | ease | `translate(2px,2px)` + shadow minimum |
+| Button press | 100ms | ease | Ripple fill (MD3), slight opacity reduction |
+| Node hover | 150ms | ease-out | Elevation Level 1 → Level 2 |
+| Node selected | 100ms | ease | Elevation Level 3, stroke highlight |
 | Drawer open | 200ms | ease-out | `translateX(100%) → 0` |
-| Modal open | 150ms | ease-out | `scale(0.97→1)` + fade |
-| Toast enter | 150ms | ease-out | `translateY(8px) → 0` + fade |
-| Route change | 150ms | ease-out | opacity 0→1 |
+| Dialog open | 150ms | ease-out | `scale(0.97 → 1)` + fade |
+| Snackbar enter | 150ms | ease-out | `translateY(8px) → 0` + fade |
+| Route change | 150ms | ease-out | Opacity 0 → 1 |
 | Progress bar | 400ms | ease | `width` CSS transition |
-
-**What does not animate:** sidebar collapse, node status color change (instant — decision felt, not eased), skeleton → content swap.
-
----
-
-## 8. Accessibility
-
-- WCAG AA minimum on all text/bg pairs. `#111827` on `#F9FAFB` = 16.1:1 (AAA).
-- Focus ring: `outline: 2px solid #2563EB; outline-offset: 2px` on all interactive elements.
-- `aria-label` on all icon-only buttons.
-- Semantic HTML throughout: `<nav>`, `<main>`, `<aside>`, `<article>`, `<section>`.
-- React Flow nodes: `aria-label` with name + status.
-- Modals trap focus; drawers close on Escape.
+| Overlay in | 150ms | ease-out | Scrim fade + dialog scale-in |
+| Status change | Instant | — | Color swap; no animation (decision felt immediately) |
 
 ---
 
-## 9. Tailwind Config Reference
+## 13. Accessibility
 
-```javascript
-module.exports = {
-  theme: {
-    extend: {
-      colors: {
-        slate:  { 900: '#111827' },
-        blue:   { 200: '#BFDBFE', 600: '#2563EB' },
-        yellow: { 200: '#FEF08A' },
-        green:  { 500: '#22C55E' },
-        purple: { 500: '#A855F7' },
-        orange: { 200: '#FED7AA' },
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-      },
-      boxShadow: {
-        'node':        '4px 4px 0px 0px #111827',
-        'node-hover':  '6px 6px 0px 0px #111827',
-        'node-press':  '2px 2px 0px 0px #111827',
-        'card':        '2px 2px 0px 0px #E5E7EB',
-        'button':      '2px 2px 0px 0px #111827',
-        'modal':       '8px 8px 0px 0px #111827',
-      },
-      borderRadius: {
-        DEFAULT: '4px',
-        sm: '4px',
-        md: '6px',
-        lg: '8px',
-      },
-    },
-  },
-};
+- All text/background pairs meet WCAG AA contrast minimum (4.5:1 for body text)
+- Focus ring: `outline: 2px solid #1A73E8; outline-offset: 2px` on all interactive elements
+- `aria-label` on all icon-only buttons
+- Semantic HTML: `<nav>`, `<main>`, `<aside>`, `<article>`, `<section>`
+- React Flow nodes: `aria-label` includes node name + current status
+- Dialogs trap focus; drawers close on `Escape`
+- MD3 touch target minimum: 48×48px on all interactive elements
+
+---
+
+## 14. Figma File Structure
+
+```
+Page 1: "Design System"
+  — Color styles (all MD3 tokens)
+  — Text styles (full type scale)
+  — Effect styles (all elevation levels)
+  — Master components (see §11)
+
+Page 2: "Public Pages"
+  — 00_Landing · 01_Login · 02_Register · 10_PublicPortfolio
+
+Page 3: "App — Student"
+  — 03_Dashboard · 04_Roadmaps · 05_RoadmapCanvas
+  — 06_Mentor · 07_SkillGap · 08_Market · 09_Portfolio · 11_Settings
+
+Page 4: "App — Admin"
+  — 12_AdminCareerRoles · 13_AdminRoadmaps · 14_AdminNodes · 15_AdminJobTrends
+
+Page 5: "Modals & Overlays"
+  — 16_GenerateModal (3 states)
+  — 04b_DeleteRoadmapDialog (560×280px)
+  — 05c_SnackbarSaved (480×56px)
+  — 11b_DeactivateDialog (560×280px)
+  — 12b_CreateRoleDialog (560×380px)
+  — CreateNodeDialog (560×420px)
+
+Page 6: "Reference"
+  — 17_NodeProgress · 18_UIReference
 ```

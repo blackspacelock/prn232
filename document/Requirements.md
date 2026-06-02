@@ -10,6 +10,8 @@
 **Type:** Full-stack SaaS Web Application
 **Domain:** EdTech / Career Development
 **Target Users:** Software Engineering students (primary), Academic Counselors, Industry Mentors
+**UI Framework:** React 19 + TypeScript + Vite + React Router v7
+**Design System:** Google Material Design 3 (MD3)
 
 **Core Problem:** SE students graduate as undirected generalists, lack job-ready specialization, and struggle to build a coherent portfolio narrative for employers.
 
@@ -31,7 +33,7 @@
 
 ### 3.1 Authentication & Token Management
 
-The platform implements a **dual-token authentication system**: a short-lived Access Token for API authorization and a long-lived Refresh Token for seamless session renewal — without requiring the user to re-enter credentials.
+The platform implements a **dual-token authentication system**: a short-lived Access Token for API authorization and a long-lived Refresh Token for seamless session renewal without requiring the user to re-enter credentials.
 
 ---
 
@@ -41,8 +43,8 @@ The platform implements a **dual-token authentication system**: a short-lived Ac
 - Hash password with BCrypt before storage
 - Create `User` record (`GoogleId = null`, `AvatarUrl = null`)
 - Auto-create an empty linked `Profile` for the new user
-- Issue **both** an Access Token and a Refresh Token
-- Store Refresh Token in the `UserRefreshToken` table (see §6 Database Design)
+- Issue both an Access Token and a Refresh Token
+- Store Refresh Token in the `UserRefreshToken` table (see §6)
 - Return `AuthResponseDto` containing both tokens
 
 #### FR-AUTH-02 — Email / Password Login
@@ -91,25 +93,25 @@ The platform implements a **dual-token authentication system**: a short-lived Ac
 
 - Type: JWT signed with HMACSHA256
 - Claims: `UserId` (NameIdentifier), `Email`, `Role` (int as string), `FullName`
-- Expiry: **15 minutes** (short-lived by design; configurable via `appsettings.json`)
+- Expiry: **15 minutes** (configurable via `appsettings.json`)
 - Settings path: `Jwt:Secret`, `Jwt:Issuer`, `Jwt:Audience`, `Jwt:AccessTokenExpiryMinutes`
 
 #### FR-AUTH-07 — Refresh Token Specification
 
 - Value: cryptographically random 64-byte string, Base64Url encoded (`RandomNumberGenerator`)
 - Expiry: **7 days** (configurable via `Jwt:RefreshTokenExpiryDays`)
-- Storage: `UserRefreshToken` table (see §6)
+- Storage: `UserRefreshToken` table
 - Strategy: **Rotation on every use** — each refresh call invalidates the old token and issues a new one
 - A revoked or expired token must never be reusable
 
 #### FR-AUTH-08 — User Deactivation
 
-- Soft-deactivate a user: `IsActive = false`
-- Any active Refresh Tokens for the user are also revoked (`IsRevoked = true`) at deactivation time
+- Soft-deactivate: `IsActive = false`
+- All active Refresh Tokens for the user are also revoked at deactivation time
 
 #### FR-AUTH-09 — Route Protection
 
-- All routes except `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/google`, and `GET /graphql` (public reads) must require a valid Access Token in `Authorization: Bearer <token>`
+- All routes except `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/google`, `POST /api/auth/refresh`, and `GET /graphql` (public reads) require a valid Access Token in `Authorization: Bearer <token>`
 
 ---
 
@@ -120,13 +122,13 @@ Fields: `BioDescription`, `PhoneNumber`, `University`, `Major`, `StudiedYear`
 
 **FR-PROF-02:** Authenticated users may view and update their own Profile.
 
-**FR-PROF-03:** System must return a Profile together with all linked Skills.
+**FR-PROF-03:** System returns a Profile together with all linked Skills.
 
 ---
 
 ### 3.3 Skill Management
 
-**FR-SKILL-01:** Users add named Skills to their Profile (SkillName, optional Note).
+**FR-SKILL-01:** Users add named Skills to their Profile (`SkillName`, optional `Note`).
 
 **FR-SKILL-02:** Users soft-delete Skills from their Profile.
 
@@ -138,7 +140,7 @@ Fields: `BioDescription`, `PhoneNumber`, `University`, `Major`, `StudiedYear`
 
 **FR-ROLE-01:** Admins/Managers create, update, soft-delete Career Roles.
 
-**FR-ROLE-02:** System returns all Career Roles (used in roadmap generation selection).
+**FR-ROLE-02:** System returns all Career Roles (used in roadmap generation role selection).
 
 **FR-RMAP-01:** Admins/Managers create Career Roadmaps linked to a Career Role.
 
@@ -152,7 +154,7 @@ Fields: `BioDescription`, `PhoneNumber`, `University`, `Major`, `StudiedYear`
 
 ### 3.5 Node & Learning Resource Management (Admin / Manager)
 
-**FR-NODE-01:** Admins/Managers create Nodes (Name, Description, Order, optional `ParentNodeId`).
+**FR-NODE-01:** Admins/Managers create Nodes (`Name`, `Description`, `Order`, optional `ParentNodeId`).
 
 **FR-NODE-02:** Node hierarchy via self-referencing nullable `ParentNodeId`.
 
@@ -195,9 +197,9 @@ Fields: `Name`, `ResourceUrl`, `ResourceType` (plain string), `Provider`, `IsFre
 
 ### 3.7 AI Virtual Mentor (Chat)
 
-**FR-CHAT-01:** Create a Chat Session (Title, scoped to ProfileId).
+**FR-CHAT-01:** Create a Chat Session (`Title`, scoped to `ProfileId`).
 
-**FR-CHAT-02:** Send messages within a session (Sender, MessageContent).
+**FR-CHAT-02:** Send messages within a session (`Sender`, `MessageContent`).
 
 **FR-CHAT-03:** Return a Chat Session with all Messages ordered by `CreatedAt ASC`.
 
@@ -205,7 +207,7 @@ Fields: `Name`, `ResourceUrl`, `ResourceType` (plain string), `Provider`, `IsFre
 
 **FR-CHAT-05:** Update a Chat Session's summary.
 
-**FR-CHAT-06:** Frontend renders Markdown in assistant messages (code blocks, headers, lists, bold).
+**FR-CHAT-06:** Frontend renders Markdown in assistant messages (code blocks, headers, lists, bold). Code blocks use `fill #202124`, `border-radius: 8px`, Roboto Mono 13px white text.
 
 ---
 
@@ -213,7 +215,10 @@ Fields: `Name`, `ResourceUrl`, `ResourceType` (plain string), `Provider`, `IsFre
 
 **FR-GAP-01:** Compare Profile skills vs CareerRoadmap nodes; return `SkillGapAnalysisDto`.
 
-**FR-GAP-02:** Frontend displays results as a Recharts radar chart (current vs required skill polygons).
+**FR-GAP-02:** Frontend displays results as a Recharts `RadarChart`:
+- Polygon 1 (Your Skills): `fill rgba(26,115,232,0.2)`, `stroke #1A73E8` 2px
+- Polygon 2 (Required): `fill rgba(251,188,4,0.15)`, `stroke #FBBC04` 2px dashed
+- PolarGrid: `#E8EAED`
 
 **FR-GAP-03:** Frontend allows client-side PDF export of the analysis.
 
@@ -221,17 +226,20 @@ Fields: `Name`, `ResourceUrl`, `ResourceType` (plain string), `Provider`, `IsFre
 
 ### 3.9 Market Pulse / Job Trends
 
-**FR-TREND-01:** Admins create, update, soft-delete Job Trend records (TechSkill, Description, Source, Region, TrendScore, SnapshotDate).
+**FR-TREND-01:** Admins create, update, soft-delete Job Trend records (`TechSkill`, `Description`, `Source`, `Region`, `TrendScore`, `SnapshotDate`).
 
 **FR-TREND-02 – 05:** System returns trends by Region, top N by TrendScore, by TechSkill keyword, by SnapshotDate.
 
-**FR-TREND-06:** Frontend displays trends as interactive Recharts area/line charts.
+**FR-TREND-06:** Frontend displays trends as interactive Recharts `AreaChart`:
+- 3 area series (e.g. React, Python, Kubernetes)
+- Fills use `#E8F0FE`, `#E6F4EA`, `#F3E8FD` with matching stroke colors
+- Grid lines `#E8EAED` dashed, axes Body Small 12px `#5F6368`
 
 ---
 
 ### 3.10 E-Portfolio & GitHub Integration
 
-**FR-PORT-01:** Students link GitHub repositories (RepositoryName, RepoUrl, Description, IsPrivate).
+**FR-PORT-01:** Students link GitHub repositories (`RepositoryName`, `RepoUrl`, `Description`, `IsPrivate`).
 
 **FR-PORT-02:** System returns all GitHub Repositories for a Profile.
 
@@ -239,7 +247,7 @@ Fields: `Name`, `ResourceUrl`, `ResourceType` (plain string), `Provider`, `IsFre
 
 **FR-PORT-04:** Portfolio Analysis stub returns placeholder AI summaries per repo.
 
-**FR-PORT-05:** Public portfolio view at `/portfolio/{userId}` shows Profile info, Skills, Roadmap progress, GitHub projects — no auth required.
+**FR-PORT-05:** Public portfolio view at `/portfolio/{userId}` — no auth required. Displays: Profile info, Skills chip cloud, Roadmap progress bars, GitHub projects. Uses minimal navbar (no Navigation Rail).
 
 ---
 
@@ -249,7 +257,7 @@ Fields: `Name`, `ResourceUrl`, `ResourceType` (plain string), `Provider`, `IsFre
 
 **FR-AI-02:** `AnalyzeGitHubPortfolioAsync` — repos → placeholder AI summary.
 
-**FR-AI-03:** `RecommendLearningResourcesAsync` — node resources, IsFree prioritized.
+**FR-AI-03:** `RecommendLearningResourcesAsync` — node resources, `IsFree = true` prioritized.
 
 **FR-AI-04:** `GetTrendingSkillRecommendationsAsync` — top JobTrends by TrendScore minus skills student already has.
 
@@ -263,29 +271,28 @@ Fields: `Name`, `ResourceUrl`, `ResourceType` (plain string), `Provider`, `IsFre
 
 - **NFR-PERF-01:** Standard CRUD API responses < 500ms under normal load.
 - **NFR-PERF-02:** `PerformanceMonitoringMiddleware` logs a warning for requests > 500ms.
-- **NFR-PERF-03:** React Flow canvas renders up to 100 nodes without visible jank.
-- **NFR-PERF-04:** TanStack Query caches REST responses (30-second stale window).
+- **NFR-PERF-03:** React Flow canvas renders up to 100 nodes without visible jank on the Roadmap Canvas page.
+- **NFR-PERF-04:** TanStack Query caches REST responses (30-second stale window by default).
 - **NFR-PERF-05:** Apollo Client caches GraphQL results until explicitly invalidated.
 
 ### 4.2 Security
 
 - **NFR-SEC-01:** Passwords hashed with BCrypt; never logged or stored in plaintext.
-- **NFR-SEC-02:** JWT secret and Refresh Token config from environment — never hardcoded.
+- **NFR-SEC-02:** JWT secret and token config loaded from environment / `appsettings.json`; never hardcoded.
 - **NFR-SEC-03:** Google ID Token validated with `GoogleJsonWebSignature.ValidateAsync` including audience check.
 - **NFR-SEC-04:** Access Tokens short-lived (15 min); Refresh Tokens rotated on every use.
 - **NFR-SEC-05:** Revoked or expired Refresh Tokens rejected with `401`.
 - **NFR-SEC-06:** All endpoints except `/api/auth/*` require valid Access Token.
 - **NFR-SEC-07:** Role-based access restricts Admin/Manager endpoints from RoadmapUsers.
-- **NFR-SEC-08:** Frontend stores tokens in memory (Zustand) + secure HttpOnly cookie or sessionStorage; never in `localStorage` in production.
+- **NFR-SEC-08:** Frontend stores Access Token in Zustand (in-memory); Refresh Token in `sessionStorage` (dev) or secure HttpOnly cookie (production). Never `localStorage`.
 
 ### 4.3 Data Integrity
 
 - **NFR-DATA-01:** All deletes are soft (`IsDeleted = true`, `UpdatedAt = DateTime.Now`). Hard DELETEs prohibited.
 - **NFR-DATA-02:** `HasQueryFilter(e => !e.IsDeleted)` applied globally in `AppDbContext`.
-- **NFR-DATA-03:** `DateTime.Now` throughout. `DateTime.UtcNow` prohibited.
+- **NFR-DATA-03:** `DateTime.Now` throughout the backend. `DateTime.UtcNow` prohibited.
 - **NFR-DATA-04:** All primary keys are `Guid`.
-- **NFR-DATA-05:** Email unique at DB level. `GoogleId` unique nullable index.
-- **NFR-DATA-06:** `UserRefreshToken.Token` has a unique index.
+- **NFR-DATA-05:** `Email` unique at DB level. `GoogleId` unique nullable index. `UserRefreshToken.Token` unique index.
 
 ### 4.4 Scalability
 
@@ -295,7 +302,7 @@ Fields: `Name`, `ResourceUrl`, `ResourceType` (plain string), `Provider`, `IsFre
 ### 4.5 Maintainability
 
 - **NFR-MAINT-01:** Strict 3-layer separation: API → Business → DataAccess.
-- **NFR-MAINT-02:** No EF Core / DbContext references outside DataAccess.
+- **NFR-MAINT-02:** No EF Core / DbContext references outside DataAccess layer.
 - **NFR-MAINT-03:** No business logic in Controllers or GraphQL resolvers.
 - **NFR-MAINT-04:** All service methods return `ServiceResult<T>`.
 - **NFR-MAINT-05:** AutoMapper for all Entity ↔ DTO mapping. Manual mapping prohibited.
@@ -310,9 +317,21 @@ Fields: `Name`, `ResourceUrl`, `ResourceType` (plain string), `Provider`, `IsFre
 ### 4.7 Compatibility
 
 - **NFR-COMPAT-01:** Backend: ASP.NET Core .NET 10, SQL Server (Code First Migrations).
-- **NFR-COMPAT-02:** Frontend: React 19, TypeScript, Vite, React Router v7.
+- **NFR-COMPAT-02:** Frontend: React 19, TypeScript, Vite, React Router v7, Google Material Design 3.
 - **NFR-COMPAT-03:** Latest 2 stable versions of Chrome, Firefox, Safari, Edge.
 - **NFR-COMPAT-04:** Functional and visually complete on screens ≥ 375px.
+
+### 4.8 UI/UX — MD3 Compliance
+
+- **NFR-UI-01:** All interactive components follow MD3 component specifications (buttons, text fields, chips, cards, dialogs, navigation rail, FAB, snackbars, segmented buttons).
+- **NFR-UI-02:** All colors use the MD3 color role tokens defined in `Design.md §3`.
+- **NFR-UI-03:** All text uses the MD3 type scale defined in `Design.md §4`.
+- **NFR-UI-04:** Elevation is expressed using the 5-level MD3 drop-shadow system defined in `Design.md §5`.
+- **NFR-UI-05:** All corner radii use the MD3 shape scale defined in `Design.md §6`.
+- **NFR-UI-06:** Node status is communicated exclusively through the 5-color status map (`#F1F3F4 / #E8F0FE / #FEF7E0 / #F3E8FD / #E6F4EA`) with matching stroke and text colors.
+- **NFR-UI-07:** The Navigation Rail (80px) replaces any sidebar pattern on all authenticated pages.
+- **NFR-UI-08:** All buttons are pill-shaped (`border-radius: 9999px`). No square or slightly-rounded buttons.
+- **NFR-UI-09:** Text fields use MD3 Outlined variant with floating labels throughout.
 
 ---
 
@@ -330,7 +349,7 @@ All endpoints require `Authorization: Bearer <accessToken>` unless marked **Publ
 | POST | `/api/auth/login` | Public | Login with email/password → Access + Refresh Token |
 | POST | `/api/auth/google` | Public | Google ID Token login → Access + Refresh Token |
 | POST | `/api/auth/refresh` | Public | Exchange Refresh Token → new Access + Refresh Token |
-| POST | `/api/auth/logout` | **Required** | Revoke Refresh Token |
+| POST | `/api/auth/logout` | Required | Revoke Refresh Token |
 
 #### Users
 | Method | Path | Description |
@@ -459,9 +478,7 @@ GetRecommendedResources(profileId: UUID, nodeId: UUID): [LearningResourceDto]
 
 ## 6. Database Design
 
-### 6.1 New Entity — UserRefreshToken
-
-This table stores all issued Refresh Tokens, supporting rotation, revocation, and multi-device sessions.
+### 6.1 UserRefreshToken Entity
 
 ```
 UserRefreshToken
@@ -478,25 +495,13 @@ IsDeleted            BIT           NOT NULL  DEFAULT 0
 ```
 
 - Inherits `BaseAuditableEntity`
-- `Token`: generated as cryptographically random 64 bytes, Base64Url encoded
-- `ExpiresAt`: `DateTime.Now.AddDays(RefreshTokenExpiryDays)` at creation time
-- `IsRevoked`: set to `true` on logout, token rotation, or user deactivation
-- `RevokedAt`: `DateTime.Now` at revocation time
-- Unique index on `Token` column
+- `Token`: cryptographically random 64 bytes, Base64Url encoded
+- `ExpiresAt`: `DateTime.Now.AddDays(RefreshTokenExpiryDays)`
+- `IsRevoked`: set `true` on logout, token rotation, or user deactivation
+- Unique index on `Token`
 - Relationship: `User 1:M UserRefreshToken`
 
-### 6.2 Updated User Entity
-
-Add to the existing `User` entity:
-
-```
-// Navigation property only — no new column
-ICollection<UserRefreshToken> RefreshTokens
-```
-
-The `UserRefreshToken` table contains `UserId` FK pointing back to `User`.
-
-### 6.3 Full Entity & Relationship Summary
+### 6.2 Full Entity & Relationship Summary
 
 ```
 User              1:1   Profile               (Profile.UserId = PK + FK)
@@ -515,16 +520,19 @@ Node              1:M   Node (self)           via ParentNodeId (nullable)
 JobTrend          (standalone — no FK)
 ```
 
-### 6.4 appsettings.json — Token Configuration
+### 6.3 appsettings.json — Token Configuration
 
 ```json
 {
   "Jwt": {
-    "Issuer":                    "SECompass",
-    "Audience":                  "SECompassUsers",
-    "Secret":                    "<minimum 32 character secret key>",
-    "AccessTokenExpiryMinutes":  15,
-    "RefreshTokenExpiryDays":    7
+    "Issuer":                   "SECompass",
+    "Audience":                 "SECompassUsers",
+    "Secret":                   "<minimum 32 character secret key>",
+    "AccessTokenExpiryMinutes": 15,
+    "RefreshTokenExpiryDays":   7
+  },
+  "Google": {
+    "ClientId": "<your Google OAuth client ID>"
   }
 }
 ```
@@ -550,7 +558,7 @@ JobTrend          (standalone — no FK)
 {
   accessToken:  string,   // JWT, short-lived (15 min)
   refreshToken: string,   // Opaque random token, long-lived (7 days)
-  userId:       string,   // UUID
+  userId:       string,
   fullName:     string,
   email:        string,
   role:         number,   // UserRole int
@@ -560,36 +568,58 @@ JobTrend          (standalone — no FK)
 
 ---
 
-## 8. Frontend Token Management
+## 8. Frontend Architecture
 
-### 8.1 Storage Strategy
+### 8.1 Tech Stack
+
+| Concern | Library / Tool |
+|---|---|
+| Framework | React 19 + TypeScript |
+| Build | Vite |
+| Routing | React Router v7 |
+| Design System | Google Material Design 3 |
+| State (auth) | Zustand |
+| REST data fetching | TanStack Query + Axios |
+| GraphQL client | Apollo Client |
+| Roadmap canvas | React Flow |
+| Charts | Recharts |
+| Icons | Material Symbols / Lucide React |
+| Markdown rendering | react-markdown + remark-gfm |
+
+### 8.2 MD3 Implementation Notes
+
+- Use **MUI (Material UI v6+)** configured with MD3 theme tokens, or a headless component library styled against the MD3 tokens from `Design.md`
+- The MD3 color tokens must be registered as CSS custom properties (see `Design.md §3.4`) and consumed via Tailwind's `extend.colors` or MUI `createTheme`
+- All component overrides must match the specifications in `Design.md §8` exactly: pill buttons, 4px/8px/12px/28px/9999px radius scale, MD3 Outlined text fields with floating labels, Navigation Rail (not sidebar/drawer) for authenticated layout
+
+### 8.3 Token Storage Strategy
 
 | Token | Storage | Rationale |
 |---|---|---|
-| Access Token | Zustand store (in-memory) | Short-lived; never written to disk |
+| Access Token | Zustand store (in-memory) | Short-lived (15 min); never written to disk |
 | Refresh Token | `sessionStorage` (dev) / secure HttpOnly cookie (prod) | Survives page refresh; isolated from JS in production |
 
-### 8.2 Automatic Token Refresh (Axios Interceptor)
+### 8.4 Automatic Token Refresh (Axios Interceptor)
 
 ```
 Request → Axios interceptor injects Access Token header
 Response → If 401 received:
   1. Call POST /api/auth/refresh with stored Refresh Token
   2. If refresh succeeds → store new tokens → retry original request
-  3. If refresh fails (token expired/revoked) → clearAuth() → redirect to /login
+  3. If refresh fails (expired/revoked) → clearAuth() → redirect to /login
 ```
 
-### 8.3 Apollo Client Token Refresh
+### 8.5 Apollo Client Token Refresh
 
 - Apollo `authLink` reads the Access Token from `AuthStore`
-- On `UNAUTHENTICATED` GraphQL error: trigger same refresh flow as Axios interceptor
-- Use `@apollo/client/link/error` `onError` handler to intercept and retry
+- On `UNAUTHENTICATED` GraphQL error: trigger the same refresh flow via `@apollo/client/link/error` `onError` handler
+- On refresh failure: `client.clearStore()` + navigate to `/login`
 
-### 8.4 Logout Flow
+### 8.6 Logout Flow
 
-1. Call `POST /api/auth/logout` with the current Refresh Token (revokes server-side)
-2. Call `AuthStore.clearAuth()` (clears in-memory tokens)
-3. Clear Apollo cache (`client.clearStore()`)
+1. Call `POST /api/auth/logout` with current Refresh Token (server revocation)
+2. `AuthStore.clearAuth()` (clear in-memory tokens)
+3. `client.clearStore()` (clear Apollo cache)
 4. Clear `sessionStorage`
 5. Navigate to `/login`
 
@@ -611,6 +641,17 @@ enum NodeProgressStatus {
   Skipped    = 3,
   Completed  = 4,
 }
+
+// MD3 Node Status Color Map (matches Design.md §3.3)
+const NODE_STATUS_COLORS: Record<NodeProgressStatus, {
+  fill: string; text: string; stroke: string; label: string;
+}> = {
+  [NodeProgressStatus.NotStarted]: { fill: '#F1F3F4', text: '#5F6368', stroke: '#DADCE0', label: 'Not Started' },
+  [NodeProgressStatus.InProgress]: { fill: '#E8F0FE', text: '#1A73E8', stroke: '#4285F4', label: 'In Progress' },
+  [NodeProgressStatus.Paused]:     { fill: '#FEF7E0', text: '#E37400', stroke: '#FBBC04', label: 'Paused'      },
+  [NodeProgressStatus.Skipped]:    { fill: '#F3E8FD', text: '#7B1FA2', stroke: '#AB47BC', label: 'Skipped'     },
+  [NodeProgressStatus.Completed]:  { fill: '#E6F4EA', text: '#1E8E3E', stroke: '#34A853', label: 'Done'        },
+};
 
 interface AuthResponseDto {
   accessToken:  string;
@@ -667,6 +708,10 @@ interface JobTrendDto {
 
 | Constraint | Decision |
 |---|---|
+| Design system | Google Material Design 3 throughout all 19 screens |
+| Layout pattern | Navigation Rail (80px) — not a sidebar — on all authenticated pages |
+| Button shape | Pill (`border-radius: 9999px`) on all buttons, no exceptions |
+| Text fields | MD3 Outlined with floating labels only |
 | Read operations | ALL via GraphQL (Apollo Client) |
 | Write operations | ALL via REST (TanStack Query + Axios) |
 | Access Token expiry | 15 minutes |
@@ -677,8 +722,9 @@ interface JobTrendDto {
 | ResourceType | Plain NVARCHAR string — not an enum anywhere in the stack |
 | Soft delete | `IsDeleted = true` on all entities; no hard DELETEs |
 | Password | BCrypt hashed for email users; `null` for Google OAuth users |
-| Node resources | Direct 1:M (LearningResource.NodeId FK) — no junction table |
+| Node resources | Direct 1:M (`LearningResource.NodeId` FK) — no junction table |
 | Architecture | 3-layer only: API → Business → DataAccess. No MediatR, no CQRS |
+| Node status colors | Defined once in `NODE_STATUS_COLORS` constant; consumed by React Flow nodes, drawers, chips, and legend |
 
 ---
 
@@ -691,3 +737,4 @@ interface JobTrendDto {
 - Real-time WebSocket chat
 - Multi-tenancy
 - CI/CD pipeline configuration
+- Dark mode
