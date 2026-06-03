@@ -17,6 +17,10 @@ import { AdminNodeLibraryPage } from "./pages/admin/NodeLibrary";
 import { AdminJobTrendsPage } from "./pages/admin/JobTrends";
 import { NodeProgressReferencePage } from "./pages/reference/NodeProgressReference";
 import { UIReferencePage } from "./pages/reference/UIReference";
+import { CareerRolesPage } from "./pages/catalog/CareerRoles";
+import { CareerRoleDetailPage } from "./pages/catalog/CareerRoleDetail";
+import { CareerRoleRoadmapsPage } from "./pages/catalog/CareerRoleRoadmaps";
+import { CareerRoadmapDetailPage } from "./pages/catalog/CareerRoadmapDetail";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 
@@ -27,6 +31,12 @@ export const router = createBrowserRouter([
   { path: "/portfolio/:username", Component: PublicPortfolioPage },
   { path: "/reference/node-progress", Component: NodeProgressReferencePage },
   { path: "/reference/ui", Component: UIReferencePage },
+  // Public catalog routes (accessible without auth; adapt layout when logged in)
+  { path: "/career-roles", Component: CareerRolesPage },
+  { path: "/career-roles/:id", Component: CareerRoleDetailPage },
+  { path: "/career-roles/:id/roadmaps", Component: CareerRoleRoadmapsPage },
+  { path: "/roadmaps/:id", Component: CareerRoadmapDetailPage },
+  { path: "/career-roadmap/:id", Component: CareerRoadmapDetailPage },
   {
     element: <ProtectedRoute />,
     children: [
@@ -38,6 +48,16 @@ export const router = createBrowserRouter([
       { path: "/market", Component: MarketPulsePage },
       { path: "/portfolio", Component: PortfolioPage },
       { path: "/settings", Component: SettingsPage },
+      // Authenticated catalog routes (redirects to /login if not authenticated)
+      { path: "/app/career-roles", Component: CareerRolesPage },
+      { path: "/app/career-roles/:id", Component: CareerRoleDetailPage },
+      { path: "/app/career-roles/:id/roadmaps", Component: CareerRoleRoadmapsPage },
+      { path: "/app/roadmaps/:id", Component: CareerRoadmapDetailPage },
+      // Legacy browse aliases kept for existing links/history.
+      { path: "/browse/career-roles", Component: CareerRolesPage },
+      { path: "/browse/career-roles/:id", Component: CareerRoleDetailPage },
+      { path: "/browse/career-roles/:id/roadmaps", Component: CareerRoleRoadmapsPage },
+      { path: "/browse/career-roadmap/:id", Component: CareerRoadmapDetailPage },
     ],
   },
   {

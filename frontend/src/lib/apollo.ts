@@ -27,7 +27,7 @@ const errorLink = onError(({ error, operation, forward }) => {
   // Apollo v4: error is CombinedGraphQLErrors (has .errors array) or NetworkError
   // Check for UNAUTHENTICATED without importing CombinedGraphQLErrors to avoid path issues
   const gqlErrors: Array<{ extensions?: { code?: string } }> =
-    (error as any)?.errors ?? [];
+    (error as { errors?: Array<{ extensions?: { code?: string } }> })?.errors ?? [];
   if (!gqlErrors.some(e => e.extensions?.code === 'UNAUTHENTICATED')) return;
 
   return new Observable(observer => {

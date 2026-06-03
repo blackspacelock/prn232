@@ -125,7 +125,8 @@ export function RoadmapCanvasPage() {
     () => (data as { personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } })?.personalRoadmapWithProgress?.nodeProgresses ?? [],
     [data],
   );
-  const summary = (progressData as { nodeProgress?: unknown })?.nodeProgress ?? [];
+  const summary: Array<{ status: number }> =
+    (progressData as { nodeProgress?: Array<{ status: number }> })?.nodeProgress ?? [];
   const resources: LearningResource[] = (resourcesData as { learningResourcesByNode?: LearningResource[] })?.learningResourcesByNode ?? [];
   const recommended: LearningResource[] = (recommendedData as { recommendedResources?: LearningResource[] })?.recommendedResources ?? [];
 

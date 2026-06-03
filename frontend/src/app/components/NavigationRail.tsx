@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   Route,
   Network,
-  Database
+  Database,
+  Telescope,
 } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
@@ -23,9 +24,17 @@ interface NavItem {
   path: string;
 }
 
+interface UserByIdQuery {
+  userById?: {
+    fullName?: string | null;
+    avatarUrl?: string | null;
+  } | null;
+}
+
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Map, label: 'Roadmaps', path: '/roadmaps' },
+  { icon: Telescope, label: 'Browse Roles', path: '/app/career-roles' },
   { icon: MessageSquare, label: 'AI Mentor', path: '/mentor' },
   { icon: BarChart3, label: 'Skill Gap', path: '/skill-gap' },
   { icon: TrendingUp, label: 'Market Pulse', path: '/market' },
@@ -58,8 +67,8 @@ export function NavigationRail() {
     skip: !userId,
   });
 
-  const fullName: string | null = (userData as any)?.userById?.fullName ?? null;
-  const avatarUrl: string | null = (userData as any)?.userById?.avatarUrl ?? null;
+  const fullName: string | null = (userData as UserByIdQuery | undefined)?.userById?.fullName ?? null;
+  const avatarUrl: string | null = (userData as UserByIdQuery | undefined)?.userById?.avatarUrl ?? null;
   const displayName = fullName ?? user?.email ?? '';
   const initials = getInitials(fullName, user?.email);
   const role = user?.role ?? '';
@@ -84,8 +93,14 @@ export function NavigationRail() {
       <nav className="flex-1 flex flex-col gap-1 w-full overflow-y-auto">
         {visibleItems.map((item, index) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path ||
-            (item.path === '/roadmaps' && location.pathname.startsWith('/roadmap/'));
+          const isActive =
+            location.pathname === item.path ||
+            (item.path === '/roadmaps' && location.pathname.startsWith('/roadmap/')) ||
+            (item.path === '/app/career-roles' &&
+              (location.pathname.startsWith('/app/career-roles') ||
+                location.pathname.startsWith('/app/roadmaps') ||
+                location.pathname.startsWith('/browse/career-roles') ||
+                location.pathname.startsWith('/browse/career-roadmap')));
           const isFirstAdminItem = isAdmin && index === navItems.length;
 
           return (

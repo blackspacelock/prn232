@@ -116,3 +116,34 @@ export interface RoadmapNodeData {
   nodeId: string;
   nodeProgressId: string;
 }
+
+export interface CareerRoleDto {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+}
+
+export interface CareerRoadmapDto {
+  id: string;
+  careerRoleId: string;
+  name: string;
+  description?: string;
+  isCustom: boolean;
+  createdAt: string;
+}
+
+export interface CareerRoadmapWithNodesDto extends CareerRoadmapDto {
+  nodes: NodeDto[];
+}
+
+export interface LearningResourceDto {
+  id: string;
+  nodeId: string;
+  name: string;
+  resourceUrl: string;
+  resourceType: string;
+  provider?: string;
+  isFree: boolean;
+  createdAt: string;
+}

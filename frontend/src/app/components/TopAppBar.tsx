@@ -14,6 +14,13 @@ interface TopAppBarProps {
   };
 }
 
+interface UserByIdQuery {
+  userById?: {
+    fullName?: string | null;
+    avatarUrl?: string | null;
+  } | null;
+}
+
 const breadcrumbRouteMap: Record<string, string> = {
   Dashboard: '/dashboard',
   Roadmaps: '/roadmaps',
@@ -23,6 +30,8 @@ const breadcrumbRouteMap: Record<string, string> = {
   'Market Pulse': '/market',
   Portfolio: '/portfolio',
   Settings: '/settings',
+  'Browse Career Roles': '/app/career-roles',
+  'Roadmap Template': '/app/career-roles',
   Admin: '/admin/career-roles',
   'Career Roles': '/admin/career-roles',
   'Roadmap Templates': '/admin/roadmaps',
@@ -49,8 +58,10 @@ export function TopAppBar({ breadcrumb, showProgress }: TopAppBarProps) {
     skip: !userId,
   });
 
-  const fullName: string | undefined = (userData as any)?.userById?.fullName;
-  const avatarUrl: string | undefined = (userData as any)?.userById?.avatarUrl;
+  const fullName: string | undefined =
+    (userData as UserByIdQuery | undefined)?.userById?.fullName ?? undefined;
+  const avatarUrl: string | undefined =
+    (userData as UserByIdQuery | undefined)?.userById?.avatarUrl ?? undefined;
   const displayName = fullName ?? user?.email ?? '';
   const initials = (() => {
     if (fullName) {

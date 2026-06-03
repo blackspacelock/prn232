@@ -18,10 +18,6 @@ export function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const from = (location.state as { from?: string })?.from ?? '/dashboard';
 
-  if (_initialized && isAuthenticated) {
-    return <Navigate to={from} replace />;
-  }
-
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,6 +61,10 @@ export function LoginPage() {
     e.preventDefault();
     loginMutation.mutate({ email, password });
   };
+
+  if (_initialized && isAuthenticated) {
+    return <Navigate to={from} replace />;
+  }
 
   return (
     <div className="flex h-screen bg-[var(--md3-surface-container)]">
