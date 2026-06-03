@@ -50,6 +50,7 @@ export function TopAppBar({ breadcrumb, showProgress }: TopAppBarProps) {
   });
 
   const fullName: string | undefined = (userData as any)?.userById?.fullName;
+  const avatarUrl: string | undefined = (userData as any)?.userById?.avatarUrl;
   const displayName = fullName ?? user?.email ?? '';
   const initials = (() => {
     if (fullName) {
@@ -173,11 +174,14 @@ export function TopAppBar({ breadcrumb, showProgress }: TopAppBarProps) {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => { setDropdownOpen((o) => !o); setNotifOpen(false); }}
-            className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--md3-primary)] focus:ring-offset-2"
+            className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] overflow-hidden flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--md3-primary)] focus:ring-offset-2"
             aria-label="User menu"
             aria-expanded={dropdownOpen}
           >
-            <span className="text-sm font-medium text-[var(--md3-primary)]">{initials}</span>
+            {avatarUrl
+              ? <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              : <span className="text-sm font-medium text-[var(--md3-primary)]">{initials}</span>
+            }
           </button>
 
           {dropdownOpen && (

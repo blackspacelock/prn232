@@ -29,6 +29,12 @@ export interface RefreshTokenRequestDto {
   refreshToken: string;
 }
 
+// Must match backend UpdateUserDto exactly
+export interface UpdateUserDto {
+  fullName?: string;
+  avatarUrl?: string;
+}
+
 // Must match backend UpdateProfileDto exactly (camelCase for JSON serialization)
 export interface UpdateProfileDto {
   bioDescription?: string;

@@ -4,14 +4,17 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ActionButton } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
-import { BadgeCheck, BookOpen, CalendarDays, Check, Edit, GraduationCap, Mail, Phone, Plus, Save, ShieldOff, UserRound, X } from 'lucide-react';
+import {
+  BadgeCheck, BookOpen, CalendarDays, Camera, Check, Edit,
+  GraduationCap, Mail, Phone, Plus, Save, ShieldOff, UserRound, X,
+} from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
 import { apiClient } from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
-import { GET_PROFILE_WITH_SKILLS } from '@/graphql/queries';
-import type { UpdateProfileDto, AddSkillDto } from '@/types/api';
+import { GET_PROFILE_WITH_SKILLS, GET_USER_BY_ID } from '@/graphql/queries';
+import type { UpdateProfileDto, UpdateUserDto, AddSkillDto } from '@/types/api';
 
 interface ProfileWithSkills {
   userId: string;
@@ -31,25 +34,52 @@ export function SettingsPage() {
   const [deleteSkillId, setDeleteSkillId] = useState<string | null>(null);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant?: 'success' | 'error' }>({ open: false, message: '' });
+
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState<UpdateProfileDto>({});
 
-  const { data, loading, error } = useQuery(GET_PROFILE_WITH_SKILLS, {
+  const [isEditingAccount, setIsEditingAccount] = useState(false);
+  const [accountForm, setAccountForm] = useState<UpdateUserDto>({});
+  const [avatarPreviewError, setAvatarPreviewError] = useState(false);
+
+  const { data: profileData, loading: profileLoading, error: profileError } = useQuery(GET_PROFILE_WITH_SKILLS, {
     variables: { userId },
     skip: !userId,
   });
 
-  const profile: ProfileWithSkills | null = (data as any)?.profileWithSkills ?? null;
+  const { data: userData, loading: userLoading } = useQuery(GET_USER_BY_ID, {
+    variables: { userId },
+    skip: !userId,
+  });
+
+  const profile: ProfileWithSkills | null = (profileData as any)?.profileWithSkills ?? null;
+  const userInfo = (userData as any)?.userById ?? null;
+  const fullName: string = userInfo?.fullName ?? '';
+  const avatarUrl: string = userInfo?.avatarUrl ?? '';
+
   const skills = profile?.skills ?? [];
-  const filledProfileFields = [
-    profile?.bioDescription,
-    profile?.phoneNumber,
-    profile?.university,
-    profile?.major,
-    profile?.studiedYear,
-  ].filter(Boolean).length;
-  const profileCompletion = Math.round((filledProfileFields / 5) * 100);
-  const accountInitial = (user?.email ?? 'U')[0].toUpperCase();
+
+  const initials = (() => {
+    if (fullName) {
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return parts[0][0].toUpperCase();
+    }
+    return (user?.email?.[0] ?? 'U').toUpperCase();
+  })();
+
+  const updateUserMutation = useMutation({
+    mutationFn: (dto: UpdateUserDto) => apiClient.put(`/api/users/${userId}`, dto),
+    onSuccess: async () => {
+      await apolloClient.refetchQueries({ include: [GET_USER_BY_ID] });
+      setIsEditingAccount(false);
+      setSnackbar({ open: true, message: 'Account updated successfully.', variant: 'success' });
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update account.';
+      setSnackbar({ open: true, message: msg, variant: 'error' });
+    },
+  });
 
   const updateProfileMutation = useMutation({
     mutationFn: (dto: UpdateProfileDto) => apiClient.put(`/api/profiles/${userId}`, dto),
@@ -89,7 +119,7 @@ export function SettingsPage() {
     },
   });
 
-  const handleEditStart = () => {
+  const handleEditProfileStart = () => {
     setProfileForm({
       bioDescription: profile?.bioDescription ?? '',
       phoneNumber: profile?.phoneNumber ?? '',
@@ -100,12 +130,20 @@ export function SettingsPage() {
     setIsEditingProfile(true);
   };
 
+  const handleEditAccountStart = () => {
+    setAccountForm({ fullName, avatarUrl });
+    setAvatarPreviewError(false);
+    setIsEditingAccount(true);
+  };
+
   const handleAddSkill = () => {
     if (!newSkill.trim() || !profile) return;
     addSkillMutation.mutate({ profileId: profile.userId, skillName: newSkill.trim() });
   };
 
-  if (loading) {
+  const isLoading = profileLoading || userLoading;
+
+  if (isLoading) {
     return (
       <AppShell breadcrumb="Settings">
         <div className="app-page">
@@ -121,6 +159,9 @@ export function SettingsPage() {
       </AppShell>
     );
   }
+
+  const previewAvatarUrl = isEditingAccount ? (accountForm.avatarUrl ?? '') : avatarUrl;
+  const showAvatarImage = !!previewAvatarUrl && !avatarPreviewError;
 
   return (
     <AppShell breadcrumb="Settings">
@@ -142,37 +183,112 @@ export function SettingsPage() {
                 />
               </div>
             ) : (
-              <ActionButton icon={Edit} label="Edit profile" variant="tonal" size="md" onClick={handleEditStart} />
+              <ActionButton icon={Edit} label="Edit profile" variant="tonal" size="md" onClick={handleEditProfileStart} />
             )
           }
         />
 
+        {/* Account card */}
         <section className="md3-card overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid grid-cols-1">
             <div className="flex items-center gap-5 p-6 lg:p-7">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[var(--md3-primary-container)]">
-                <span className="text-3xl font-semibold text-[var(--md3-primary)]">{accountInitial}</span>
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate text-2xl font-semibold text-[var(--md3-on-surface)]">{user?.email}</h2>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--md3-success-container)] px-3 py-1 text-xs font-medium text-[var(--md3-success)]">
-                    <BadgeCheck className="h-3.5 w-3.5" />
-                    Verified
-                  </span>
+              {/* Avatar */}
+              <div className="relative shrink-0 group">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--md3-primary-container)] overflow-hidden">
+                  {showAvatarImage ? (
+                    <img
+                      src={previewAvatarUrl}
+                      alt={fullName || user?.email}
+                      className="w-full h-full object-cover"
+                      onError={() => setAvatarPreviewError(true)}
+                    />
+                  ) : (
+                    <span className="text-3xl font-semibold text-[var(--md3-primary)]">{initials}</span>
+                  )}
                 </div>
-                <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">{user?.role ?? 'Student'} workspace account</p>
+                {!isEditingAccount && (
+                  <button
+                    onClick={handleEditAccountStart}
+                    className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--md3-primary)] text-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Edit avatar"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                {isEditingAccount ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">Full Name</label>
+                      <input
+                        type="text"
+                        value={accountForm.fullName ?? ''}
+                        onChange={(e) => setAccountForm({ ...accountForm, fullName: e.target.value })}
+                        placeholder="Your full name"
+                        className="md3-field w-full px-3 h-9 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">Avatar URL</label>
+                      <input
+                        type="url"
+                        value={accountForm.avatarUrl ?? ''}
+                        onChange={(e) => { setAccountForm({ ...accountForm, avatarUrl: e.target.value }); setAvatarPreviewError(false); }}
+                        placeholder="https://example.com/avatar.jpg"
+                        className="md3-field w-full px-3 h-9 text-sm"
+                      />
+                      {accountForm.avatarUrl && !avatarPreviewError && (
+                        <p className="mt-1 text-xs text-[var(--md3-on-surface-variant)]">Preview shown in avatar above.</p>
+                      )}
+                      {avatarPreviewError && (
+                        <p className="mt-1 text-xs text-[var(--md3-error)]">Could not load image from this URL.</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <ActionButton
+                        icon={Save}
+                        label={updateUserMutation.isPending ? 'Saving...' : 'Save'}
+                        variant="primary"
+                        size="md"
+                        disabled={updateUserMutation.isPending}
+                        onClick={() => updateUserMutation.mutate(accountForm)}
+                      />
+                      <ActionButton icon={X} label="Cancel" variant="neutral" size="md" onClick={() => setIsEditingAccount(false)} />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="truncate text-2xl font-semibold text-[var(--md3-on-surface)]">
+                        {fullName || user?.email}
+                      </h2>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--md3-success-container)] px-3 py-1 text-xs font-medium text-[var(--md3-success)]">
+                        <BadgeCheck className="h-3.5 w-3.5" />
+                        Verified
+                      </span>
+                    </div>
+                    {fullName && (
+                      <p className="mt-0.5 text-sm text-[var(--md3-on-surface-variant)]">{user?.email}</p>
+                    )}
+                    <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">{user?.role ?? 'Student'} workspace account</p>
+                    <button
+                      onClick={handleEditAccountStart}
+                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--md3-primary)] hover:underline"
+                    >
+                      <Edit className="h-3 w-3" /> Edit name & avatar
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-            <div className="grid grid-cols-3 border-t border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container)] lg:border-l lg:border-t-0">
-              <ProfileMetric label="Fields" value={`${filledProfileFields}/5`} />
-              <ProfileMetric label="Skills" value={String(skills.length)} />
-              <ProfileMetric label="Complete" value={`${profileCompletion}%`} />
-            </div>
+
           </div>
         </section>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.75fr)]">
+          {/* Personal Information */}
           <section className="md3-card p-6">
             <SectionHeader
               title="Personal Information"
@@ -182,12 +298,12 @@ export function SettingsPage() {
                   icon={isEditingProfile ? X : Edit}
                   label={isEditingProfile ? 'Cancel' : 'Edit'}
                   variant={isEditingProfile ? 'neutral' : 'tonal'}
-                  onClick={() => isEditingProfile ? setIsEditingProfile(false) : handleEditStart()}
+                  onClick={() => isEditingProfile ? setIsEditingProfile(false) : handleEditProfileStart()}
                 />
               }
             />
 
-            {error ? (
+            {profileError ? (
               <p className="mt-5 text-sm text-[var(--md3-error)]">Failed to load profile data.</p>
             ) : isEditingProfile ? (
               <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -255,6 +371,7 @@ export function SettingsPage() {
           </section>
 
           <div className="space-y-4">
+            {/* Skills */}
             <section className="md3-card p-6">
               <SectionHeader title="Skills" description="Technologies connected to your career profile." />
 
@@ -297,6 +414,7 @@ export function SettingsPage() {
               </div>
             </section>
 
+            {/* Security */}
             <section className="md3-card p-6">
               <SectionHeader title="Security" description="Account identity and verification state." />
               <div className="mt-5 space-y-3">
@@ -314,6 +432,7 @@ export function SettingsPage() {
               </div>
             </section>
 
+            {/* Danger Zone */}
             <section className="rounded-xl border border-[var(--md3-error-container)] bg-white p-6 shadow-sm">
               <SectionHeader title="Danger Zone" description="Account-level actions with restricted access." titleClassName="text-[var(--md3-error)]" />
               <div className="mt-5 flex flex-col gap-4 rounded-lg border border-[var(--md3-error-container)] bg-[var(--md3-error-container)]/40 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -377,19 +496,6 @@ function SectionHeader({ title, description, action, titleClassName = '' }: Sect
   );
 }
 
-interface ProfileMetricProps {
-  label: string;
-  value: string;
-}
-
-function ProfileMetric({ label, value }: ProfileMetricProps) {
-  return (
-    <div className="flex min-h-28 flex-col justify-center border-r border-[var(--md3-outline-variant)] px-5 last:border-r-0">
-      <span className="text-2xl font-semibold text-[var(--md3-on-surface)]">{value}</span>
-      <span className="mt-1 text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">{label}</span>
-    </div>
-  );
-}
 
 interface DetailItemProps {
   icon: ElementType;
