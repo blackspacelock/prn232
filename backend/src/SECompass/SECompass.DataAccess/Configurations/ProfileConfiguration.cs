@@ -1,0 +1,30 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SECompass.DataAccess.Entities;
+
+namespace SECompass.DataAccess.Configurations;
+
+public class ProfileConfiguration : IEntityTypeConfiguration<Profile>
+{
+    public void Configure(EntityTypeBuilder<Profile> builder)
+    {
+        builder.ToTable("Profiles");
+        builder.HasKey(p => p.UserId);
+        builder.Ignore(p => p.Id);
+        builder.Property(p => p.BioDescription).IsRequired(false);
+        builder.Property(p => p.PhoneNumber).IsRequired(false);
+        builder.Property(p => p.University).IsRequired(false).HasMaxLength(255);
+        builder.Property(p => p.Major).IsRequired(false).HasMaxLength(255);
+        builder.Property(p => p.StudiedYear).IsRequired(false);
+        builder.Property(p => p.CreatedAt).IsRequired();
+        builder.Property(p => p.UpdatedAt).IsRequired(false);
+        builder.Property(p => p.IsDeleted).IsRequired().HasDefaultValue(false);
+
+        builder.HasQueryFilter(p => !p.IsDeleted);
+
+        builder.HasOne(p => p.User)
+            .WithOne(u => u.Profile)
+            .HasForeignKey<Profile>(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}

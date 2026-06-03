@@ -1,62 +1,73 @@
 erDiagram
     JobTrend {
         UUID JobTrendId PK
-        NVARCHAR(255) TechSkill 
-        NVARCHAR(MAX) Description 
-        NVARCHAR(255) Source 
-        NVARCHAR(255) Region 
-        INT TrendScore 
-        DATETIME SnapshotDate 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHAR(255) TechSkill
+        NVARCHAR(MAX) Description
+        NVARCHAR(255) Source
+        NVARCHAR(255) Region
+        INT TrendScore
+        DATETIME SnapshotDate
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     User {
         UUID UserId PK
-        NVARCHAR(255) FullName  
-        NVARCHAR(255) Email 
-        NVARCHAR(MAX) PasswordHashed 
+        NVARCHAR(255) FullName
+        NVARCHAR(255) Email "UNIQUE"
+        NVARCHAR(MAX) PasswordHashed "NULLABLE"
         INT Role
-        BIT IsActive 
+        BIT IsActive
+        NVARCHAR(255) GoogleId "UNIQUE, NULLABLE"
+        NVARCHAR(MAX) AvatarUrl "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     Profile {
-        UUID UserId PK
-        NVARCHAR(MAX) BioDescription 
-        NVARCHAR(MAX) PhoneNumber 
-        NVARCHAR(255) University 
-        NVARCHAR(255) Major
-        INT StudiedYear 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        UUID UserId PK, FK
+        NVARCHAR(MAX) BioDescription "NULLABLE"
+        NVARCHAR(MAX) PhoneNumber "NULLABLE"
+        NVARCHAR(255) University "NULLABLE"
+        NVARCHAR(255) Major "NULLABLE"
+        INT StudiedYear "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     Skill {
         UUID SkillId PK
         UUID ProfileId FK
-        NVARCHAR(MAX) Note 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHAR(255) SkillName
+        NVARCHAR(MAX) Note "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
-    
+
     GitHubRepository {
         UUID GithubRepositoryId PK
         UUID ProfileId FK
-        NVARCHAR(255) RepositoryName 
-        NVARCHAR(MAX) RepoUrl 
-        NVARCHAR(MAX) Description 
+        NVARCHAR(255) RepositoryName
+        NVARCHAR(MAX) RepoUrl
+        NVARCHAR(MAX) Description "NULLABLE"
         BIT IsPrivate
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     ChatSession {
         UUID ChatSessionId PK
         UUID ProfileId FK
-        NVARCHAR(255) Title 
-        NVARCHAR(MAX) Summary
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHAR(255) Title
+        NVARCHAR(MAX) Summary "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     ChatMessage {
@@ -64,99 +75,114 @@ erDiagram
         UUID ChatSessionId FK
         NVARCHAR(100) Sender
         NVARCHAR(MAX) MessageContent
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
-    }
-
-    PersonalRoadmap {
-        UUID PersonalRoadmapId PK
-        UUID CareerRoadmapId FK
-        NVARCHAR(MAX) Note 
-        DECIMAL ProgressPercentage 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
-    }
-
-    NodeProgress {
-        UUID NodeProgressId PK
-        UUID NodeId  FK
-        UUID PersonalRoadmapId FK
-        INT Status
-        NVARCHAR(255) Note 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     CareerRole {
         UUID CareerRoleId PK
         NVARCHAR(255) Name
-        NVARCHAR(MAX) Description 
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        NVARCHAR(MAX) Description "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     CareerRoadmap {
-        UUID CareetRoadmapId PK
-        UUID CareerRoleId  FK
+        UUID CareerRoadmapId PK
+        UUID CareerRoleId FK
         NVARCHAR(255) Name
-        NVARCHAR(MAX) Description 
+        NVARCHAR(MAX) Description "NULLABLE"
         BIT IsCustom
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
-    RoadmapNode {
-        UUID RoadmapNodeId PK
-        UUID PersonalRoadmapId FK
-        UUID NodeId FK
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+    PersonalRoadmap {
+        UUID PersonalRoadmapId PK
+        UUID ProfileId FK
+        UUID CareerRoadmapId FK
+        NVARCHAR(MAX) Note "NULLABLE"
+        DECIMAL(5_2) ProgressPercentage
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     Node {
         UUID NodeId PK
-        UUID ParentNodeId FK
+        UUID ParentNodeId FK "NULLABLE"
         NVARCHAR(255) Name
-        NVARCHAR(MAX) Description 
+        NVARCHAR(MAX) Description "NULLABLE"
         INT Order
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
-    NodeLearningResource {
-        UUID NodeLearningResourceId PK
+    RoadmapNode {
+        UUID RoadmapNodeId PK
+        UUID CareerRoadmapId FK
         UUID NodeId FK
-        UUID LearningResourceId FK
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt 
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
+    }
+
+    NodeProgress {
+        UUID NodeProgressId PK
+        UUID PersonalRoadmapId FK
+        UUID NodeId FK
+        INT Status
+        NVARCHAR(MAX) Note "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
     LearningResource {
         UUID LearningResourceId PK
+        UUID NodeId FK
         NVARCHAR(255) Name
-        NVARCHAR(MAX) ResourceUrl 
-        NVARCHAR(100) ResourceType 
-        NVARCHAR(255) Provider 
+        NVARCHAR(MAX) ResourceUrl
+        NVARCHAR(100) ResourceType
+        NVARCHAR(255) Provider "NULLABLE"
         BIT IsFree
-        DATETIME CreatedAt 
-        DATETIME UpdatedAt  
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
     }
 
-    %% Student profile management
-    User ||--|| Profile : ""
-    Profile }o--o{ Skill : ""
-    Profile }|--o{ GitHubRepository : ""
+    UserRefreshToken {
+        UUID UserRefreshTokenId PK
+        UUID UserId FK
+        NVARCHAR(512) Token
+        DATETIME ExpiresAt
+        DATETIME RevokedAt
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
+    }
 
-    %% AI chat management
-    Profile }o--o{ ChatSession : ""
-    ChatSession ||--|{ ChatMessage : ""
-
-    %% Roadmap management
-    Profile ||--o{ PersonalRoadmap : ""
-    PersonalRoadmap ||--|| CareerRoadmap : ""
-    CareerRoadmap }o--|{ CareerRole: ""
-    CareerRoadmap ||--o{ RoadmapNode : ""
-    Node ||--|{ RoadmapNode : ""
-    PersonalRoadmap ||--o{ NodeProgress : ""
-    NodeProgress }o--|| Node : ""
-    Node ||--o{ NodeLearningResource: ""
+    %% Physical Relationships
+    User ||--|| Profile : "UserId (1:1 Shared PK)"
+    Profile ||--o{ Skill : "ProfileId"
+    Profile ||--o{ GitHubRepository : "ProfileId"
+    Profile ||--o{ ChatSession : "ProfileId"
+    ChatSession ||--o{ ChatMessage : "ChatSessionId"
+    User ||--o{ UserRefreshToken : "UserId"
+    
+    CareerRole ||--o{ CareerRoadmap : "CareerRoleId"
+    Profile ||--o{ PersonalRoadmap : "ProfileId"
+    CareerRoadmap ||--o{ PersonalRoadmap : "CareerRoadmapId"
+    
+    CareerRoadmap ||--o{ RoadmapNode : "CareerRoadmapId"
+    Node ||--o{ RoadmapNode : "NodeId"
+    
+    PersonalRoadmap ||--o{ NodeProgress : "PersonalRoadmapId"
+    Node ||--o{ NodeProgress : "NodeId"
+    
+    Node ||--o{ LearningResource : "NodeId (1:M direct)"
+    Node |o--o{ Node : "ParentNodeId"
