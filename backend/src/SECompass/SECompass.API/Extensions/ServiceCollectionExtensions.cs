@@ -15,13 +15,11 @@ namespace SECompass.API.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
         // CORS
-        var allowedOrigins = env.IsDevelopment()
-            ? new[] { "https://localhost:5173" }
-            : (configuration["Cors:AllowedOrigins"] ?? "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var allowedOrigins = (configuration["Cors:AllowedOrigins"] ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         services.AddCors(options =>
         {
