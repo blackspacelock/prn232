@@ -1,0 +1,264 @@
+query GetUserById {
+  userById(id: "00000000-0000-0000-0000-000000000001") {
+    id
+    fullName
+    email
+    role
+    isActive
+    avatarUrl
+  }
+}
+
+query GetProfileByUserId {
+  profileByUserId(userId: "00000000-0000-0000-0000-000000000001") {
+    userId
+    bioDescription
+    university
+    major
+    studiedYear
+  }
+}
+
+query GetProfileWithSkills {
+  profileWithSkills(userId: "00000000-0000-0000-0000-000000000001") {
+    userId
+    bioDescription
+    skills {
+      id
+      skillName
+      note
+    }
+  }
+}
+
+query GetSkillsByProfile {
+  skillsByProfile(profileId: "00000000-0000-0000-0000-000000000001") {
+    id
+    skillName
+    note
+  }
+}
+
+query GetCareerRoleById {
+  careerRoleById(id: "00000000-0000-0000-0000-000000000001") {
+    id
+    name
+    description
+  }
+}
+
+query GetCareerRoles {
+  careerRoles {
+    id
+    name
+    description
+  }
+}
+
+query GetCareerRoadmapById {
+  careerRoadmapById(id: "00000000-0000-0000-0000-000000000001") {
+    id
+    careerRoleId
+    name
+    description
+    isCustom
+  }
+}
+
+query GetCareerRoadmapsByRole {
+  careerRoadmapsByRole(careerRoleId: "00000000-0000-0000-0000-000000000001") {
+    id
+    name
+    description
+  }
+}
+
+query GetCareerRoadmapWithNodes {
+  careerRoadmapWithNodes(roadmapId: "00000000-0000-0000-0000-000000000001") {
+    id
+    name
+    nodes {
+      id
+      name
+      order
+    }
+  }
+}
+
+query GetPersonalRoadmapsByProfile {
+  personalRoadmapsByProfile(profileId: "00000000-0000-0000-0000-000000000001") {
+    id
+    careerRoadmapId
+    progressPercentage
+  }
+}
+
+query GetPersonalRoadmapWithProgress {
+  personalRoadmapWithProgress(personalRoadmapId: "00000000-0000-0000-0000-000000000001") {
+    id
+    progressPercentage
+    nodeProgresses {
+      id
+      status
+      node {
+        id
+        name
+      }
+    }
+  }
+}
+
+query GetNodeById {
+  nodeById(id: "00000000-0000-0000-0000-000000000001") {
+    id
+    name
+    description
+    order
+    parentNodeId
+  }
+}
+
+query GetNodeChildren {
+  nodeChildren(parentId: "00000000-0000-0000-0000-000000000001") {
+    id
+    name
+    order
+  }
+}
+
+query GetNodeHierarchy {
+  nodeHierarchy(rootId: "00000000-0000-0000-0000-000000000001") {
+    id
+    name
+    children {
+      id
+      name
+      children {
+        id
+        name
+      }
+    }
+  }
+}
+
+query GetNodeProgress {
+  nodeProgress(personalRoadmapId: "00000000-0000-0000-0000-000000000001") {
+    id
+    status
+    note
+    node {
+      id
+      name
+    }
+  }
+}
+
+query GetCompletedNodes {
+  completedNodes(personalRoadmapId: "00000000-0000-0000-0000-000000000001") {
+    id
+    status
+    node {
+      id
+      name
+    }
+  }
+}
+
+query GetLearningResourcesByNode {
+  learningResourcesByNode(nodeId: "00000000-0000-0000-0000-000000000001") {
+    id
+    name
+    resourceUrl
+    resourceType
+    isFree
+  }
+}
+
+query GetFreeResourcesByNode {
+  freeResourcesByNode(nodeId: "00000000-0000-0000-0000-000000000001") {
+    id
+    name
+    resourceUrl
+    provider
+  }
+}
+
+query GetGitHubRepositoriesByProfile {
+  gitHubRepositoriesByProfile(profileId: "00000000-0000-0000-0000-000000000001") {
+    id
+    repositoryName
+    repoUrl
+    isPrivate
+  }
+}
+
+query GetChatSessionsByProfile {
+  chatSessionsByProfile(profileId: "00000000-0000-0000-0000-000000000001") {
+    id
+    title
+    summary
+    createdAt
+  }
+}
+
+query GetChatSessionWithMessages {
+  chatSessionWithMessages(sessionId: "00000000-0000-0000-0000-000000000001") {
+    id
+    title
+    messages {
+      id
+      sender
+      messageContent
+      createdAt
+    }
+  }
+}
+
+query GetJobTrendsByRegion {
+  jobTrendsByRegion(region: "Vietnam") {
+    id
+    techSkill
+    trendScore
+    snapshotDate
+  }
+}
+
+query GetTopTrendingSkills {
+  topTrendingSkills(count: 10) {
+    id
+    techSkill
+    trendScore
+    region
+  }
+}
+
+query GetSkillGapAnalysis {
+  skillGapAnalysis(profileId: "00000000-0000-0000-0000-000000000001", careerRoadmapId: "00000000-0000-0000-0000-000000000002") {
+    existingSkills
+    requiredSkills
+    missingSkills
+    coveragePercentage
+    summary
+  }
+}
+
+query GetPortfolioAnalysis {
+  portfolioAnalysis(profileId: "00000000-0000-0000-0000-000000000001") {
+    overallSummary
+    strengths
+    recommendations
+  }
+}
+
+query GetTrendingSkillRecommendations {
+  trendingSkillRecommendations(profileId: "00000000-0000-0000-0000-000000000001")
+}
+
+query GetRecommendedResources {
+  recommendedResources(profileId: "00000000-0000-0000-0000-000000000001", nodeId: "00000000-0000-0000-0000-000000000002") {
+    id
+    name
+    resourceUrl
+    isFree
+  }
+}

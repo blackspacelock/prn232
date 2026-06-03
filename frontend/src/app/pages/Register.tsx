@@ -1,0 +1,203 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { Compass, User, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { AuthDrawer } from '../components/AuthDrawer';
+import { ActionButton } from '../components/ActionButton';
+import { GoogleIcon } from '../components/GoogleIcon';
+
+export function RegisterPage() {
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const getPasswordStrength = (password: string): {
+    level: 0 | 1 | 2 | 3 | 4;
+    label: string;
+    color: string;
+  } => {
+    if (!password) return { level: 0, label: '', color: '' };
+    if (password.length < 6) return { level: 1, label: 'Weak', color: 'var(--md3-error)' };
+    if (password.length < 10) return { level: 2, label: 'Fair', color: 'var(--md3-warning)' };
+    if (password.length < 14) return { level: 3, label: 'Good', color: '#FBBC04' };
+    return { level: 4, label: 'Strong', color: 'var(--md3-success)' };
+  };
+
+  const passwordStrength = getPasswordStrength(formData.password);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    // Simulate API call
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 800);
+  };
+
+  return (
+    <div className="flex h-screen bg-[var(--md3-surface-container)]">
+      {/* Auth Drawer */}
+      <AuthDrawer />
+
+      {/* Form Area */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div
+          className="bg-white rounded-3xl p-10 w-full max-w-[480px]"
+          style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.08)' }}
+        >
+          {/* Logo */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <Compass className="w-8 h-8 text-[var(--md3-primary)]" />
+            <span className="text-xl font-bold text-[var(--md3-primary)]">SECompass</span>
+          </div>
+
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-semibold text-[var(--md3-on-surface)] mb-2">Create your account</h1>
+            <p className="text-sm text-[var(--md3-on-surface-variant)]">Start your journey to becoming job-ready</p>
+          </div>
+
+          {/* Step Indicator */}
+          <div className="flex items-center gap-4 mb-8">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-[var(--md3-primary)] text-white flex items-center justify-center text-sm font-medium">
+                1
+              </div>
+              <span className="text-xs font-medium text-[var(--md3-primary)]">Account</span>
+            </div>
+            <div className="flex-1 h-px bg-[var(--md3-outline)]" />
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full border-2 border-[var(--md3-outline)] text-[var(--md3-on-surface-variant)] flex items-center justify-center text-sm font-medium">
+                2
+              </div>
+              <span className="text-xs font-medium text-[var(--md3-on-surface-variant)]">Profile</span>
+            </div>
+            <div className="flex-1 h-px bg-[var(--md3-outline)]" />
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full border-2 border-[var(--md3-outline)] text-[var(--md3-on-surface-variant)] flex items-center justify-center text-sm font-medium">
+                3
+              </div>
+              <span className="text-xs font-medium text-[var(--md3-on-surface-variant)]">Done</span>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name Field */}
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Full name"
+                className="md3-field w-full pl-12 pr-4 text-base"
+                required
+              />
+            </div>
+
+            {/* Email Field */}
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="Email address"
+                className="md3-field w-full pl-12 pr-4 text-base"
+                required
+              />
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Create password"
+                  className="md3-field w-full pl-12 pr-12 text-base"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-on-surface)] transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+
+              {/* Password Strength */}
+              {formData.password && (
+                <div className="mt-2">
+                  <div className="flex gap-1 mb-1">
+                    {[1, 2, 3, 4].map((segment) => (
+                      <div
+                        key={segment}
+                        className="h-1 flex-1 rounded-full transition-all"
+                        style={{
+                          backgroundColor: segment <= passwordStrength.level
+                            ? passwordStrength.color
+                            : 'var(--md3-outline-variant)',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-end">
+                    <span className="text-xs font-medium" style={{ color: passwordStrength.color }}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Continue Button */}
+            <ActionButton
+              type="submit"
+              icon={ArrowRight}
+              label={isLoading ? 'Creating account...' : 'Continue'}
+              variant="primary"
+              size="lg"
+              disabled={isLoading}
+              className="mt-6 h-12 w-full"
+            />
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-[var(--md3-outline-variant)]" />
+              <span className="text-xs text-[var(--md3-on-surface-variant)]">OR</span>
+              <div className="flex-1 h-px bg-[var(--md3-outline-variant)]" />
+            </div>
+
+            {/* Google Button */}
+            <ActionButton
+              type="button"
+              icon={GoogleIcon}
+              label="Continue with Google"
+              variant="neutral"
+              size="lg"
+              onClick={() => navigate('/dashboard')}
+              className="h-12 w-full text-[var(--md3-on-surface)]"
+            />
+          </form>
+
+          {/* Sign In Link */}
+          <p className="text-center text-sm text-[var(--md3-on-surface-variant)] mt-6">
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-[var(--md3-primary)] hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
