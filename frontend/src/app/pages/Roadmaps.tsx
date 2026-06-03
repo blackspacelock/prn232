@@ -40,6 +40,7 @@ export function RoadmapsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [searchQuery, setSearchQuery] = useState('');
 
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
 
@@ -51,7 +52,13 @@ export function RoadmapsPage() {
   const { data: rolesData, loading: rolesLoading } = useQuery(GET_CAREER_ROLES);
   const [loadRoadmapsByRole, { data: roadmapsByRoleData, loading: roadmapsByRoleLoading }] = useLazyQuery(GET_CAREER_ROADMAPS_BY_ROLE);
 
-  const roadmaps: PersonalRoadmap[] = (roadmapsData as any)?.personalRoadmapsByProfile ?? [];
+  const allRoadmaps: PersonalRoadmap[] = (roadmapsData as any)?.personalRoadmapsByProfile ?? [];
+  const roadmaps = searchQuery
+    ? allRoadmaps.filter((r) =>
+        new Date(r.createdAt).toLocaleDateString().includes(searchQuery) ||
+        (r.note ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : allRoadmaps;
   const careerRoles: CareerRole[] = (rolesData as any)?.careerRoles ?? [];
   const careerRoadmaps: CareerRoadmap[] = (roadmapsByRoleData as any)?.careerRoadmapsByRole ?? [];
 
@@ -118,7 +125,13 @@ export function RoadmapsPage() {
         <div className="md3-panel flex flex-wrap items-center gap-3 p-4">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
-            <input type="text" placeholder="Search roadmaps..." className="md3-field w-full pl-12 pr-4" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search roadmaps..."
+              className="md3-field w-full pl-12 pr-4"
+            />
           </div>
         </div>
 

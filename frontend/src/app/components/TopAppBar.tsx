@@ -142,7 +142,14 @@ export function TopAppBar({ breadcrumb, showProgress }: TopAppBarProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-3">
-        <button className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[var(--md3-surface-variant)]" aria-label="Search">
+        <button
+          onClick={() => {
+            const input = document.querySelector<HTMLInputElement>('input[placeholder*="Search"], input[placeholder*="Filter"]');
+            if (input) { input.focus(); input.select(); }
+          }}
+          className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[var(--md3-surface-variant)]"
+          aria-label="Search"
+        >
           <Search className="w-6 h-6 text-[var(--md3-on-surface-variant)]" />
         </button>
         {/* Notifications */}
@@ -154,7 +161,6 @@ export function TopAppBar({ breadcrumb, showProgress }: TopAppBarProps) {
             aria-expanded={notifOpen}
           >
             <Bell className="w-6 h-6 text-[var(--md3-on-surface-variant)]" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-[var(--md3-error)] rounded-full" />
           </button>
 
           {notifOpen && (

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Download, SlidersHorizontal } from 'lucide-react';
 import { ActionButton } from '../components/ActionButton';
+import { SkillChip } from '../components/SkillChip';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
@@ -24,6 +26,7 @@ interface SkillGapResult {
 }
 
 export function SkillGapPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const profileId = user?.profileId ?? '';
   const [selectedRoadmapId, setSelectedRoadmapId] = useState<string | null>(null);
@@ -73,7 +76,7 @@ export function SkillGapPage() {
         <PageHeader
           title="Skill Gap Analysis"
           description="See exactly where you stand against your target role."
-          actions={<ActionButton icon={Download} label="Export PDF" variant="neutral" size="md" />}
+          actions={<ActionButton icon={Download} label="Export PDF" variant="neutral" size="md" onClick={() => window.print()} />}
         />
 
         {roadmaps.length > 0 && (
@@ -104,7 +107,7 @@ export function SkillGapPage() {
         ) : skillGapError ? (
           <EmptyState icon={SlidersHorizontal} title="Failed to load analysis" description="Please try again." actionLabel="Retry" onAction={refetch} />
         ) : !skillGap ? (
-          <EmptyState icon={SlidersHorizontal} title="No roadmap selected" description="Generate a personal roadmap first to see your skill gap analysis." actionLabel="Go to Roadmaps" onAction={() => {}} />
+          <EmptyState icon={SlidersHorizontal} title="No roadmap selected" description="Generate a personal roadmap first to see your skill gap analysis." actionLabel="Go to Roadmaps" onAction={() => navigate('/roadmaps')} />
         ) : (
           <div className="desktop-grid-2">
             <div className="md3-card p-6">
@@ -135,12 +138,9 @@ export function SkillGapPage() {
               <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)] mb-2">Missing Skills</h2>
               <p className="text-sm text-[var(--md3-on-surface-variant)] mb-4">{skillGap.missingSkills.length} skills to develop</p>
 
-              <div className="space-y-2 mb-6">
+              <div className="flex flex-wrap gap-2 mb-6">
                 {skillGap.missingSkills.map((skill) => (
-                  <div key={skill} className="flex items-center justify-between p-3 bg-[var(--md3-surface-container)] rounded-lg">
-                    <span className="text-sm font-medium text-[var(--md3-on-surface)]">{skill}</span>
-                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-[var(--md3-error-container)] text-[var(--md3-error)]">Missing</span>
-                  </div>
+                  <SkillChip key={skill} label={skill} size="sm" />
                 ))}
               </div>
 
@@ -149,7 +149,7 @@ export function SkillGapPage() {
                   <h3 className="text-sm font-medium text-[var(--md3-on-surface)] mb-2">Trending Recommendations</h3>
                   <div className="flex flex-wrap gap-2">
                     {trendingSkills.map((skill) => (
-                      <span key={skill} className="px-3 py-1 bg-[var(--md3-primary-container)] text-[var(--md3-primary)] rounded-lg text-xs font-medium">{skill}</span>
+                      <SkillChip key={skill} label={skill} size="sm" />
                     ))}
                   </div>
                 </>

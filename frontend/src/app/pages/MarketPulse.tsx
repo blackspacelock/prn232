@@ -22,6 +22,7 @@ const REGIONS = ['Vietnam', 'Singapore', 'Thailand', 'Global'];
 
 export function MarketPulsePage() {
   const [region, setRegion] = useState('Vietnam');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: trendsData, loading: trendsLoading, error: trendsError, refetch } = useQuery(GET_JOB_TRENDS_BY_REGION, {
     variables: { region },
@@ -33,10 +34,17 @@ export function MarketPulsePage() {
     variables: { count: 10 },
   });
 
-  const trends: JobTrend[] = (trendsData as any)?.jobTrendsByRegion ?? [];
+  const allTrends: JobTrend[] = (trendsData as any)?.jobTrendsByRegion ?? [];
   const topSkills: JobTrend[] = (topSkillsData as any)?.topTrendingSkills ?? [];
 
-  const chartData = topSkills.map((s) => ({ name: s.techSkill, score: s.trendScore }));
+  const trends = searchQuery
+    ? allTrends.filter((t) => t.techSkill.toLowerCase().includes(searchQuery.toLowerCase()))
+    : allTrends;
+
+  const chartData = (searchQuery
+    ? topSkills.filter((s) => s.techSkill.toLowerCase().includes(searchQuery.toLowerCase()))
+    : topSkills
+  ).map((s) => ({ name: s.techSkill, score: s.trendScore }));
 
   const handleRegionChange = (newRegion: string) => {
     setRegion(newRegion);
@@ -64,7 +72,13 @@ export function MarketPulsePage() {
           ))}
           <div className="relative flex-1 max-w-xs ml-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
-            <input type="text" placeholder="Filter by skill..." className="md3-field w-full pl-12 pr-4" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter by skill..."
+              className="md3-field w-full pl-12 pr-4"
+            />
           </div>
         </div>
 

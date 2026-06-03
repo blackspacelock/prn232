@@ -1,7 +1,9 @@
 import { useState, type ElementType, type ReactNode } from 'react';
+import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ActionButton } from '../components/ActionButton';
+import { SkillChip } from '../components/SkillChip';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import {
@@ -27,7 +29,9 @@ interface ProfileWithSkills {
 }
 
 export function SettingsPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   const userId = user?.id ?? '';
 
   const [newSkill, setNewSkill] = useState('');
@@ -119,6 +123,19 @@ export function SettingsPage() {
     },
   });
 
+  const deactivateMutation = useMutation({
+    mutationFn: () => apiClient.put(`/api/users/${userId}/deactivate`),
+    onSuccess: () => {
+      clearAuth();
+      navigate('/login', { replace: true });
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to deactivate account.';
+      setSnackbar({ open: true, message: msg, variant: 'error' });
+      setDeactivateOpen(false);
+    },
+  });
+
   const handleEditProfileStart = () => {
     setProfileForm({
       bioDescription: profile?.bioDescription ?? '',
@@ -137,8 +154,8 @@ export function SettingsPage() {
   };
 
   const handleAddSkill = () => {
-    if (!newSkill.trim() || !profile) return;
-    addSkillMutation.mutate({ profileId: profile.userId, skillName: newSkill.trim() });
+    if (!newSkill.trim()) return;
+    addSkillMutation.mutate({ profileId: user?.profileId ?? '', skillName: newSkill.trim() });
   };
 
   const isLoading = profileLoading || userLoading;
@@ -169,23 +186,6 @@ export function SettingsPage() {
         <PageHeader
           title="Profile & Settings"
           description="Manage account details, profile data, skills, and access controls."
-          actions={
-            isEditingProfile ? (
-              <div className="flex items-center gap-2">
-                <ActionButton icon={X} label="Cancel" variant="neutral" size="md" onClick={() => setIsEditingProfile(false)} />
-                <ActionButton
-                  icon={Save}
-                  label={updateProfileMutation.isPending ? 'Saving...' : 'Save changes'}
-                  variant="primary"
-                  size="md"
-                  disabled={updateProfileMutation.isPending}
-                  onClick={() => updateProfileMutation.mutate(profileForm)}
-                />
-              </div>
-            ) : (
-              <ActionButton icon={Edit} label="Edit profile" variant="tonal" size="md" onClick={handleEditProfileStart} />
-            )
-          }
         />
 
         {/* Account card */}
@@ -377,23 +377,18 @@ export function SettingsPage() {
 
               <div className="mt-5 flex min-h-24 flex-wrap content-start gap-2">
                 {skills.map((skill) => (
-                  <div key={skill.id} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[var(--md3-status-in-progress-stroke)] bg-[var(--md3-primary-container)] px-3 text-sm font-medium text-[var(--md3-primary)]">
-                    <span>{skill.skillName}</span>
-                    <button
-                      onClick={() => setDeleteSkillId(skill.id)}
-                      className="rounded-full p-0.5 hover:bg-[var(--md3-primary)] hover:text-white"
-                      aria-label={`Remove ${skill.skillName}`}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  <SkillChip
+                    key={skill.id}
+                    label={skill.skillName}
+                    onRemove={() => setDeleteSkillId(skill.id)}
+                  />
                 ))}
                 {skills.length === 0 && (
                   <p className="text-sm text-[var(--md3-on-surface-variant)]">No skills added yet.</p>
                 )}
               </div>
 
-              <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <div className="mt-5 flex items-center gap-2">
                 <input
                   type="text"
                   value={newSkill}
@@ -409,7 +404,7 @@ export function SettingsPage() {
                   size="md"
                   onClick={handleAddSkill}
                   disabled={!newSkill.trim() || addSkillMutation.isPending}
-                  className="h-10"
+                  className="h-10 shrink-0"
                 />
               </div>
             </section>
@@ -461,9 +456,9 @@ export function SettingsPage() {
         isOpen={deactivateOpen}
         title="Deactivate Account?"
         message="Your data will be preserved but you will lose access."
-        confirmLabel="Deactivate"
+        confirmLabel={deactivateMutation.isPending ? 'Deactivating...' : 'Deactivate'}
         variant="danger"
-        onConfirm={() => setDeactivateOpen(false)}
+        onConfirm={() => deactivateMutation.mutate()}
         onCancel={() => setDeactivateOpen(false)}
       />
 
