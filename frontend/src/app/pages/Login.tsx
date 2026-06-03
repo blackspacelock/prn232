@@ -137,7 +137,7 @@ export function LoginPage() {
               <div className="flex-1 h-px bg-[var(--md3-outline-variant)]" />
             </div>
 
-            <div className="flex w-full justify-center [&>div]:w-full [&_iframe]:w-full">
+            <div className="flex h-12 w-full justify-center overflow-hidden [&>div]:h-12 [&>div]:w-full [&_iframe]:h-10 [&_iframe]:w-full [&_iframe]:origin-top [&_iframe]:scale-y-[1.2]">
               <GoogleLogin
                 onSuccess={(credentialResponse) => {
                   if (credentialResponse.credential) {
