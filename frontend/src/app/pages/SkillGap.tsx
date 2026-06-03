@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
@@ -36,9 +36,15 @@ export function SkillGapPage() {
     skip: !profileId,
   });
 
+  // Derive roadmaps and the effective ID before the skill-gap query so it
+  // auto-loads the first roadmap without needing a setState-in-effect.
+  const roadmaps: Array<{ id: string; careerRoadmapId: string; createdAt: string }> =
+    (roadmapsData as { personalRoadmapsByProfile?: Array<{ id: string; careerRoadmapId: string; createdAt: string }> })?.personalRoadmapsByProfile ?? [];
+  const effectiveRoadmapId = selectedRoadmapId ?? roadmaps[0]?.careerRoadmapId ?? null;
+
   const { data: skillGapData, loading: skillGapLoading, error: skillGapError, refetch } = useQuery(GET_SKILL_GAP_ANALYSIS, {
-    variables: { profileId, careerRoadmapId: selectedRoadmapId },
-    skip: !profileId || !selectedRoadmapId,
+    variables: { profileId, careerRoadmapId: effectiveRoadmapId },
+    skip: !profileId || !effectiveRoadmapId,
   });
 
   const [loadSkillGap] = useLazyQuery(GET_SKILL_GAP_ANALYSIS);
@@ -48,20 +54,13 @@ export function SkillGapPage() {
     skip: !profileId,
   });
 
-  const roadmaps = (roadmapsData as any)?.personalRoadmapsByProfile ?? [];
-
-  useEffect(() => {
-    if (roadmaps.length > 0 && !selectedRoadmapId) {
-      setSelectedRoadmapId(roadmaps[0].careerRoadmapId);
-    }
-  }, [roadmaps, selectedRoadmapId]);
-  const skillGap: SkillGapResult | null = (skillGapData as any)?.skillGapAnalysis ?? null;
-  const trendingSkills: string[] = (trendingData as any)?.trendingSkillRecommendations ?? [];
+  const skillGap: SkillGapResult | null = (skillGapData as { skillGapAnalysis?: SkillGapResult })?.skillGapAnalysis ?? null;
+  const trendingSkills: string[] = (trendingData as { trendingSkillRecommendations?: string[] })?.trendingSkillRecommendations ?? [];
 
   const radarData = skillGap
     ? [
-        ...(skillGap.existingSkills as string[]).slice(0, 3).map((skill) => ({ skill, current: 100, required: 100 })),
-        ...(skillGap.missingSkills as string[]).slice(0, 3).map((skill) => ({ skill, current: 0, required: 100 })),
+        ...skillGap.existingSkills.slice(0, 3).map((skill) => ({ skill, current: 100, required: 100 })),
+        ...skillGap.missingSkills.slice(0, 3).map((skill) => ({ skill, current: 0, required: 100 })),
       ]
     : [];
 
@@ -82,12 +81,12 @@ export function SkillGapPage() {
         {roadmaps.length > 0 && (
           <div className="md3-card p-4">
             <div className="flex flex-wrap gap-2">
-              {roadmaps.map((rm: { id: string; careerRoadmapId: string; createdAt: string }) => (
+              {roadmaps.map((rm) => (
                 <button
                   key={rm.id}
                   onClick={() => handleRoadmapChange(rm.careerRoadmapId)}
                   className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                    selectedRoadmapId === rm.careerRoadmapId
+                    effectiveRoadmapId === rm.careerRoadmapId
                       ? 'bg-[var(--md3-primary-container)] border-[var(--md3-primary)] text-[var(--md3-primary)]'
                       : 'border-[var(--md3-outline)] hover:border-[var(--md3-on-surface-variant)]'
                   }`}

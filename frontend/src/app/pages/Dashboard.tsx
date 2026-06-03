@@ -45,28 +45,30 @@ export function DashboardPage() {
     skip: !profileId,
   });
 
-  const fullName = (userData as any)?.userById?.fullName ?? user?.email ?? 'there';
-  const roadmaps = (roadmapsData as any)?.personalRoadmapsByProfile ?? [];
+  const fullName = (userData as { userById?: { fullName?: string } })?.userById?.fullName ?? user?.email ?? 'there';
+  const roadmaps: Array<{ id: string; careerRoadmapId: string; progressPercentage: number }> =
+    (roadmapsData as { personalRoadmapsByProfile?: typeof roadmaps })?.personalRoadmapsByProfile ?? [];
   const activeCount = roadmaps.length;
   const avgProgress = activeCount > 0
-    ? Math.round(roadmaps.reduce((sum: number, r: { progressPercentage: number }) => sum + r.progressPercentage, 0) / activeCount)
+    ? Math.round(roadmaps.reduce((sum, r) => sum + r.progressPercentage, 0) / activeCount)
     : 0;
 
-  const topSkills: Array<{ techSkill: string; trendScore: number }> = (topSkillsData as any)?.topTrendingSkills ?? [];
+  const topSkills: Array<{ techSkill: string; trendScore: number }> =
+    (topSkillsData as { topTrendingSkills?: Array<{ techSkill: string; trendScore: number }> })?.topTrendingSkills ?? [];
   const topSkillName = topSkills[0]?.techSkill ?? '—';
   const trendChartData = topSkills.map((s) => ({ name: s.techSkill, score: s.trendScore }));
 
-  const githubRepoCount = ((githubData as any)?.gitHubRepositoriesByProfile ?? []).length;
+  const githubRepoCount = ((githubData as { gitHubRepositoriesByProfile?: unknown[] })?.gitHubRepositoriesByProfile ?? []).length;
 
   const recentSessions: Array<{ id: string; title: string; createdAt: string }> =
-    ((sessionsData as any)?.chatSessionsByProfile ?? []).slice(0, 2);
+    ((sessionsData as { chatSessionsByProfile?: Array<{ id: string; title: string; createdAt: string }> })?.chatSessionsByProfile ?? []).slice(0, 2);
 
   const firstCareerRoadmapId: string = roadmaps[0]?.careerRoadmapId ?? '';
   const { data: dashSkillGapData } = useQuery(GET_SKILL_GAP_ANALYSIS, {
     variables: { profileId, careerRoadmapId: firstCareerRoadmapId },
     skip: !profileId || !firstCareerRoadmapId,
   });
-  const dashSkillGap = (dashSkillGapData as any)?.skillGapAnalysis ?? null;
+  const dashSkillGap = (dashSkillGapData as { skillGapAnalysis?: { existingSkills?: string[]; missingSkills?: string[] } })?.skillGapAnalysis ?? null;
   const skillGapData = dashSkillGap
     ? [
         ...((dashSkillGap.existingSkills ?? []) as string[]).slice(0, 3).map((s) => ({ skill: s, current: 100, required: 100 })),

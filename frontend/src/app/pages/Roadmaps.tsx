@@ -52,15 +52,15 @@ export function RoadmapsPage() {
   const { data: rolesData, loading: rolesLoading } = useQuery(GET_CAREER_ROLES);
   const [loadRoadmapsByRole, { data: roadmapsByRoleData, loading: roadmapsByRoleLoading }] = useLazyQuery(GET_CAREER_ROADMAPS_BY_ROLE);
 
-  const allRoadmaps: PersonalRoadmap[] = (roadmapsData as any)?.personalRoadmapsByProfile ?? [];
+  const allRoadmaps: PersonalRoadmap[] = (roadmapsData as { personalRoadmapsByProfile?: PersonalRoadmap[] })?.personalRoadmapsByProfile ?? [];
   const roadmaps = searchQuery
     ? allRoadmaps.filter((r) =>
         new Date(r.createdAt).toLocaleDateString().includes(searchQuery) ||
         (r.note ?? '').toLowerCase().includes(searchQuery.toLowerCase())
       )
     : allRoadmaps;
-  const careerRoles: CareerRole[] = (rolesData as any)?.careerRoles ?? [];
-  const careerRoadmaps: CareerRoadmap[] = (roadmapsByRoleData as any)?.careerRoadmapsByRole ?? [];
+  const careerRoles: CareerRole[] = (rolesData as { careerRoles?: CareerRole[] })?.careerRoles ?? [];
+  const careerRoadmaps: CareerRoadmap[] = (roadmapsByRoleData as { careerRoadmapsByRole?: CareerRoadmap[] })?.careerRoadmapsByRole ?? [];
 
   const generateMutation = useMutation({
     mutationFn: (dto: GeneratePersonalRoadmapRequestDto) =>

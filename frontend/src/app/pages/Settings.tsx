@@ -7,7 +7,7 @@ import { SkillChip } from '../components/SkillChip';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import {
-  BadgeCheck, BookOpen, CalendarDays, Camera, Check, Edit,
+  BookOpen, CalendarDays, Camera, Edit,
   GraduationCap, Mail, Phone, Plus, Save, ShieldOff, UserRound, X,
 } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
@@ -56,8 +56,8 @@ export function SettingsPage() {
     skip: !userId,
   });
 
-  const profile: ProfileWithSkills | null = (profileData as any)?.profileWithSkills ?? null;
-  const userInfo = (userData as any)?.userById ?? null;
+  const profile: ProfileWithSkills | null = (profileData as { profileWithSkills?: ProfileWithSkills })?.profileWithSkills ?? null;
+  const userInfo = (userData as { userById?: { fullName?: string; avatarUrl?: string } })?.userById ?? null;
   const fullName: string = userInfo?.fullName ?? '';
   const avatarUrl: string = userInfo?.avatarUrl ?? '';
 
@@ -265,7 +265,7 @@ export function SettingsPage() {
                         {fullName || user?.email}
                       </h2>
                       <span className="inline-flex items-center gap-1 rounded-full bg-[var(--md3-success-container)] px-3 py-1 text-xs font-medium text-[var(--md3-success)]">
-                        <BadgeCheck className="h-3.5 w-3.5" />
+                        <BadgeCheckIcon />
                         Verified
                       </span>
                     </div>
@@ -420,7 +420,7 @@ export function SettingsPage() {
                     <p className="mt-1 text-xs text-[var(--md3-on-surface-variant)]">Primary account credential</p>
                   </div>
                   <div className="inline-flex items-center gap-1 rounded bg-[var(--md3-success-container)] px-2 py-1 text-xs font-medium text-[var(--md3-success)]">
-                    <Check className="h-3 w-3" />
+                    <BadgeCheckIcon />
                     Verified
                   </div>
                 </div>
@@ -469,6 +469,26 @@ export function SettingsPage() {
         onClose={() => setSnackbar({ open: false, message: '' })}
       />
     </AppShell>
+  );
+}
+
+function BadgeCheckIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3.5 w-3.5"
+    >
+      <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
   );
 }
 

@@ -25,7 +25,7 @@ export function AdminRoadmapTemplatesPage() {
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const { data: rolesData } = useQuery(GET_CAREER_ROLES);
-  const roles: CareerRole[] = (rolesData as any)?.careerRoles ?? [];
+  const roles: CareerRole[] = (rolesData as { careerRoles?: CareerRole[] })?.careerRoles ?? [];
 
   const { data: roadmapsData, loading, error, refetch } = useQuery(GET_CAREER_ROADMAPS_BY_ROLE, {
     variables: { careerRoleId: selectedRoleId },
@@ -34,7 +34,7 @@ export function AdminRoadmapTemplatesPage() {
 
   useLazyQuery(GET_CAREER_ROADMAP_WITH_NODES);
 
-  const roadmaps: CareerRoadmap[] = (roadmapsData as any)?.careerRoadmapsByRole ?? [];
+  const roadmaps: CareerRoadmap[] = (roadmapsData as { careerRoadmapsByRole?: CareerRoadmap[] })?.careerRoadmapsByRole ?? [];
 
   const invalidate = () => apolloClient.refetchQueries({ include: [GET_CAREER_ROADMAPS_BY_ROLE] });
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });

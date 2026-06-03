@@ -24,7 +24,7 @@ export function AdminJobTrendsPage() {
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const { data, loading, error, refetch } = useQuery(GET_JOB_TRENDS_BY_REGION, { variables: { region } });
-  const trends: JobTrend[] = (data as any)?.jobTrendsByRegion ?? [];
+  const trends: JobTrend[] = (data as { jobTrendsByRegion?: JobTrend[] })?.jobTrendsByRegion ?? [];
 
   const invalidate = () => apolloClient.refetchQueries({ include: [GET_JOB_TRENDS_BY_REGION] });
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });

@@ -24,7 +24,7 @@ export function AdminCareerRolesPage() {
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const { data, loading, error, refetch } = useQuery(GET_CAREER_ROLES);
-  const roles: CareerRole[] = ((data as any)?.careerRoles ?? []).filter((r: CareerRole) =>
+  const roles: CareerRole[] = ((data as { careerRoles?: CareerRole[] })?.careerRoles ?? []).filter((r) =>
     r.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 

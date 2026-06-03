@@ -121,10 +121,13 @@ export function RoadmapCanvasPage() {
   const [loadResources, { data: resourcesData, loading: resourcesLoading }] = useLazyQuery(GET_LEARNING_RESOURCES_BY_NODE);
   const [loadRecommended, { data: recommendedData }] = useLazyQuery(GET_RECOMMENDED_RESOURCES);
 
-  const progressNodes: ProgressNode[] = (data as any)?.personalRoadmapWithProgress?.nodeProgresses ?? [];
-  const summary = (progressData as any)?.nodeProgress ?? [];
-  const resources: LearningResource[] = (resourcesData as any)?.learningResourcesByNode ?? [];
-  const recommended: LearningResource[] = (recommendedData as any)?.recommendedResources ?? [];
+  const progressNodes: ProgressNode[] = useMemo(
+    () => (data as { personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } })?.personalRoadmapWithProgress?.nodeProgresses ?? [],
+    [data],
+  );
+  const summary = (progressData as { nodeProgress?: unknown })?.nodeProgress ?? [];
+  const resources: LearningResource[] = (resourcesData as { learningResourcesByNode?: LearningResource[] })?.learningResourcesByNode ?? [];
+  const recommended: LearningResource[] = (recommendedData as { recommendedResources?: LearningResource[] })?.recommendedResources ?? [];
 
   const nodes = useMemo(() => mapToFlowNodes(progressNodes), [progressNodes]);
   const edges = useMemo(() => mapToFlowEdges(progressNodes), [progressNodes]);

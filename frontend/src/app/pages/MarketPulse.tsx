@@ -34,8 +34,8 @@ export function MarketPulsePage() {
     variables: { count: 10 },
   });
 
-  const allTrends: JobTrend[] = (trendsData as any)?.jobTrendsByRegion ?? [];
-  const topSkills: JobTrend[] = (topSkillsData as any)?.topTrendingSkills ?? [];
+  const allTrends: JobTrend[] = (trendsData as { jobTrendsByRegion?: JobTrend[] })?.jobTrendsByRegion ?? [];
+  const topSkills: JobTrend[] = (topSkillsData as { topTrendingSkills?: JobTrend[] })?.topTrendingSkills ?? [];
 
   const trends = searchQuery
     ? allTrends.filter((t) => t.techSkill.toLowerCase().includes(searchQuery.toLowerCase()))

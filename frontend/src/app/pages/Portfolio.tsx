@@ -45,8 +45,8 @@ export function PortfolioPage() {
     skip: !profileId,
   });
 
-  const repos: GitHubRepo[] = (reposData as any)?.gitHubRepositoriesByProfile ?? [];
-  const analysis: PortfolioAnalysis | null = (analysisData as any)?.portfolioAnalysis ?? null;
+  const repos: GitHubRepo[] = (reposData as { gitHubRepositoriesByProfile?: GitHubRepo[] })?.gitHubRepositoriesByProfile ?? [];
+  const analysis: PortfolioAnalysis | null = (analysisData as { portfolioAnalysis?: PortfolioAnalysis })?.portfolioAnalysis ?? null;
 
   const addRepoMutation = useMutation({
     mutationFn: (dto: AddGitHubRepoDto) => apiClient.post('/api/github-repositories', dto),

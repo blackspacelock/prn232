@@ -19,7 +19,7 @@ export function PublicPortfolioPage() {
     context: { headers: {} },
   });
 
-  const profile: ProfileDto | null = (profileData as any)?.profileByUserId ?? null;
+  const profile: ProfileDto | null = (profileData as { profileByUserId?: ProfileDto })?.profileByUserId ?? null;
 
   const { data: reposData, loading: reposLoading } = useQuery(GET_GITHUB_REPOS_BY_PROFILE, {
     variables: { profileId: profile?.userId ?? username },
@@ -27,7 +27,7 @@ export function PublicPortfolioPage() {
     context: { headers: {} },
   });
 
-  const repos: GitHubRepo[] = (reposData as any)?.gitHubRepositoriesByProfile ?? [];
+  const repos: GitHubRepo[] = (reposData as { gitHubRepositoriesByProfile?: GitHubRepo[] })?.gitHubRepositoriesByProfile ?? [];
 
   if (profileLoading) {
     return (

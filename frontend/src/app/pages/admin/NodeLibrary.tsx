@@ -27,7 +27,7 @@ export function AdminNodeLibraryPage() {
   const [loadChildren, { data: childrenData, loading, error }] = useLazyQuery(GET_NODE_CHILDREN);
   const [loadHierarchy, { data: hierarchyData, loading: hierarchyLoading, }] = useLazyQuery(GET_NODE_HIERARCHY);
 
-  const nodes: NodeItem[] = (childrenData as any)?.nodeChildren ?? [];
+  const nodes: NodeItem[] = (childrenData as { nodeChildren?: NodeItem[] })?.nodeChildren ?? [];
 
   const invalidate = () => apolloClient.refetchQueries({ include: [GET_NODE_CHILDREN] });
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
@@ -98,9 +98,9 @@ export function AdminNodeLibraryPage() {
           </div>
         )}
 
-        {(hierarchyData as any) && (
+        {hierarchyData && (
           <div className="md3-card p-4 mb-4 text-sm text-[var(--md3-on-surface-variant)]">
-            Hierarchy root: <strong>{(hierarchyData as any)?.nodeHierarchy?.name}</strong> — use &quot;Load Children&quot; to browse sub-nodes.
+            Hierarchy root: <strong>{(hierarchyData as { nodeHierarchy?: { name?: string } })?.nodeHierarchy?.name}</strong> — use &quot;Load Children&quot; to browse sub-nodes.
           </div>
         )}
 

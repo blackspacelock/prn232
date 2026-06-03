@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { AppShell } from '../components/AppShell';
 import { ActionButton } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
@@ -35,9 +35,9 @@ export function MentorPage() {
 
   const [loadMessages, { data: messagesData, loading: messagesLoading }] = useLazyQuery(GET_CHAT_SESSION_WITH_MESSAGES);
 
-  const sessions: ChatSession[] = (sessionsData as any)?.chatSessionsByProfile ?? [];
-  const activeSession = (messagesData as any)?.chatSessionWithMessages;
-  const messages: ChatMessage[] = activeSession?.messages ?? [];
+  const sessions: ChatSession[] = (sessionsData as { chatSessionsByProfile?: ChatSession[] })?.chatSessionsByProfile ?? [];
+  const activeSession = (messagesData as { chatSessionWithMessages?: { title?: string; messages?: ChatMessage[] } })?.chatSessionWithMessages;
+  const messages: ChatMessage[] = useMemo(() => activeSession?.messages ?? [], [activeSession]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
