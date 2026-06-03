@@ -5,6 +5,8 @@ import {
   AlertCircle,
   ChevronLeft,
   Layers,
+  Map,
+  Route,
 } from 'lucide-react';
 import { GET_CAREER_ROLES } from '@/graphql/queries';
 import { AppShell, PageHeader } from '../../components/AppShell';
@@ -26,7 +28,13 @@ export function CareerRoleDetailPage() {
 
   if (paths.isProtectedCatalog) {
     return (
-      <AppShell breadcrumb={role?.name ?? 'Career Role'}>
+      <AppShell
+        breadcrumb="Career Roles / Role"
+        breadcrumbs={[
+          { label: 'Career Roles', to: paths.roleListPath },
+          { label: role?.name ?? 'Career Role' },
+        ]}
+      >
         <div className="app-page">
           <div className="mb-4">
             <Link
@@ -79,7 +87,27 @@ export function CareerRoleDetailPage() {
 
           {role && (
             <>
-              <h2 className="text-lg font-semibold text-[var(--md3-on-surface)] mb-4 mt-2">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4 shadow-sm">
+                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--md3-primary-container)]">
+                    <Route className="h-5 w-5 text-[var(--md3-primary)]" />
+                  </div>
+                  <p className="text-sm font-semibold text-[var(--md3-on-surface)]">Role Track</p>
+                  <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">
+                    {role.name}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4 shadow-sm">
+                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--md3-primary-container)]">
+                    <Map className="h-5 w-5 text-[var(--md3-primary)]" />
+                  </div>
+                  <p className="text-sm font-semibold text-[var(--md3-on-surface)]">Templates</p>
+                  <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">
+                    Curated roadmaps for this role
+                  </p>
+                </div>
+              </div>
+              <h2 className="mb-4 mt-2 text-lg font-semibold text-[var(--md3-on-surface)]">
                 Roadmap Templates
               </h2>
               <CatalogRoadmapList
@@ -118,15 +146,18 @@ export function CareerRoleDetailPage() {
             <p className="text-[var(--md3-on-surface-variant)]">Failed to load career role.</p>
           </div>
         ) : role ? (
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--md3-primary-container)]">
+          <div className="mb-8 rounded-lg border border-[var(--md3-outline-variant)] bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--md3-primary-container)]">
                 <Layers className="h-6 w-6 text-[var(--md3-primary)]" />
               </div>
-              <h1 className="text-2xl font-bold text-[var(--md3-on-surface)]">{role.name}</h1>
+              <div>
+                <h1 className="text-2xl font-bold leading-tight text-[var(--md3-on-surface)]">{role.name}</h1>
+                <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">Career role</p>
+              </div>
             </div>
             {role.description && (
-              <p className="text-[var(--md3-on-surface-variant)]">{role.description}</p>
+              <p className="max-w-3xl text-sm leading-6 text-[var(--md3-on-surface-variant)]">{role.description}</p>
             )}
             <ActionLink
               icon={ArrowRight}

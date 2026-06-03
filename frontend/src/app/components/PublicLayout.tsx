@@ -14,7 +14,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           </Link>
           <div className="flex items-center gap-3">
             <Link
-              to="/career-roles"
+              to="/explore/career-roles"
               className="hidden text-sm font-medium text-[var(--md3-on-surface-variant)] transition-colors hover:text-[var(--md3-primary)] sm:inline-flex"
             >
               Browse Roles

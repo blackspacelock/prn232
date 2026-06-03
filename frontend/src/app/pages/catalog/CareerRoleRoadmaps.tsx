@@ -47,17 +47,20 @@ export function CareerRoleRoadmapsPage() {
               description={role.description ?? 'Choose a roadmap template for this career role.'}
             />
           ) : (
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--md3-primary-container)]">
+            <div className="mb-8 rounded-lg border border-[var(--md3-outline-variant)] bg-white p-6 shadow-sm">
+              <div className="mb-3 flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--md3-primary-container)]">
                   <Route className="h-6 w-6 text-[var(--md3-primary)]" />
                 </div>
-                <h1 className="text-2xl font-bold text-[var(--md3-on-surface)]">
-                  {role.name} Roadmaps
-                </h1>
+                <div>
+                  <h1 className="text-2xl font-bold leading-tight text-[var(--md3-on-surface)]">
+                    {role.name} Roadmaps
+                  </h1>
+                  <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">Templates</p>
+                </div>
               </div>
               {role.description && (
-                <p className="text-[var(--md3-on-surface-variant)]">{role.description}</p>
+                <p className="max-w-3xl text-sm leading-6 text-[var(--md3-on-surface-variant)]">{role.description}</p>
               )}
             </div>
           )}
@@ -82,7 +85,14 @@ export function CareerRoleRoadmapsPage() {
 
   if (paths.isProtectedCatalog) {
     return (
-      <AppShell breadcrumb="Browse Career Roles / Roadmaps">
+      <AppShell
+        breadcrumb="Career Roles / Roadmaps"
+        breadcrumbs={[
+          { label: 'Career Roles', to: paths.roleListPath },
+          { label: role?.name ?? 'Role', to: role ? paths.roleDetailPath(role.id) : undefined },
+          { label: 'Roadmaps' },
+        ]}
+      >
         <div className="app-page">{body}</div>
       </AppShell>
     );

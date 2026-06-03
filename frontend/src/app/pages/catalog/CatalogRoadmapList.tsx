@@ -1,6 +1,6 @@
 import { useQuery } from '@apollo/client/react';
 import { Link } from 'react-router';
-import { AlertCircle, ArrowRight, Map as MapIcon, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowRight, Clock3, Map as MapIcon, Sparkles } from 'lucide-react';
 import { GET_CAREER_ROADMAPS_BY_ROLE } from '@/graphql/queries';
 import { Skeleton } from '../../components/Skeleton';
 import type { CareerRoadmapDto } from '@/types/api';
@@ -54,39 +54,45 @@ export function CatalogRoadmapList({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="grid gap-4 lg:grid-cols-2">
       {visibleRoadmaps.map((roadmap) => (
         <Link
           key={roadmap.id}
           to={getRoadmapDetailPath(roadmap.id)}
-          className="md3-card p-4 flex items-center gap-4 hover:shadow-md transition-shadow group"
+          className="group flex min-h-[154px] flex-col justify-between rounded-lg border border-[var(--md3-outline-variant)] bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--md3-status-in-progress-stroke)] hover:shadow-md"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--md3-primary-container)]">
-            <MapIcon className="h-5 w-5 text-[var(--md3-primary)]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-              <h3 className="text-sm font-semibold text-[var(--md3-on-surface)]">
-                {roadmap.name}
-              </h3>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)] shrink-0">
+          <div>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--md3-primary-container)]">
+                <MapIcon className="h-5 w-5 text-[var(--md3-primary)]" />
+              </div>
+              <span className="inline-flex items-center gap-1 rounded-md border border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container)] px-2 py-1 text-xs font-medium text-[var(--md3-on-surface-variant)]">
                 {roadmap.isCustom ? (
                   <>
-                    <Sparkles className="h-3 w-3" />
+                    <Sparkles className="h-3.5 w-3.5" />
                     Custom
                   </>
                 ) : (
-                  'Default'
+                  <>
+                    <Clock3 className="h-3.5 w-3.5" />
+                    Template
+                  </>
                 )}
               </span>
             </div>
+            <h3 className="text-base font-semibold leading-tight text-[var(--md3-on-surface)]">
+              {roadmap.name}
+            </h3>
             {roadmap.description && (
-              <p className="text-xs text-[var(--md3-on-surface-variant)] line-clamp-2">
+              <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--md3-on-surface-variant)]">
                 {roadmap.description}
               </p>
             )}
           </div>
-          <ArrowRight className="h-5 w-5 text-[var(--md3-on-surface-variant)] group-hover:text-[var(--md3-primary)] transition-colors shrink-0" />
+          <div className="mt-5 flex items-center justify-between border-t border-[var(--md3-outline-variant)] pt-4">
+            <span className="text-sm font-medium text-[var(--md3-primary)]">Open roadmap</span>
+            <ArrowRight className="h-5 w-5 shrink-0 text-[var(--md3-on-surface-variant)] transition-colors group-hover:text-[var(--md3-primary)]" />
+          </div>
         </Link>
       ))}
     </div>

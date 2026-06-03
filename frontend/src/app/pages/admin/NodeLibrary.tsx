@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
-import { Plus, Pencil, Trash2, Network, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Network, ChevronRight, Hash, Search } from 'lucide-react';
 import { useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
@@ -23,11 +23,19 @@ export function AdminNodeLibraryPage() {
   const [form, setForm] = useState<NodeDto>({ name: '', order: 1 });
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [rootId, setRootId] = useState('');
+  const [search, setSearch] = useState('');
 
   const [loadChildren, { data: childrenData, loading, error }] = useLazyQuery(GET_NODE_CHILDREN);
   const [loadHierarchy, { data: hierarchyData, loading: hierarchyLoading, }] = useLazyQuery(GET_NODE_HIERARCHY);
 
   const nodes: NodeItem[] = (childrenData as { nodeChildren?: NodeItem[] })?.nodeChildren ?? [];
+  const filteredNodes = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return nodes;
+    return nodes.filter((node) =>
+      `${node.name} ${node.description ?? ''}`.toLowerCase().includes(term),
+    );
+  }, [nodes, search]);
   const hierarchyRootName =
     (hierarchyData as { nodeHierarchy?: { name?: string } } | undefined)?.nodeHierarchy?.name;
 
@@ -76,12 +84,20 @@ export function AdminNodeLibraryPage() {
           actions={<AdminActionButton icon={Plus} label="Create Node" onClick={() => { setEditingNode(null); setForm({ name: '', order: 1 }); setShowForm(true); }} />}
         />
 
-        <div className="md3-card p-4 mb-4">
-          <p className="text-sm font-medium text-[var(--md3-on-surface)] mb-2">Browse Hierarchy</p>
-          <div className="flex gap-2">
-            <input type="text" value={rootId} onChange={(e) => setRootId(e.target.value)} placeholder="Root node UUID" className="md3-field flex-1 px-4 h-10" />
-            <AdminActionButton icon={Network} label="Load Hierarchy" onClick={handleLoadHierarchy} disabled={!rootId || hierarchyLoading} />
-            <AdminActionButton icon={ChevronRight} label="Load Children" onClick={() => { if (parentId) loadChildren({ variables: { parentId } }); }} disabled={!parentId} />
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[var(--md3-on-surface)]">Browse Hierarchy</p>
+            {parentId && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-[var(--md3-surface-container)] px-2 py-1 text-xs text-[var(--md3-on-surface-variant)]">
+                <Hash className="h-3.5 w-3.5" />
+                {nodes.length} children
+              </span>
+            )}
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+            <input type="text" value={rootId} onChange={(e) => setRootId(e.target.value)} placeholder="Root node UUID" className="md3-field h-11 px-4" />
+            <AdminActionButton icon={Network} label={hierarchyLoading ? 'Loading...' : 'Load Hierarchy'} onClick={handleLoadHierarchy} disabled={!rootId || hierarchyLoading} />
+            <AdminActionButton icon={ChevronRight} label="Reload Children" onClick={() => { if (parentId) loadChildren({ variables: { parentId } }); }} disabled={!parentId} />
           </div>
         </div>
 
@@ -113,37 +129,38 @@ export function AdminNodeLibraryPage() {
         ) : error ? (
           <EmptyState icon={Network} title="Failed to load nodes" description="Please try again." actionLabel="Retry" onAction={() => loadChildren({ variables: { parentId } })} />
         ) : (
-          <div className="md3-card overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Description</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Order</th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {nodes.map((node) => (
-                  <tr key={node.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[var(--md3-on-surface)]">{node.name}</span>
-                        <button onClick={() => handleLoadChildren(node.id)} className="text-xs text-[var(--md3-primary)] hover:underline">View children</button>
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--md3-on-surface-variant)]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search loaded nodes"
+                className="h-11 w-full rounded-md border border-[var(--md3-outline)] bg-white pl-10 pr-4 text-sm focus:border-[var(--md3-primary)] focus:outline-none"
+              />
+            </div>
+            <div className="grid gap-3">
+              {filteredNodes.map((node) => (
+                <div key={node.id} className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded-md bg-[var(--md3-primary-container)] px-2 py-1 text-xs font-medium text-[var(--md3-primary)]">Order {node.order}</span>
+                        <span className="truncate text-xs text-[var(--md3-on-surface-variant)]">{node.id}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{node.description ?? '—'}</td>
-                    <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{node.order}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => { setEditingNode(node); setForm({ name: node.name, description: node.description, order: node.order }); setShowForm(true); }} className="p-2 hover:bg-[var(--md3-primary-container)] rounded-lg"><Pencil className="w-4 h-4 text-[var(--md3-primary)]" /></button>
-                        <button onClick={() => setDeleteId(node.id)} className="p-2 hover:bg-[var(--md3-error-container)] rounded-lg"><Trash2 className="w-4 h-4 text-[var(--md3-error)]" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <h3 className="text-base font-semibold text-[var(--md3-on-surface)]">{node.name}</h3>
+                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--md3-on-surface-variant)]">{node.description ?? 'No description.'}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button onClick={() => handleLoadChildren(node.id)} className="rounded-md px-3 py-2 text-sm font-medium text-[var(--md3-primary)] hover:bg-[var(--md3-primary-container)]">Children</button>
+                      <button onClick={() => { setEditingNode(node); setForm({ name: node.name, description: node.description, order: node.order }); setShowForm(true); }} className="rounded-md p-2 hover:bg-[var(--md3-primary-container)]"><Pencil className="h-4 w-4 text-[var(--md3-primary)]" /></button>
+                      <button onClick={() => setDeleteId(node.id)} className="rounded-md p-2 hover:bg-[var(--md3-error-container)]"><Trash2 className="h-4 w-4 text-[var(--md3-error)]" /></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

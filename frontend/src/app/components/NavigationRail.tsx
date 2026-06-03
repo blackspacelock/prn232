@@ -34,7 +34,7 @@ interface UserByIdQuery {
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Map, label: 'Roadmaps', path: '/roadmaps' },
-  { icon: Telescope, label: 'Browse Roles', path: '/app/career-roles' },
+  { icon: Telescope, label: 'Browse Roles', path: '/career-roles' },
   { icon: MessageSquare, label: 'AI Mentor', path: '/mentor' },
   { icon: BarChart3, label: 'Skill Gap', path: '/skill-gap' },
   { icon: TrendingUp, label: 'Market Pulse', path: '/market' },
@@ -96,8 +96,9 @@ export function NavigationRail() {
           const isActive =
             location.pathname === item.path ||
             (item.path === '/roadmaps' && location.pathname.startsWith('/roadmap/')) ||
-            (item.path === '/app/career-roles' &&
-              (location.pathname.startsWith('/app/career-roles') ||
+            (item.path === '/career-roles' &&
+              (location.pathname.startsWith('/career-roles') ||
+                location.pathname.startsWith('/app/career-roles') ||
                 location.pathname.startsWith('/app/roadmaps') ||
                 location.pathname.startsWith('/browse/career-roles') ||
                 location.pathname.startsWith('/browse/career-roadmap')));

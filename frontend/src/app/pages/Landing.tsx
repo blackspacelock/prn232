@@ -17,7 +17,7 @@ export function LandingPage() {
             <a href="#features" className="text-base text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors">Features</a>
             <a href="#how-it-works" className="text-base text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors">How It Works</a>
             <a href="#market" className="text-base text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors">Market Pulse</a>
-            <Link to="/career-roles" className="text-base text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors">Browse Roles</Link>
+            <Link to="/explore/career-roles" className="text-base text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors">Browse Roles</Link>
           </div>
 
           <div className="flex items-center gap-3">

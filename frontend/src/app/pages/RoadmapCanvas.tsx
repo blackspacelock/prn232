@@ -6,30 +6,22 @@ import { EmptyState } from '../components/EmptyState';
 import { Snackbar } from '../components/Snackbar';
 import { ActionButton } from '../components/ActionButton';
 import { X, Save } from 'lucide-react';
-import {
-  ReactFlow as _ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-  type Node,
-  type Edge,
-} from '@xyflow/react';
-import type { ReactFlowProps } from '@xyflow/react';
-const ReactFlow = _ReactFlow as unknown as (props: ReactFlowProps & { className?: string }) => React.ReactElement;
-import '@xyflow/react/dist/style.css';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
 import { apiClient } from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
 import { NODE_STATUS_COLORS, type NodeStatusInt } from '@/constants/nodeStatus';
+import { RoadmapGraphCanvas, type RoadmapGraphNode } from '../components/roadmap/RoadmapGraphCanvas';
+import { RoadmapResourceCard } from '../components/roadmap/RoadmapResourceCard';
 import {
+  GET_CAREER_ROADMAP_WITH_NODES,
   GET_PERSONAL_ROADMAP_WITH_PROGRESS,
   GET_NODE_PROGRESS,
   GET_LEARNING_RESOURCES_BY_NODE,
   GET_RECOMMENDED_RESOURCES,
 } from '@/graphql/queries';
-import type { UpdateNodeProgressStatusDto } from '@/types/api';
+import type { CareerRoadmapWithNodesDto, UpdateNodeProgressStatusDto } from '@/types/api';
 
 interface ProgressNode {
   id: string;
@@ -42,59 +34,13 @@ interface ProgressNode {
 
 interface LearningResource {
   id: string;
+  nodeId?: string;
   name: string;
   resourceUrl: string;
   resourceType: string;
   provider?: string;
   isFree: boolean;
-}
-
-function mapToFlowNodes(progressNodes: ProgressNode[]): Node[] {
-  const COLS = 4;
-  const X_GAP = 220;
-  const Y_GAP = 140;
-
-  return progressNodes.map((np, index) => {
-    const col = index % COLS;
-    const row = Math.floor(index / COLS);
-    const status = np.status as NodeStatusInt;
-    const colors = NODE_STATUS_COLORS[status] ?? NODE_STATUS_COLORS[0];
-
-    return {
-      id: np.id,
-      type: 'default',
-      position: { x: col * X_GAP + 50, y: row * Y_GAP + 50 },
-      data: {
-        label: np.node.name,
-        status,
-        nodeId: np.nodeId,
-        nodeProgressId: np.id,
-      },
-      style: {
-        background: colors.fill,
-        color: colors.text,
-        border: `1.5px solid ${colors.stroke}`,
-        borderRadius: '12px',
-        minWidth: '160px',
-        fontSize: '13px',
-        fontWeight: 500,
-      },
-    };
-  });
-}
-
-function mapToFlowEdges(progressNodes: ProgressNode[]): Edge[] {
-  const nodeById = new Map(progressNodes.map((np) => [np.nodeId, np.id]));
-  return progressNodes.flatMap((np) => {
-    const children = progressNodes.filter((p) => p.node.parentNodeId === np.nodeId);
-    return children.map((child) => ({
-      id: `${np.id}-${child.id}`,
-      source: nodeById.get(np.nodeId) ?? np.id,
-      target: child.id,
-      animated: np.status === 1,
-      style: { stroke: np.status === 1 ? '#1A73E8' : '#DADCE0', strokeWidth: 2 },
-    }));
-  });
+  createdAt?: string;
 }
 
 export function RoadmapCanvasPage() {
@@ -125,13 +71,36 @@ export function RoadmapCanvasPage() {
     () => (data as { personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } })?.personalRoadmapWithProgress?.nodeProgresses ?? [],
     [data],
   );
+  const personalRoadmap = (data as { personalRoadmapWithProgress?: { careerRoadmapId?: string } })
+    ?.personalRoadmapWithProgress;
+  const careerRoadmapId = personalRoadmap?.careerRoadmapId ?? '';
+
+  const { data: templateData } = useQuery(GET_CAREER_ROADMAP_WITH_NODES, {
+    variables: { roadmapId: careerRoadmapId },
+    skip: !careerRoadmapId,
+  });
+  const template: CareerRoadmapWithNodesDto | null =
+    (templateData as { careerRoadmapWithNodes?: CareerRoadmapWithNodesDto })
+      ?.careerRoadmapWithNodes ?? null;
+  const roadmapTitle = template?.name ?? 'Personal Roadmap';
+
   const summary: Array<{ status: number }> =
     (progressData as { nodeProgress?: Array<{ status: number }> })?.nodeProgress ?? [];
   const resources: LearningResource[] = (resourcesData as { learningResourcesByNode?: LearningResource[] })?.learningResourcesByNode ?? [];
   const recommended: LearningResource[] = (recommendedData as { recommendedResources?: LearningResource[] })?.recommendedResources ?? [];
 
-  const nodes = useMemo(() => mapToFlowNodes(progressNodes), [progressNodes]);
-  const edges = useMemo(() => mapToFlowEdges(progressNodes), [progressNodes]);
+  const graphNodes: RoadmapGraphNode[] = useMemo(
+    () =>
+      progressNodes.map((np) => ({
+        id: np.nodeId,
+        parentNodeId: np.node.parentNodeId,
+        name: np.node.name,
+        description: np.node.description,
+        order: np.node.order,
+        status: np.status as NodeStatusInt,
+      })),
+    [progressNodes],
+  );
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ nodeProgressId, dto }: { nodeProgressId: string; dto: UpdateNodeProgressStatusDto }) =>
@@ -148,8 +117,8 @@ export function RoadmapCanvasPage() {
     },
   });
 
-  const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    const np = progressNodes.find((p) => p.id === node.id);
+  const handleNodeSelect = useCallback((node: RoadmapGraphNode) => {
+    const np = progressNodes.find((p) => p.nodeId === node.id);
     if (np) {
       setSelectedNodeProgress(np);
       setOptimisticStatus(np.status as NodeStatusInt);
@@ -197,31 +166,35 @@ export function RoadmapCanvasPage() {
   return (
     <AppShell
       breadcrumb="Roadmaps / Canvas"
+      breadcrumbs={[
+        { label: 'Roadmaps', to: '/roadmaps' },
+        { label: roadmapTitle },
+      ]}
       showProgress={totalCount > 0 ? { current: completedCount, total: totalCount, percentage: Math.round((completedCount / totalCount) * 100) } : undefined}
       className="app-main--flush"
     >
-      <div className="flex h-[calc(100vh-64px)]">
-        <div className="flex-1 relative overflow-hidden">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodeClick={handleNodeClick}
-            fitView
-          >
-            <Background color="#DADCE0" gap={24} />
-            <Controls />
-            <MiniMap />
-          </ReactFlow>
+      <div className="flex h-[calc(100vh-64px)] flex-col md:flex-row">
+        <div className="relative min-h-[520px] flex-1 overflow-hidden bg-[var(--md3-surface-container)]">
+          <div className="pointer-events-none absolute left-6 top-6 z-10 max-w-[min(620px,calc(100%-48px))] rounded-lg border border-[var(--md3-outline-variant)] bg-white/95 p-4 shadow-sm backdrop-blur">
+            <h1 className="text-2xl font-semibold leading-tight text-[var(--md3-on-surface)]">
+              {roadmapTitle}
+            </h1>
+          </div>
+          <RoadmapGraphCanvas
+            graphNodes={graphNodes}
+            selectedNodeId={selectedNodeProgress?.nodeId}
+            onNodeSelect={handleNodeSelect}
+          />
         </div>
 
         {selectedNodeProgress && (
-          <div className="w-[400px] bg-white border-l border-[var(--md3-outline-variant)] shadow-xl flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-[var(--md3-outline-variant)]">
+          <div className="flex w-full flex-col overflow-hidden border-l border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container)] shadow-xl md:w-[420px]">
+            <div className="border-b border-[var(--md3-outline-variant)] bg-white p-6">
               <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-[var(--md3-on-surface)] mb-1">{selectedNodeProgress.node.name}</h2>
+                <div className="min-w-0">
+                  <h2 className="line-clamp-2 text-xl font-semibold leading-tight text-[var(--md3-on-surface)]">{selectedNodeProgress.node.name}</h2>
                   <span
-                    className="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
+                    className="mt-3 inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
                     style={{ background: currentColors.fill, color: currentColors.text, border: `1px solid ${currentColors.stroke}` }}
                   >
                     {currentColors.label}
@@ -233,8 +206,8 @@ export function RoadmapCanvasPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div>
+            <div className="flex-1 space-y-4 overflow-y-auto p-5">
+              <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
                 <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Progress Status</p>
                 <div className="grid grid-cols-2 gap-2">
                   {([0, 1, 2, 3, 4] as NodeStatusInt[]).map((s) => {
@@ -257,7 +230,7 @@ export function RoadmapCanvasPage() {
                 </div>
               </div>
 
-              <div>
+              <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
                 <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Note</p>
                 <textarea
                   value={note}
@@ -269,9 +242,7 @@ export function RoadmapCanvasPage() {
 
               <ActionButton icon={Save} label={updateStatusMutation.isPending ? 'Saving...' : 'Save progress'} variant="primary" size="lg" onClick={handleSave} disabled={updateStatusMutation.isPending} className="w-full" />
 
-              <div className="h-px bg-[var(--md3-outline-variant)]" />
-
-              <div>
+              <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
                 <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Learning Resources</p>
                 {resourcesLoading ? (
                   <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
@@ -280,10 +251,10 @@ export function RoadmapCanvasPage() {
                 ) : (
                   <div className="space-y-3">
                     {resources.map((r) => (
-                      <ResourceCard key={r.id} resource={r} />
+                      <RoadmapResourceCard key={r.id} resource={r} />
                     ))}
                     {recommended.map((r) => (
-                      <ResourceCard key={`rec-${r.id}`} resource={r} recommended />
+                      <RoadmapResourceCard key={`rec-${r.id}`} resource={r} recommended />
                     ))}
                   </div>
                 )}
@@ -295,33 +266,5 @@ export function RoadmapCanvasPage() {
 
       <Snackbar isOpen={snackbar.open} message={snackbar.message} variant="error" onClose={() => setSnackbar({ open: false, message: '' })} />
     </AppShell>
-  );
-}
-
-function ResourceCard({ resource, recommended }: { resource: LearningResource; recommended?: boolean }) {
-  return (
-    <a
-      href={resource.resourceUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block p-3 rounded-lg border border-[var(--md3-outline)] hover:border-[var(--md3-primary)] transition-colors"
-      style={{ background: resource.isFree ? '#E6F4EA' : 'white' }}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-[var(--md3-on-surface)] truncate">{resource.name}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-[var(--md3-on-surface-variant)]">{resource.resourceType}</span>
-            {resource.provider && <span className="text-xs text-[var(--md3-on-surface-variant)]">· {resource.provider}</span>}
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className={`text-xs px-2 py-0.5 rounded font-medium ${resource.isFree ? 'bg-[#E6F4EA] text-[#1E8E3E]' : 'bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)]'}`}>
-            {resource.isFree ? 'Free' : 'Paid'}
-          </span>
-          {recommended && <span className="text-xs px-2 py-0.5 rounded font-medium bg-[var(--md3-primary-container)] text-[var(--md3-primary)]">AI Pick</span>}
-        </div>
-      </div>
-    </a>
   );
 }
