@@ -9,6 +9,8 @@ bin/
 obj/
 Debug/
 Release/
+**/obj/Debug/
+**/obj/Release/
 
 ## NuGet
 *.nupkg
