@@ -56,11 +56,10 @@ export function SkillGapPage() {
   const trendingSkills: string[] = (trendingData as any)?.trendingSkillRecommendations ?? [];
 
   const radarData = skillGap
-    ? skillGap.existingSkills.slice(0, 6).map((skill) => ({
-        skill,
-        current: 80,
-        required: 90,
-      }))
+    ? [
+        ...(skillGap.existingSkills as string[]).slice(0, 3).map((skill) => ({ skill, current: 100, required: 100 })),
+        ...(skillGap.missingSkills as string[]).slice(0, 3).map((skill) => ({ skill, current: 0, required: 100 })),
+      ]
     : [];
 
   const handleRoadmapChange = (careerRoadmapId: string) => {

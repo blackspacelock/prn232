@@ -29,68 +29,79 @@ export interface RefreshTokenRequestDto {
   refreshToken: string;
 }
 
+// Must match backend UpdateProfileDto exactly (camelCase for JSON serialization)
+export interface UpdateProfileDto {
+  bioDescription?: string;
+  phoneNumber?: string;
+  university?: string;
+  major?: string;
+  studiedYear?: number;
+}
+
+// Must match backend AddSkillDto exactly
+export interface AddSkillDto {
+  profileId: string;
+  skillName: string;
+  note?: string;
+}
+
+// Must match backend AddGitHubRepoDto exactly
+export interface AddGitHubRepoDto {
+  profileId: string;
+  repositoryName: string;
+  repoUrl: string;
+  description?: string;
+  isPrivate: boolean;
+}
+
+// Must match backend SendMessageDto exactly
+export interface SendMessageDto {
+  sender: string;
+  messageContent: string;
+}
+
+// Must match backend CreateChatSessionDto (profileId passed as query param separately)
+export interface CreateChatSessionDto {
+  profileId: string;
+  title: string;
+}
+
 export interface UpdateNodeProgressStatusDto {
   status: 0 | 1 | 2 | 3 | 4;
   note?: string;
 }
 
+// Matches backend NodeDto
 export interface NodeDto {
   id: string;
-  title: string;
+  parentNodeId?: string;
+  name: string;
   description?: string;
-  positionX: number;
-  positionY: number;
-  childIds?: string[];
+  order: number;
 }
 
+// Matches backend NodeProgressDto (id field, not nodeProgressId)
 export interface NodeProgressDto {
-  nodeProgressId: string;
+  id: string;
+  personalRoadmapId: string;
   nodeId: string;
-  status: 0 | 1 | 2 | 3 | 4;
+  status: NodeStatusInt;
   note?: string;
   node: NodeDto;
 }
 
 export interface PersonalRoadmapDetailDto {
   id: string;
-  title: string;
   profileId: string;
   careerRoadmapId: string;
-  nodeProgress: NodeProgressDto[];
+  note?: string;
+  progressPercentage: number;
+  nodeProgresses: NodeProgressDto[];
 }
 
 export interface GeneratePersonalRoadmapRequestDto {
   profileId: string;
   careerRoadmapId: string;
-}
-
-export interface UpdateProfileDto {
-  fullName?: string;
-  bio?: string;
-  location?: string;
-  avatarUrl?: string;
-}
-
-export interface CreateSkillDto {
-  profileId: string;
-  skillName: string;
-  proficiencyLevel: number;
-}
-
-export interface CreateGitHubRepositoryDto {
-  profileId: string;
-  repositoryUrl: string;
-  description?: string;
-}
-
-export interface CreateChatSessionDto {
-  profileId: string;
-  title: string;
-}
-
-export interface SendMessageDto {
-  content: string;
-  role: 'User';
 }
 
 export interface RoadmapNodeData {

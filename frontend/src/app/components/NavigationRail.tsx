@@ -13,6 +13,9 @@ import {
   Network,
   Database
 } from 'lucide-react';
+import { useQuery } from '@apollo/client/react';
+import { useAuthStore } from '@/store/authStore';
+import { GET_USER_BY_ID } from '@/graphql/queries';
 
 interface NavItem {
   icon: React.ElementType;
@@ -36,8 +39,32 @@ const adminItems: NavItem[] = [
   { icon: Database, label: 'Trends', path: '/admin/job-trends' },
 ];
 
+function getInitials(fullName: string | null | undefined, email: string | null | undefined): string {
+  if (fullName) {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0][0].toUpperCase();
+  }
+  return (email?.[0] ?? '?').toUpperCase();
+}
+
 export function NavigationRail() {
   const location = useLocation();
+  const user = useAuthStore((s) => s.user);
+  const userId = user?.id ?? '';
+
+  const { data: userData } = useQuery(GET_USER_BY_ID, {
+    variables: { userId },
+    skip: !userId,
+  });
+
+  const fullName: string | null = (userData as any)?.userById?.fullName ?? null;
+  const displayName = fullName ?? user?.email ?? '';
+  const initials = getInitials(fullName, user?.email);
+  const role = user?.role ?? '';
+  const isAdmin = role === 'Admin';
+
+  const visibleItems = isAdmin ? [...navItems, ...adminItems] : navItems;
 
   return (
     <aside className="fixed left-0 top-0 z-50 hidden h-full w-56 flex-col border-r border-[var(--md3-outline-variant)] bg-white px-4 py-4 md:flex">
@@ -54,17 +81,18 @@ export function NavigationRail() {
 
       {/* Nav Items */}
       <nav className="flex-1 flex flex-col gap-1 w-full overflow-y-auto">
-        {[...navItems, ...adminItems].map((item, index) => {
+        {visibleItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path ||
             (item.path === '/roadmaps' && location.pathname.startsWith('/roadmap/'));
+          const isFirstAdminItem = isAdmin && index === navItems.length;
 
           return (
             <Link
               key={item.path}
               to={item.path}
               className={`
-                ${index === navItems.length ? 'mt-3 border-t border-[var(--md3-outline-variant)] pt-3' : ''}
+                ${isFirstAdminItem ? 'mt-3 border-t border-[var(--md3-outline-variant)] pt-3' : ''}
                 group flex min-h-11 items-center gap-3 rounded-full px-3 py-2 transition-colors
                 ${isActive
                   ? 'bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
@@ -99,15 +127,15 @@ export function NavigationRail() {
           </span>
           <span className="text-sm font-medium">Settings</span>
         </Link>
-        <div className="flex items-center gap-3 rounded-xl bg-[var(--md3-surface-container)] px-3 py-3">
+        <Link to="/settings" className="flex items-center gap-3 rounded-xl bg-[var(--md3-surface-container)] px-3 py-3 hover:bg-[var(--md3-surface-variant)] transition-colors">
           <div className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] flex shrink-0 items-center justify-center">
-            <span className="text-sm font-medium text-[var(--md3-primary)]">NT</span>
+            <span className="text-sm font-medium text-[var(--md3-primary)]">{initials}</span>
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-[var(--md3-on-surface)]">Nguyen Thanh</p>
-            <p className="truncate text-[11px] text-[var(--md3-on-surface-variant)]">Student</p>
+            <p className="truncate text-sm font-semibold text-[var(--md3-on-surface)]">{displayName}</p>
+            <p className="truncate text-[11px] text-[var(--md3-on-surface-variant)]">{role}</p>
           </div>
-        </div>
+        </Link>
       </div>
     </aside>
   );

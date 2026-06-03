@@ -1,5 +1,9 @@
-import { Link } from 'react-router';
-import { Search, Bell, ChevronRight } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { Search, Bell, ChevronRight, Settings, LogOut } from 'lucide-react';
+import { useQuery } from '@apollo/client/react';
+import { useAuthStore } from '@/store/authStore';
+import { GET_USER_BY_ID } from '@/graphql/queries';
 
 interface TopAppBarProps {
   breadcrumb: string;
@@ -30,6 +34,50 @@ const breadcrumbRouteMap: Record<string, string> = {
 
 export function TopAppBar({ breadcrumb, showProgress }: TopAppBarProps) {
   const breadcrumbItems = breadcrumb.split('/').map((item) => item.trim()).filter(Boolean);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  const user = useAuthStore((s) => s.user);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const userId = user?.id ?? '';
+
+  const { data: userData } = useQuery(GET_USER_BY_ID, {
+    variables: { userId },
+    skip: !userId,
+  });
+
+  const fullName: string | undefined = (userData as any)?.userById?.fullName;
+  const displayName = fullName ?? user?.email ?? '';
+  const initials = (() => {
+    if (fullName) {
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return parts[0][0].toUpperCase();
+    }
+    return (user?.email?.[0] ?? '?').toUpperCase();
+  })();
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    if (dropdownOpen || notifOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen, notifOpen]);
+
+  const handleLogout = () => {
+    setDropdownOpen(false);
+    clearAuth();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div
@@ -96,12 +144,73 @@ export function TopAppBar({ breadcrumb, showProgress }: TopAppBarProps) {
         <button className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[var(--md3-surface-variant)]" aria-label="Search">
           <Search className="w-6 h-6 text-[var(--md3-on-surface-variant)]" />
         </button>
-        <button className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[var(--md3-surface-variant)]" aria-label="Notifications">
-          <Bell className="w-6 h-6 text-[var(--md3-on-surface-variant)]" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-[var(--md3-error)] rounded-full" />
-        </button>
-        <div className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] flex items-center justify-center">
-          <span className="text-sm font-medium text-[var(--md3-primary)]">NT</span>
+        {/* Notifications */}
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => { setNotifOpen((o) => !o); setDropdownOpen(false); }}
+            className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[var(--md3-surface-variant)]"
+            aria-label="Notifications"
+            aria-expanded={notifOpen}
+          >
+            <Bell className="w-6 h-6 text-[var(--md3-on-surface-variant)]" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-[var(--md3-error)] rounded-full" />
+          </button>
+
+          {notifOpen && (
+            <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-[var(--md3-outline-variant)] bg-white shadow-lg">
+              <div className="px-4 py-3 border-b border-[var(--md3-outline-variant)]">
+                <p className="text-sm font-semibold text-[var(--md3-on-surface)]">Notifications</p>
+              </div>
+              <div className="flex flex-col items-center justify-center py-10 gap-2">
+                <Bell className="w-8 h-8 text-[var(--md3-outline)]" />
+                <p className="text-sm text-[var(--md3-on-surface-variant)]">Coming soon...</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Avatar with dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => { setDropdownOpen((o) => !o); setNotifOpen(false); }}
+            className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--md3-primary)] focus:ring-offset-2"
+            aria-label="User menu"
+            aria-expanded={dropdownOpen}
+          >
+            <span className="text-sm font-medium text-[var(--md3-primary)]">{initials}</span>
+          </button>
+
+          {dropdownOpen && (
+            <div className="absolute right-0 top-11 z-50 min-w-[200px] rounded-2xl border border-[var(--md3-outline-variant)] bg-white py-2 shadow-lg">
+              {/* User info header */}
+              <div className="px-4 py-3 border-b border-[var(--md3-outline-variant)]">
+                <p className="text-sm font-semibold text-[var(--md3-on-surface)] truncate">{displayName}</p>
+                {user?.email && fullName && (
+                  <p className="text-xs text-[var(--md3-on-surface-variant)] truncate mt-0.5">{user.email}</p>
+                )}
+                <p className="text-xs text-[var(--md3-on-surface-variant)] mt-0.5">{user?.role}</p>
+              </div>
+
+              {/* Menu items */}
+              <div className="py-1">
+                <Link
+                  to="/settings"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-variant)] transition-colors"
+                >
+                  <Settings className="w-4 h-4 text-[var(--md3-on-surface-variant)]" />
+                  Settings
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[var(--md3-error)] hover:bg-[var(--md3-error-container)] transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Log out
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ import {
   GET_CHAT_SESSIONS_BY_PROFILE,
   GET_CHAT_SESSION_WITH_MESSAGES,
 } from '@/graphql/queries';
-import type { CreateChatSessionDto, SendMessageDto } from '@/types/api';
+import type { SendMessageDto } from '@/types/api';
 
 interface ChatSession { id: string; title: string; summary?: string; createdAt: string }
 interface ChatMessage { id: string; sender: string; messageContent: string; createdAt: string }
@@ -44,8 +44,15 @@ export function MentorPage() {
   }, [messages]);
 
   const createSessionMutation = useMutation({
-    mutationFn: (dto: CreateChatSessionDto) =>
-      apiClient.post<{ id: string }>('/api/chat/sessions', dto).then((r) => r.data),
+    // Backend: POST /api/chat/sessions?profileId=... with body { title }
+    mutationFn: ({ profileId: pid, title }: { profileId: string; title: string }) =>
+      apiClient
+        .post<{ id: string; title: string; profileId: string; createdAt: string }>(
+          '/api/chat/sessions',
+          { title },
+          { params: { profileId: pid } },
+        )
+        .then((r) => r.data),
     onSuccess: async (data) => {
       await refetchSessions();
       setActiveSessionId(data.id);
@@ -58,6 +65,7 @@ export function MentorPage() {
   });
 
   const sendMessageMutation = useMutation({
+    // Backend SendMessageDto: { Sender, MessageContent }
     mutationFn: ({ sessionId, dto }: { sessionId: string; dto: SendMessageDto }) =>
       apiClient.post(`/api/chat/sessions/${sessionId}/messages`, dto).then((r) => r.data),
     onSuccess: async (_data, { sessionId }) => {
@@ -72,7 +80,8 @@ export function MentorPage() {
 
   const handleSend = () => {
     if (!message.trim() || !activeSessionId) return;
-    sendMessageMutation.mutate({ sessionId: activeSessionId, dto: { content: message, role: 'User' } });
+    const dto: SendMessageDto = { sender: 'User', messageContent: message.trim() };
+    sendMessageMutation.mutate({ sessionId: activeSessionId, dto });
   };
 
   const handleSelectSession = (sessionId: string) => {
@@ -81,12 +90,14 @@ export function MentorPage() {
   };
 
   const handleNewSession = () => {
-    createSessionMutation.mutate({ profileId, title: `Session ${new Date().toLocaleDateString()}` });
+    const title = `Session ${new Date().toLocaleDateString()}`;
+    createSessionMutation.mutate({ profileId, title });
   };
 
   return (
     <AppShell breadcrumb="AI Mentor" className="app-main--flush">
       <div className="flex h-[calc(100vh-64px)]">
+        {/* Session sidebar */}
         <aside className="hidden w-[280px] flex-col border-r border-[var(--md3-outline-variant)] bg-white lg:flex">
           <div className="p-4 border-b border-[var(--md3-outline-variant)] flex items-center justify-between">
             <h2 className="text-base font-medium text-[var(--md3-on-surface)]">AI Mentor</h2>
@@ -116,6 +127,7 @@ export function MentorPage() {
           </div>
         </aside>
 
+        {/* Chat main area */}
         <div className="flex-1 flex flex-col bg-[var(--md3-surface-container)]">
           <div className="h-16 bg-white border-b border-[var(--md3-outline-variant)] px-5 flex items-center">
             <h3 className="text-base font-medium text-[var(--md3-on-surface)]">

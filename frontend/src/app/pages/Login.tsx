@@ -137,7 +137,7 @@ export function LoginPage() {
               <div className="flex-1 h-px bg-[var(--md3-outline-variant)]" />
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex w-full justify-center [&>div]:w-full [&_iframe]:w-full">
               <GoogleLogin
                 onSuccess={(credentialResponse) => {
                   if (credentialResponse.credential) {
@@ -148,7 +148,7 @@ export function LoginPage() {
                 shape="pill"
                 size="large"
                 text="continue_with"
-                width="100%"
+                width="400"
               />
             </div>
           </form>

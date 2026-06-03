@@ -224,7 +224,7 @@ export function LandingPage() {
               href="#how-it-works"
               variant="neutral"
               size="lg"
-              className="border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              className="border-white bg-white/15 text-white shadow-sm hover:border-white hover:bg-white hover:text-[var(--md3-primary)]"
             />
           </div>
           <p className="text-sm text-white/70 mt-6">Free to start · No credit card required</p>

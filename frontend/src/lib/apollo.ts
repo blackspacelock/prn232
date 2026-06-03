@@ -1,13 +1,13 @@
-import { ApolloClient } from '@apollo/client/core';
+import { ApolloClient, Observable } from '@apollo/client';
 import { InMemoryCache } from '@apollo/client/cache';
 import { HttpLink } from '@apollo/client/link/http';
 import { from } from '@apollo/client/link';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
-import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { Observable } from 'rxjs';
 import { useAuthStore, getRefreshToken } from '@/store/authStore';
 import { apiClient } from './axios';
+import { mapAuthResponse } from './authMapper';
+import type { AuthResponseDto } from '@/types/api';
 
 const httpLink = new HttpLink({
   uri: `${import.meta.env.VITE_API_URL ?? ''}/graphql`,
@@ -24,18 +24,18 @@ const authLink = setContext((_, prevContext) => {
 });
 
 const errorLink = onError(({ error, operation, forward }) => {
-  if (!CombinedGraphQLErrors.is(error)) return;
+  // Apollo v4: error is CombinedGraphQLErrors (has .errors array) or NetworkError
+  // Check for UNAUTHENTICATED without importing CombinedGraphQLErrors to avoid path issues
+  const gqlErrors: Array<{ extensions?: { code?: string } }> =
+    (error as any)?.errors ?? [];
+  if (!gqlErrors.some(e => e.extensions?.code === 'UNAUTHENTICATED')) return;
 
-  const isUnauthenticated = error.errors.some(
-    (e) => e.extensions?.['code'] === 'UNAUTHENTICATED',
-  );
-  if (!isUnauthenticated) return;
-
-  return new Observable((observer) => {
+  return new Observable(observer => {
     apiClient
-      .post('/api/auth/refresh', { refreshToken: getRefreshToken() })
+      .post<AuthResponseDto>('/api/auth/refresh', { refreshToken: getRefreshToken() })
       .then(({ data }) => {
-        useAuthStore.getState().setAuth(data.accessToken, data.user, data.refreshToken);
+        const { user, accessToken, refreshToken } = mapAuthResponse(data);
+        useAuthStore.getState().setAuth(accessToken, user, refreshToken);
         const subscriber = {
           next: observer.next.bind(observer),
           error: observer.error.bind(observer),

@@ -1,5 +1,7 @@
 import axios from 'axios';
-import { useAuthStore, getRefreshToken, type AuthUser } from '@/store/authStore';
+import { useAuthStore, getRefreshToken } from '@/store/authStore';
+import { mapAuthResponse } from '@/lib/authMapper';
+import type { AuthResponseDto } from '@/types/api';
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '',
@@ -26,12 +28,9 @@ apiClient.interceptors.response.use(
         if (!refreshPromise) {
           const rt = getRefreshToken();
           refreshPromise = apiClient
-            .post<{ accessToken: string; refreshToken: string; user: AuthUser }>(
-              '/api/auth/refresh',
-              { refreshToken: rt },
-            )
+            .post<AuthResponseDto>('/api/auth/refresh', { refreshToken: rt })
             .then((res) => {
-              const { accessToken, refreshToken, user } = res.data;
+              const { user, accessToken, refreshToken } = mapAuthResponse(res.data);
               useAuthStore.getState().setAuth(accessToken, user, refreshToken);
               return accessToken;
             })

@@ -12,10 +12,19 @@ import { apolloClient } from '@/lib/apollo';
 import { apiClient } from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
 import { GET_GITHUB_REPOS_BY_PROFILE, GET_PORTFOLIO_ANALYSIS } from '@/graphql/queries';
-import type { CreateGitHubRepositoryDto } from '@/types/api';
+import type { AddGitHubRepoDto } from '@/types/api';
 
 interface GitHubRepo { id: string; repositoryName: string; repoUrl: string; description?: string; isPrivate: boolean; createdAt: string }
 interface PortfolioAnalysis { overallSummary: string; strengths: string[]; recommendations: string[] }
+
+function extractRepoName(url: string): string {
+  try {
+    const parts = url.replace(/\/$/, '').split('/');
+    return parts[parts.length - 1] || url;
+  } catch {
+    return url;
+  }
+}
 
 export function PortfolioPage() {
   const user = useAuthStore((s) => s.user);
@@ -24,7 +33,7 @@ export function PortfolioPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newRepo, setNewRepo] = useState({ repositoryUrl: '', description: '' });
+  const [newRepo, setNewRepo] = useState({ repoUrl: '', description: '', isPrivate: false });
 
   const { data: reposData, loading: reposLoading, error: reposError, refetch } = useQuery(GET_GITHUB_REPOS_BY_PROFILE, {
     variables: { profileId },
@@ -40,12 +49,11 @@ export function PortfolioPage() {
   const analysis: PortfolioAnalysis | null = (analysisData as any)?.portfolioAnalysis ?? null;
 
   const addRepoMutation = useMutation({
-    mutationFn: (dto: CreateGitHubRepositoryDto) =>
-      apiClient.post('/api/github-repositories', dto),
+    mutationFn: (dto: AddGitHubRepoDto) => apiClient.post('/api/github-repositories', dto),
     onSuccess: async () => {
       await apolloClient.refetchQueries({ include: [GET_GITHUB_REPOS_BY_PROFILE] });
       setShowAddForm(false);
-      setNewRepo({ repositoryUrl: '', description: '' });
+      setNewRepo({ repoUrl: '', description: '', isPrivate: false });
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to add repository.';
@@ -66,6 +74,18 @@ export function PortfolioPage() {
     },
   });
 
+  const handleAddRepo = () => {
+    if (!newRepo.repoUrl.trim()) return;
+    const dto: AddGitHubRepoDto = {
+      profileId,
+      repositoryName: extractRepoName(newRepo.repoUrl),
+      repoUrl: newRepo.repoUrl.trim(),
+      description: newRepo.description.trim() || undefined,
+      isPrivate: newRepo.isPrivate,
+    };
+    addRepoMutation.mutate(dto);
+  };
+
   return (
     <AppShell breadcrumb="Portfolio">
       <div className="app-page">
@@ -81,8 +101,8 @@ export function PortfolioPage() {
             <div className="space-y-3">
               <input
                 type="url"
-                value={newRepo.repositoryUrl}
-                onChange={(e) => setNewRepo({ ...newRepo, repositoryUrl: e.target.value })}
+                value={newRepo.repoUrl}
+                onChange={(e) => setNewRepo({ ...newRepo, repoUrl: e.target.value })}
                 placeholder="https://github.com/username/repo"
                 className="md3-field w-full px-4"
               />
@@ -93,13 +113,22 @@ export function PortfolioPage() {
                 placeholder="Description (optional)"
                 className="md3-field w-full px-4"
               />
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={newRepo.isPrivate}
+                  onChange={(e) => setNewRepo({ ...newRepo, isPrivate: e.target.checked })}
+                  className="w-4 h-4 rounded border-[var(--md3-outline)] text-[var(--md3-primary)]"
+                />
+                <span className="text-sm text-[var(--md3-on-surface-variant)]">Private repository</span>
+              </label>
               <div className="flex gap-3">
                 <ActionButton
                   icon={Plus}
                   label={addRepoMutation.isPending ? 'Adding...' : 'Add Repository'}
                   variant="primary"
-                  disabled={!newRepo.repositoryUrl || addRepoMutation.isPending}
-                  onClick={() => addRepoMutation.mutate({ profileId, repositoryUrl: newRepo.repositoryUrl, description: newRepo.description || undefined })}
+                  disabled={!newRepo.repoUrl.trim() || addRepoMutation.isPending}
+                  onClick={handleAddRepo}
                 />
                 <ActionButton icon={Trash2} label="Cancel" variant="text" onClick={() => setShowAddForm(false)} />
               </div>
@@ -132,7 +161,12 @@ export function PortfolioPage() {
                   </div>
                 </div>
                 {repo.description && <p className="text-sm text-[var(--md3-on-surface-variant)]">{repo.description}</p>}
-                <p className="text-xs text-[var(--md3-on-surface-variant)] mt-2">{new Date(repo.createdAt).toLocaleDateString()}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  {repo.isPrivate && (
+                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)]">Private</span>
+                  )}
+                  <p className="text-xs text-[var(--md3-on-surface-variant)]">{new Date(repo.createdAt).toLocaleDateString()}</p>
+                </div>
               </div>
             ))}
           </div>
