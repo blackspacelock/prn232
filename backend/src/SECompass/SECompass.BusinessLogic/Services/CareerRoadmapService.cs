@@ -52,13 +52,57 @@ public class CareerRoadmapService : ICareerRoadmapService
         var roadmap = roadmaps.FirstOrDefault();
         if (roadmap == null) return ServiceResult<CareerRoadmapWithNodesDto>.Fail("Career roadmap not found.");
 
-        var roadmapNodes = await _uow.RoadmapNodes.FindAsync(rn => rn.CareerRoadmapId == roadmapId);
-        var nodeIds = roadmapNodes.Select(rn => rn.NodeId).ToList();
-        var nodes = await _uow.Nodes.FindAsync(n => nodeIds.Contains(n.Id));
+        var nodes = await GetExpandedRoadmapNodesAsync(roadmapId);
 
         var dto = _mapper.Map<CareerRoadmapWithNodesDto>(roadmap);
         dto.Nodes = _mapper.Map<List<DTOs.Node.NodeDto>>(nodes);
         return ServiceResult<CareerRoadmapWithNodesDto>.Ok(dto);
+    }
+
+    private async Task<List<Node>> GetExpandedRoadmapNodesAsync(Guid roadmapId)
+    {
+        var roadmapNodes = await _uow.RoadmapNodes.FindAsync(rn => rn.CareerRoadmapId == roadmapId);
+        var assignedNodeIds = roadmapNodes.Select(rn => rn.NodeId).Distinct().ToHashSet();
+        if (assignedNodeIds.Count == 0) return new List<Node>();
+
+        var allNodes = (await _uow.Nodes.GetAllAsync()).ToList();
+        var nodesById = allNodes.ToDictionary(n => n.Id);
+        var childrenByParent = allNodes
+            .Where(n => n.ParentNodeId.HasValue)
+            .GroupBy(n => n.ParentNodeId!.Value)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(n => n.Order).ThenBy(n => n.Name).ToList());
+
+        var expanded = new List<Node>();
+        var visited = new HashSet<Guid>();
+
+        void AddNodeAndDescendants(Node node)
+        {
+            if (!visited.Add(node.Id)) return;
+
+            expanded.Add(node);
+            if (!childrenByParent.TryGetValue(node.Id, out var children)) return;
+
+            foreach (var child in children)
+            {
+                AddNodeAndDescendants(child);
+            }
+        }
+
+        var assignedNodes = assignedNodeIds
+            .Select(id => nodesById.GetValueOrDefault(id))
+            .Where(n => n != null)
+            .Cast<Node>()
+            .OrderBy(n => n.Order)
+            .ThenBy(n => n.Name);
+
+        foreach (var node in assignedNodes)
+        {
+            AddNodeAndDescendants(node);
+        }
+
+        return expanded;
     }
 
     public async Task<ServiceResult<bool>> AssignNodeAsync(Guid roadmapId, Guid nodeId)

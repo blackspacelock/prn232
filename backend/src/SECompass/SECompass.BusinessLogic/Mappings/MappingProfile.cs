@@ -51,7 +51,7 @@ public class MappingProfile : AutoMapper.Profile
         // CareerRoadmap
         CreateMap<CareerRoadmap, CareerRoadmapDto>();
         CreateMap<CareerRoadmap, CareerRoadmapWithNodesDto>()
-            .ForMember(d => d.Nodes, o => o.MapFrom(s => s.RoadmapNodes.Select(rn => rn.Node)));
+            .ForMember(d => d.Nodes, o => o.Ignore());
         CreateMap<CreateCareerRoadmapDto, CareerRoadmap>();
         CreateMap<UpdateCareerRoadmapDto, CareerRoadmap>()
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
