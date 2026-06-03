@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router';
+import { Link, useNavigate, useLocation, Navigate } from 'react-router';
 import { Compass, Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { GoogleLogin } from '@react-oauth/google';
@@ -14,8 +14,13 @@ import type { AuthResponseDto, LoginUserDto, GoogleLoginDto } from '@/types/api'
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, _initialized } = useAuthStore();
   const setAuth = useAuthStore((s) => s.setAuth);
   const from = (location.state as { from?: string })?.from ?? '/dashboard';
+
+  if (_initialized && isAuthenticated) {
+    return <Navigate to={from} replace />;
+  }
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');

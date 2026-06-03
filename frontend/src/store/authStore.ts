@@ -22,6 +22,8 @@ interface AuthActions {
 
 export type AuthStore = AuthState & AuthActions;
 
+const ACCESS_TOKEN_KEY = 'secompass_at';
+const USER_KEY = 'secompass_user';
 const REFRESH_TOKEN_KEY = 'secompass_rt';
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -31,21 +33,40 @@ export const useAuthStore = create<AuthStore>((set) => ({
   _initialized: false,
 
   setAuth: (accessToken, user, refreshToken) => {
-    if (refreshToken && import.meta.env.DEV) {
-      sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     }
     set({ accessToken, user, isAuthenticated: true });
   },
 
   clearAuth: () => {
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     set({ accessToken: null, user: null, isAuthenticated: false });
   },
 
   initFromStorage: () => {
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const userStr = localStorage.getItem(USER_KEY);
+
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr) as AuthUser;
+        set({ accessToken: token, user, isAuthenticated: true, _initialized: true });
+        return;
+      } catch {
+        // corrupt data — fall through to clear
+      }
+    }
+
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     set({ _initialized: true });
   },
 }));
 
 export const getRefreshToken = (): string | null =>
-  sessionStorage.getItem(REFRESH_TOKEN_KEY);
+  localStorage.getItem(REFRESH_TOKEN_KEY);
