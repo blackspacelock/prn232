@@ -59,6 +59,7 @@ export function NavigationRail() {
   });
 
   const fullName: string | null = (userData as any)?.userById?.fullName ?? null;
+  const avatarUrl: string | null = (userData as any)?.userById?.avatarUrl ?? null;
   const displayName = fullName ?? user?.email ?? '';
   const initials = getInitials(fullName, user?.email);
   const role = user?.role ?? '';
@@ -69,7 +70,7 @@ export function NavigationRail() {
   return (
     <aside className="fixed left-0 top-0 z-50 hidden h-full w-56 flex-col border-r border-[var(--md3-outline-variant)] bg-white px-4 py-4 md:flex">
       {/* Logo */}
-      <Link to="/dashboard" className="mb-5 flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-[var(--md3-surface-variant)]">
+      <div className="mb-5 flex items-center gap-3 px-3 py-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--md3-primary-container)]">
           <Compass className="h-6 w-6 text-[var(--md3-primary)]" />
         </div>
@@ -77,7 +78,7 @@ export function NavigationRail() {
           <span className="block text-base font-semibold leading-tight text-[var(--md3-primary)]">SECompass</span>
           <span className="block truncate text-[11px] font-medium text-[var(--md3-on-surface-variant)]">Career workspace</span>
         </div>
-      </Link>
+      </div>
 
       {/* Nav Items */}
       <nav className="flex-1 flex flex-col gap-1 w-full overflow-y-auto">
@@ -127,15 +128,18 @@ export function NavigationRail() {
           </span>
           <span className="text-sm font-medium">Settings</span>
         </Link>
-        <Link to="/settings" className="flex items-center gap-3 rounded-xl bg-[var(--md3-surface-container)] px-3 py-3 hover:bg-[var(--md3-surface-variant)] transition-colors">
-          <div className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] flex shrink-0 items-center justify-center">
-            <span className="text-sm font-medium text-[var(--md3-primary)]">{initials}</span>
+        <div className="flex items-center gap-3 rounded-xl bg-[var(--md3-surface-container)] px-3 py-3">
+          <div className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] flex shrink-0 items-center justify-center overflow-hidden">
+            {avatarUrl
+              ? <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              : <span className="text-sm font-medium text-[var(--md3-primary)]">{initials}</span>
+            }
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-[var(--md3-on-surface)]">{displayName}</p>
             <p className="truncate text-[11px] text-[var(--md3-on-surface-variant)]">{role}</p>
           </div>
-        </Link>
+        </div>
       </div>
     </aside>
   );
