@@ -20,7 +20,10 @@ packages/
 .idea/
 
 ## ASP.NET / app settings
-appsettings*.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.local.json
+appsettings.json
 secrets.json
 
 ## Entity Framework local DB

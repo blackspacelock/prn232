@@ -1,178 +1,111 @@
+import { useParams } from 'react-router';
 import { Link } from 'react-router';
-import { ActionAnchor, ActionButton } from '../components/ActionButton';
-import { Compass, Github, Linkedin, ExternalLink, Copy, Mail } from 'lucide-react';
+import { ActionButton } from '../components/ActionButton';
+import { Skeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
+import { Compass, ExternalLink, Lock, User } from 'lucide-react';
+import { useQuery } from '@apollo/client/react';
+import { GET_PROFILE_BY_USER_ID, GET_GITHUB_REPOS_BY_PROFILE } from '@/graphql/queries';
 
-const skills = [
-  'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'SQL',
-  'Docker', 'Git', '.NET', 'GraphQL', 'REST API', 'CI/CD'
-];
-
-const roadmaps = [
-  { name: 'Frontend Developer', progress: 75, role: 'Primary' },
-  { name: 'Backend Developer', progress: 30, role: 'Secondary' },
-];
-
-const projects = [
-  {
-    name: 'E-commerce Platform',
-    summary: 'Full-stack e-commerce application with React, Node.js, and PostgreSQL. Features include user authentication, shopping cart, and payment integration.',
-    technologies: ['React', 'Node.js', 'PostgreSQL'],
-  },
-  {
-    name: 'Task Management API',
-    summary: 'RESTful API for task management with authentication and real-time updates using WebSocket.',
-    technologies: ['Express', 'MongoDB', 'Socket.io'],
-  },
-  {
-    name: 'Real-time Chat App',
-    summary: 'Real-time messaging application with group chat and file sharing capabilities.',
-    technologies: ['React', 'Firebase', 'TypeScript'],
-  },
-];
+interface ProfileDto { userId: string; bioDescription?: string; university?: string; major?: string; studiedYear?: number }
+interface GitHubRepo { id: string; repositoryName: string; repoUrl: string; description?: string; isPrivate: boolean }
 
 export function PublicPortfolioPage() {
+  const { username } = useParams<{ username: string }>();
+
+  const { data: profileData, loading: profileLoading, error: profileError } = useQuery(GET_PROFILE_BY_USER_ID, {
+    variables: { userId: username },
+    skip: !username,
+    context: { headers: {} },
+  });
+
+  const profile: ProfileDto | null = (profileData as any)?.profileByUserId ?? null;
+
+  const { data: reposData, loading: reposLoading } = useQuery(GET_GITHUB_REPOS_BY_PROFILE, {
+    variables: { profileId: profile?.userId ?? username },
+    skip: !username,
+    context: { headers: {} },
+  });
+
+  const repos: GitHubRepo[] = (reposData as any)?.gitHubRepositoriesByProfile ?? [];
+
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--md3-surface-container)] py-12">
+        <div className="max-w-[860px] mx-auto px-6 space-y-6">
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-64 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (profileError || !profile) {
+    return (
+      <div className="min-h-screen bg-[var(--md3-surface-container)] flex items-center justify-center">
+        <EmptyState icon={User} title="Portfolio not found" description="This portfolio does not exist or is not public." actionLabel="Go Home" onAction={() => {}} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--md3-surface-container)]">
-      {/* Navbar */}
-      <nav className="h-14 bg-white border-b border-[var(--md3-outline-variant)] sticky top-0 z-50">
-        <div className="max-w-[860px] mx-auto h-full px-6 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-[var(--md3-primary)]" />
-            <span className="text-base font-bold text-[var(--md3-primary)]">SECompass</span>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <ActionButton icon={Copy} label="Copy Link" variant="neutral" size="md" />
-            <ActionButton icon={Mail} label="Contact Me" variant="primary" size="md" />
-          </div>
-        </div>
+      <nav className="bg-white border-b border-[var(--md3-outline-variant)] px-6 py-4 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2">
+          <Compass className="w-6 h-6 text-[var(--md3-primary)]" />
+          <span className="font-bold text-[var(--md3-primary)]">SECompass</span>
+        </Link>
+        <Link to="/login" className="text-sm font-medium text-[var(--md3-primary)] hover:underline">Sign In</Link>
       </nav>
 
-      {/* Content */}
-      <div className="max-w-[860px] mx-auto px-6 py-6 space-y-4">
-        {/* Profile Header */}
-        <div className="md3-card p-8">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="w-[72px] h-[72px] rounded-full bg-[var(--md3-primary-container)] flex items-center justify-center shrink-0">
-              <span className="text-2xl font-medium text-[var(--md3-primary)]">NT</span>
+      <div className="max-w-[860px] mx-auto px-6 py-12 space-y-8">
+        <div className="bg-white rounded-2xl p-8 shadow-sm">
+          <div className="flex items-start gap-6">
+            <div className="w-20 h-20 rounded-full bg-[var(--md3-primary-container)] flex items-center justify-center shrink-0">
+              <span className="text-2xl font-bold text-[var(--md3-primary)]">
+                {String(username ?? '?')[0].toUpperCase()}
+              </span>
             </div>
             <div className="flex-1">
-              <h1 className="text-[32px] font-semibold leading-tight text-[var(--md3-on-surface)] mb-1">Nguyen Thanh</h1>
-              <p className="text-lg text-[var(--md3-on-surface-variant)] mb-2">Software Engineering Student</p>
-              <div className="flex items-center gap-2 text-sm text-[var(--md3-on-surface-variant)]">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
-                </svg>
-                RMIT University Vietnam
-              </div>
+              <h1 className="text-3xl font-semibold text-[var(--md3-on-surface)] mb-2">{String(username)}</h1>
+              {profile.university && (
+                <p className="text-sm text-[var(--md3-on-surface-variant)] mb-1">{profile.university} {profile.major && `· ${profile.major}`}</p>
+              )}
+              {profile.bioDescription && (
+                <p className="text-sm text-[var(--md3-on-surface-variant)]">{profile.bioDescription}</p>
+              )}
             </div>
           </div>
-
-          <p className="text-base text-[var(--md3-on-surface)] leading-relaxed mb-4">
-            Passionate software engineering student with a focus on full-stack development.
-            Building modern web applications with React, Node.js, and cloud technologies.
-            Currently learning DevOps practices and expanding into machine learning.
-          </p>
-
-          <div className="flex items-center gap-4">
-            <a
-              href="#"
-              className="text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors"
-              aria-label="GitHub"
-            >
-              <Github className="w-5 h-5" />
-            </a>
-            <a
-              href="#"
-              className="text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors"
-              aria-label="LinkedIn"
-            >
-              <Linkedin className="w-5 h-5" />
-            </a>
-          </div>
         </div>
 
-        {/* Skills */}
-        <div className="md3-card p-6">
-          <h2 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">Technical Skills</h2>
-          <div className="flex flex-wrap gap-2">
-            {skills.map((skill, index) => (
-              <div
-                key={index}
-                className="md3-chip md3-chip-selected"
-              >
-                {skill}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Roadmap Progress */}
-        <div className="md3-card p-6">
-          <h2 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">Learning Roadmaps</h2>
-          <div className="space-y-4">
-            {roadmaps.map((roadmap, index) => (
-              <div key={index}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium text-[var(--md3-on-surface)]">{roadmap.name}</h3>
-                    <span className="px-2 py-0.5 bg-[var(--md3-primary-container)] text-[var(--md3-primary)] rounded text-xs">
-                      {roadmap.role}
-                    </span>
+        <div className="bg-white rounded-2xl p-8 shadow-sm">
+          <h2 className="text-xl font-semibold text-[var(--md3-on-surface)] mb-4">GitHub Projects</h2>
+          {reposLoading ? (
+            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+          ) : repos.length === 0 ? (
+            <p className="text-sm text-[var(--md3-on-surface-variant)]">No public repositories.</p>
+          ) : (
+            <div className="space-y-4">
+              {repos.filter((r) => !r.isPrivate).map((repo) => (
+                <div key={repo.id} className="border border-[var(--md3-outline-variant)] rounded-xl p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      {repo.isPrivate && <Lock className="w-4 h-4 text-[var(--md3-on-surface-variant)]" />}
+                      <h3 className="text-base font-medium text-[var(--md3-on-surface)]">{repo.repositoryName || repo.repoUrl}</h3>
+                    </div>
+                    <a href={repo.repoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-[var(--md3-primary)] hover:underline">
+                      <ExternalLink className="w-3 h-3" /> View
+                    </a>
                   </div>
-                  <span className="text-sm font-medium text-[var(--md3-success)]">{roadmap.progress}%</span>
+                  {repo.description && <p className="text-sm text-[var(--md3-on-surface-variant)] mt-2">{repo.description}</p>}
                 </div>
-                <div className="h-1.5 bg-[var(--md3-outline-variant)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[var(--md3-success)] transition-all"
-                    style={{ width: `${roadmap.progress}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Projects */}
-        <div className="md3-card p-6">
-          <h2 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">Projects</h2>
-          <div className="grid gap-3">
-            {projects.map((project, index) => (
-              <div key={index} className="border border-[var(--md3-outline-variant)] rounded-xl p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-sm font-medium text-[var(--md3-on-surface)]">{project.name}</h3>
-                  <ActionAnchor
-                    icon={ExternalLink}
-                    label="Open"
-                    href="#"
-                    variant="text"
-                    className="shrink-0"
-                  />
-                </div>
-                <p className="text-xs text-[var(--md3-on-surface-variant)] italic mb-3 leading-relaxed">
-                  {project.summary}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {project.technologies.map((tech, techIndex) => (
-                    <span
-                      key={techIndex}
-                      className="px-2 py-0.5 bg-[var(--md3-surface-variant)] border border-[var(--md3-outline)] rounded text-xs font-mono text-[var(--md3-on-surface-variant)]"
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="py-6 border-t border-[var(--md3-outline-variant)] text-center">
-          <p className="text-xs text-[var(--md3-on-surface-variant)] mb-1">Built with SECompass</p>
-          <a href="/" className="text-xs font-medium text-[var(--md3-primary)] hover:underline">
-            secompass.io
-          </a>
+        <div className="text-center">
+          <ActionButton icon={Compass} label="Join SECompass" variant="primary" size="lg" onClick={() => {}} />
         </div>
       </div>
     </div>

@@ -2,172 +2,122 @@ import { useState } from 'react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { FormDialog, type FormDialogField } from '../../components/FormDialog';
-import { Calendar, Filter, Pencil, Plus, RotateCcw, Search, Trash2 } from 'lucide-react';
-import { appToast } from '../../components/AppToast';
+import { Skeleton } from '../../components/Skeleton';
+import { Snackbar } from '../../components/Snackbar';
+import { EmptyState } from '../../components/EmptyState';
+import { Plus, Pencil, Trash2, TrendingUp } from 'lucide-react';
+import { useQuery } from '@apollo/client/react';
+import { useMutation } from '@tanstack/react-query';
+import { apolloClient } from '@/lib/apollo';
+import { apiClient } from '@/lib/axios';
+import { GET_JOB_TRENDS_BY_REGION } from '@/graphql/queries';
 
-interface Trend {
-  skill: string;
-  region: string;
-  score: number;
-  source: string;
-  date: string;
-}
-
-const initialTrends: Trend[] = [
-  { skill: 'React', region: 'Vietnam', score: 98, source: 'LinkedIn', date: 'Jun 3, 2026' },
-  { skill: 'Python', region: 'Vietnam', score: 90, source: 'TopCV', date: 'Jun 3, 2026' },
-  { skill: 'Node.js', region: 'Vietnam', score: 88, source: 'TopCV', date: 'Jun 2, 2026' },
-  { skill: 'TypeScript', region: 'Vietnam', score: 85, source: 'LinkedIn', date: 'Jun 2, 2026' },
-  { skill: 'Docker', region: 'Vietnam', score: 82, source: 'LinkedIn', date: 'Jun 1, 2026' },
-  { skill: 'Kubernetes', region: 'Vietnam', score: 78, source: 'TopCV', date: 'Jun 1, 2026' },
-];
+interface JobTrend { id: string; techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
+interface JobTrendDto { techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
 
 export function AdminJobTrendsPage() {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [trends, setTrends] = useState<Trend[]>(initialTrends);
-  const [editingTrend, setEditingTrend] = useState<Trend | null>(null);
-  const [deleteTrend, setDeleteTrend] = useState<Trend | null>(null);
+  const [region] = useState('Vietnam');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingTrend, setEditingTrend] = useState<JobTrend | null>(null);
+  const [form, setForm] = useState<JobTrendDto>({ techSkill: '', trendScore: 80, snapshotDate: new Date().toISOString().split('T')[0] });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
-  const trendFields: FormDialogField[] = [
-    { name: 'skill', label: 'Tech Skill', defaultValue: editingTrend?.skill ?? '' },
-    { name: 'source', label: 'Source', defaultValue: editingTrend?.source ?? 'LinkedIn' },
-    { name: 'region', label: 'Region', defaultValue: editingTrend?.region ?? 'Vietnam' },
-    { name: 'score', label: 'Trend Score', type: 'number', defaultValue: String(editingTrend?.score ?? 80) },
-    { name: 'date', label: 'Snapshot Date', defaultValue: editingTrend?.date ?? 'Jun 3, 2026' },
-    { name: 'description', label: 'Description', type: 'textarea', colSpan: 2 },
-  ];
+  const { data, loading, error, refetch } = useQuery(GET_JOB_TRENDS_BY_REGION, { variables: { region } });
+  const trends: JobTrend[] = (data as any)?.jobTrendsByRegion ?? [];
+
+  const invalidate = () => apolloClient.refetchQueries({ include: [GET_JOB_TRENDS_BY_REGION] });
+  const showError = (msg: string) => setSnackbar({ open: true, message: msg });
+
+  const createMutation = useMutation({
+    mutationFn: (dto: JobTrendDto) => apiClient.post('/api/job-trends', dto),
+    onSuccess: async () => { await invalidate(); setShowForm(false); },
+    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create.'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: JobTrendDto }) => apiClient.put(`/api/job-trends/${id}`, dto),
+    onSuccess: async () => { await invalidate(); setEditingTrend(null); setShowForm(false); },
+    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update.'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/api/job-trends/${id}`),
+    onSuccess: async () => { await invalidate(); setDeleteId(null); },
+    onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
+  });
+
+  const handleSave = () => {
+    if (editingTrend) updateMutation.mutate({ id: editingTrend.id, dto: form });
+    else createMutation.mutate(form);
+  };
 
   return (
     <AppShell breadcrumb="Admin / Job Trends">
       <div className="app-page">
         <PageHeader
           title="Job Trends"
-          description="Manage market demand data used by recommendations."
-          actions={
-          <AdminActionButton
-            icon={Plus}
-            label="New Trend"
-            variant="primary"
-            size="md"
-            onClick={() => {
-              setEditingTrend(null);
-              setDialogOpen(true);
-            }}
-          />
-          }
+          description="Manage market demand data for tech skills."
+          actions={<AdminActionButton icon={Plus} label="Add Trend" onClick={() => { setEditingTrend(null); setForm({ techSkill: '', trendScore: 80, snapshotDate: new Date().toISOString().split('T')[0] }); setShowForm(true); }} />}
         />
 
-        <div className="md3-panel flex flex-wrap gap-3 p-4">
-          <select className="md3-field min-w-[180px] px-4"><option>Vietnam</option><option>Global</option></select>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--md3-on-surface-variant)]" />
-            <input className="md3-field w-[220px] pl-12 pr-4" placeholder="Skill keyword" />
-          </div>
-          {['From date', 'To date'].map((label) => (
-            <div key={label} className="relative">
-              <Calendar className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--md3-on-surface-variant)]" />
-              <input className="md3-field w-[150px] pl-12 pr-4" placeholder={label} />
+        {showForm && (
+          <div className="md3-card p-6">
+            <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">{editingTrend ? 'Edit Trend' : 'Add Trend'}</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <input type="text" value={form.techSkill} onChange={(e) => setForm({ ...form, techSkill: e.target.value })} placeholder="Tech Skill (e.g. React)" className="md3-field w-full px-4" />
+              <input type="number" value={form.trendScore} onChange={(e) => setForm({ ...form, trendScore: Number(e.target.value) })} placeholder="Score (0-100)" className="md3-field w-full px-4" min={0} max={100} />
+              <input type="text" value={form.region ?? ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Region" className="md3-field w-full px-4" />
+              <input type="text" value={form.source ?? ''} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="Source" className="md3-field w-full px-4" />
+              <input type="date" value={form.snapshotDate} onChange={(e) => setForm({ ...form, snapshotDate: e.target.value })} className="md3-field w-full px-4" />
+              <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description" className="md3-field w-full px-4" />
             </div>
-          ))}
-          <AdminActionButton icon={Filter} label="Apply" variant="primary" size="md" />
-          <AdminActionButton icon={RotateCcw} label="Reset" variant="neutral" size="md" />
-        </div>
+            <div className="flex gap-3 mt-4">
+              <AdminActionButton icon={Plus} label={createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save'} onClick={handleSave} disabled={!form.techSkill || createMutation.isPending || updateMutation.isPending} />
+              <AdminActionButton icon={Trash2} label="Cancel" onClick={() => setShowForm(false)} />
+            </div>
+          </div>
+        )}
 
-        <div className="md3-card overflow-hidden">
-          <table className="md3-data-table">
-            <thead className="bg-[var(--md3-surface-container)] text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">
-              <tr>
-                {['Tech Skill', 'Region', 'Score', 'Source', 'Snapshot Date', 'Actions'].map((heading) => (
-                  <th key={heading} className="border-b-2 border-[var(--md3-outline-variant)] px-6 py-4 text-left">{heading}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {trends.map((trend, index) => (
-                <tr key={trend.skill} className={`border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)] ${index === 0 ? 'border-l-4 border-l-[var(--md3-primary)]' : ''} ${index % 2 ? 'bg-[#FAFAFA]' : 'bg-white'}`}>
-                  <td className="px-6 py-4 text-sm font-medium text-[var(--md3-on-surface)]">{trend.skill}</td>
-                  <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{trend.region}</td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-medium">{trend.score}</p>
-                    <div className="mt-1 h-1 w-[60px] rounded-full bg-[var(--md3-outline-variant)]"><div className="h-full rounded-full bg-[var(--md3-primary)]" style={{ width: `${trend.score}%` }} /></div>
-                  </td>
-                  <td className="px-6 py-4"><span className="rounded bg-[var(--md3-primary-container)] px-2 py-1 font-mono text-xs text-[var(--md3-primary)]">{trend.source}</span></td>
-                  <td className="px-6 py-4 text-xs text-[var(--md3-on-surface-variant)]">{trend.date}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-2">
-                    <AdminActionButton
-                      icon={Pencil}
-                      label="Edit"
-                      onClick={() => {
-                        setEditingTrend(trend);
-                        setDialogOpen(true);
-                      }}
-                    />
-                    <AdminActionButton
-                      icon={Trash2}
-                      label="Delete"
-                      variant="danger"
-                      onClick={() => setDeleteTrend(trend)}
-                    />
-                    </div>
-                  </td>
+        {loading ? (
+          <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
+        ) : error ? (
+          <EmptyState icon={TrendingUp} title="Failed to load trends" description="Please try again." actionLabel="Retry" onAction={refetch} />
+        ) : (
+          <div className="md3-card overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Skill</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Region</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Score</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Source</th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {trends.map((trend) => (
+                  <tr key={trend.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
+                    <td className="px-6 py-4 text-sm font-medium text-[var(--md3-on-surface)]">{trend.techSkill}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{trend.region ?? '—'}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-[var(--md3-primary)]">{trend.trendScore}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{trend.source ?? '—'}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => { setEditingTrend(trend); setForm({ techSkill: trend.techSkill, trendScore: trend.trendScore, snapshotDate: trend.snapshotDate.split('T')[0], region: trend.region, source: trend.source, description: trend.description }); setShowForm(true); }} className="p-2 hover:bg-[var(--md3-primary-container)] rounded-lg"><Pencil className="w-4 h-4 text-[var(--md3-primary)]" /></button>
+                        <button onClick={() => setDeleteId(trend.id)} className="p-2 hover:bg-[var(--md3-error-container)] rounded-lg"><Trash2 className="w-4 h-4 text-[var(--md3-error)]" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <ConfirmDialog isOpen={deleteId !== null} title="Delete Trend?" message="This will permanently remove the job trend." confirmLabel="Delete" variant="danger" onConfirm={() => { if (deleteId) deleteMutation.mutate(deleteId); }} onCancel={() => setDeleteId(null)} />
+        <Snackbar isOpen={snackbar.open} message={snackbar.message} variant="error" onClose={() => setSnackbar({ open: false, message: '' })} />
       </div>
-
-      <FormDialog
-        isOpen={dialogOpen}
-        title={editingTrend ? 'Edit Job Trend' : 'Create Job Trend'}
-        description="Record a market demand signal."
-        fields={trendFields}
-        onCancel={() => {
-          setDialogOpen(false);
-          setEditingTrend(null);
-        }}
-        onSubmit={(values) => {
-          const nextTrend: Trend = {
-            skill: String(values.skill || 'New Skill'),
-            source: String(values.source || 'LinkedIn'),
-            region: String(values.region || 'Vietnam'),
-            score: Number(values.score || 80),
-            date: String(values.date || 'Today'),
-          };
-
-          if (editingTrend) {
-            setTrends(trends.map((trend) => (
-              trend === editingTrend ? nextTrend : trend
-            )));
-            appToast.success('Trend updated');
-          } else {
-            setTrends([nextTrend, ...trends]);
-            appToast.success('Trend created');
-          }
-
-          setDialogOpen(false);
-          setEditingTrend(null);
-        }}
-      />
-
-      <ConfirmDialog
-        isOpen={deleteTrend !== null}
-        title="Delete Job Trend?"
-        message={`This removes ${deleteTrend?.skill ?? 'this trend'} from market recommendations.`}
-        confirmLabel="Delete"
-        variant="danger"
-        onConfirm={() => {
-          if (deleteTrend) {
-            setTrends(trends.filter((trend) => trend !== deleteTrend));
-            appToast.success('Trend deleted');
-          }
-          setDeleteTrend(null);
-        }}
-        onCancel={() => setDeleteTrend(null)}
-      />
     </AppShell>
   );
 }
-

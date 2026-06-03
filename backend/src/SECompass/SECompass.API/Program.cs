@@ -14,7 +14,21 @@ try
         configuration.ReadFrom.Configuration(context.Configuration)
                      .ReadFrom.Services(services));
 
-    builder.Services.AddApplicationServices(builder.Configuration);
+    builder.Services.AddApplicationServices(builder.Configuration, builder.Environment);
+
+    static void ValidateRequiredConfig(IConfiguration cfg)
+    {
+        var required = new[]
+        {
+            "Jwt:Secret", "Jwt:Issuer", "Jwt:Audience",
+            "ConnectionStrings:DefaultConnection"
+        };
+        var missing = required.Where(k => string.IsNullOrWhiteSpace(cfg[k])).ToList();
+        if (missing.Count > 0)
+            throw new InvalidOperationException(
+                $"Missing required configuration keys: {string.Join(", ", missing)}");
+    }
+    ValidateRequiredConfig(builder.Configuration);
 
     var app = builder.Build();
 
@@ -26,6 +40,7 @@ try
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SECompass API v1"));
 
     app.UseRouting();
+    app.UseCors("AllowFrontend");
     app.UseAuthentication();
     app.UseAuthorization();
 
