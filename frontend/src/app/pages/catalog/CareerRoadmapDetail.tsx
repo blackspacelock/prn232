@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLazyQuery, useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router';
-import { AlertCircle, ChevronLeft, Map as MapIcon } from 'lucide-react';
+import { AlertCircle, ChevronLeft } from 'lucide-react';
 import {
   GET_CAREER_ROADMAP_WITH_NODES,
   GET_LEARNING_RESOURCES_BY_NODE,
@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { AppShell } from '../../components/AppShell';
 import { PublicLayout } from '../../components/PublicLayout';
+import { AppBreadcrumbs } from '../../components/AppBreadcrumbs';
 import { Skeleton } from '../../components/Skeleton';
 import { ActionLink } from '../../components/ActionButton';
 import { Snackbar } from '../../components/Snackbar';
@@ -129,6 +130,21 @@ export function CareerRoadmapDetailPage() {
   const backPath = roadmap?.careerRoleId
     ? paths.roleDetailPath(roadmap.careerRoleId)
     : paths.roleListPath;
+  const publicBreadcrumbs = [
+    { label: 'Home', to: '/' },
+    { label: 'Browse Roles', to: paths.roleListPath },
+    ...(roadmap?.careerRoleId ? [{ label: 'Roadmaps', to: backPath }] : []),
+    { label: roadmap?.name ?? 'Roadmap Template' },
+  ];
+  const contentHeightClass = paths.isProtectedCatalog
+    ? 'h-[calc(100vh-64px)]'
+    : 'h-[calc(100vh-64px)]';
+  const canvasHeightClass = paths.isProtectedCatalog
+    ? 'h-[calc(100vh-64px)]'
+    : 'h-[calc(100vh-112px)]';
+  const minContentHeightClass = paths.isProtectedCatalog
+    ? 'min-h-[calc(100vh-64px)]'
+    : 'min-h-[calc(100vh-64px)]';
 
   const handleNodeSelect = (node: RoadmapGraphNode) => {
     const sourceNode = roadmap?.nodes.find((item) => item.id === node.id) ?? null;
@@ -139,28 +155,35 @@ export function CareerRoadmapDetailPage() {
   };
 
   const canvas = (
-    <div className="flex h-[calc(100vh-64px)] flex-col md:flex-row">
-      <div className="relative min-h-[520px] flex-1 overflow-hidden bg-[#fafafa]">
-        <RoadmapCanvasHeader
-          title={roadmap?.name ?? 'Roadmap Template'}
-          description={roadmap?.description}
-          nodeCount={graphNodes.length}
-          levelCount={levelCount}
-        />
-        {graphNodes.length > 0 ? (
-          <RoadmapGraphCanvas
-            graphNodes={graphNodes}
-            graphEdges={roadmap?.edges}
-            selectedNodeId={selectedRoadmapNode?.id}
-            onNodeSelect={handleNodeSelect}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-[var(--md3-on-surface-variant)]">
-              No topics defined for this roadmap template yet.
-            </p>
+    <div className={`flex ${contentHeightClass} flex-col md:flex-row`}>
+      <div className="flex min-h-[520px] flex-1 flex-col bg-[#fafafa]">
+        {!paths.isProtectedCatalog && (
+          <div className="shrink-0 border-b border-[var(--md3-outline-variant)] bg-white px-5 py-2">
+            <AppBreadcrumbs items={publicBreadcrumbs} />
           </div>
         )}
+        <div className={`relative flex-1 overflow-hidden ${canvasHeightClass}`}>
+          <RoadmapCanvasHeader
+            title={roadmap?.name ?? 'Roadmap Template'}
+            description={roadmap?.description}
+            nodeCount={graphNodes.length}
+            levelCount={levelCount}
+          />
+          {graphNodes.length > 0 ? (
+            <RoadmapGraphCanvas
+              graphNodes={graphNodes}
+              graphEdges={roadmap?.edges}
+              selectedNodeId={selectedRoadmapNode?.id}
+              onNodeSelect={handleNodeSelect}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-sm text-[var(--md3-on-surface-variant)]">
+                No topics defined for this roadmap template yet.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       <RoadmapTemplateInspector
@@ -186,7 +209,7 @@ export function CareerRoadmapDetailPage() {
 
   if (loading) {
     const skeleton = (
-      <div className="flex h-[calc(100vh-64px)]">
+      <div className={`flex ${contentHeightClass}`}>
         <div className="flex-1 p-6">
           <Skeleton className="h-full rounded-xl" />
         </div>
@@ -214,7 +237,7 @@ export function CareerRoadmapDetailPage() {
 
   if (error || !roadmap) {
     const fallback = (
-      <div className="flex min-h-[calc(100vh-64px)] items-center justify-center p-6 text-center">
+      <div className={`flex ${minContentHeightClass} items-center justify-center p-6 text-center`}>
         <div>
           <AlertCircle className="mx-auto mb-3 h-10 w-10 text-[var(--md3-error)]" />
           <p className="text-[var(--md3-on-surface-variant)]">
@@ -261,9 +284,6 @@ export function CareerRoadmapDetailPage() {
 
   return (
     <PublicLayout>
-      <div className="border-b border-[var(--md3-outline-variant)] bg-white px-6 py-3">
-        <ActionLink icon={MapIcon} label="All Career Roles" to="/explore/career-roles" variant="text" />
-      </div>
       {canvas}
     </PublicLayout>
   );

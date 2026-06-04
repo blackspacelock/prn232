@@ -1,17 +1,24 @@
-import { useParams } from 'react-router';
-import { Link } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { ActionButton } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Compass, ExternalLink, Lock, User } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { GET_PROFILE_BY_USER_ID, GET_GITHUB_REPOS_BY_PROFILE } from '@/graphql/queries';
+import { PublicLayout } from '../components/PublicLayout';
+import { AppBreadcrumbs } from '../components/AppBreadcrumbs';
 
 interface ProfileDto { userId: string; bioDescription?: string; university?: string; major?: string; studiedYear?: number }
 interface GitHubRepo { id: string; repositoryName: string; repoUrl: string; description?: string; isPrivate: boolean }
 
 export function PublicPortfolioPage() {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
+  const breadcrumbs = [
+    { label: 'Home', to: '/' },
+    { label: 'Portfolio' },
+    { label: username ?? 'User' },
+  ];
 
   const { data: profileData, loading: profileLoading, error: profileError } = useQuery(GET_PROFILE_BY_USER_ID, {
     variables: { userId: username },
@@ -31,34 +38,42 @@ export function PublicPortfolioPage() {
 
   if (profileLoading) {
     return (
-      <div className="min-h-screen bg-[var(--md3-surface-container)] py-12">
-        <div className="max-w-[860px] mx-auto px-6 space-y-6">
-          <Skeleton className="h-48 rounded-2xl" />
-          <Skeleton className="h-64 rounded-2xl" />
+      <PublicLayout>
+        <div className="min-h-[calc(100vh-64px)] bg-[var(--md3-surface-container)] py-12">
+          <div className="max-w-[860px] mx-auto px-6 space-y-6">
+            <AppBreadcrumbs items={breadcrumbs} />
+            <Skeleton className="h-48 rounded-2xl" />
+            <Skeleton className="h-64 rounded-2xl" />
+          </div>
         </div>
-      </div>
+      </PublicLayout>
     );
   }
 
   if (profileError || !profile) {
     return (
-      <div className="min-h-screen bg-[var(--md3-surface-container)] flex items-center justify-center">
-        <EmptyState icon={User} title="Portfolio not found" description="This portfolio does not exist or is not public." actionLabel="Go Home" onAction={() => {}} />
-      </div>
+      <PublicLayout>
+        <div className="min-h-[calc(100vh-64px)] bg-[var(--md3-surface-container)] flex items-center justify-center p-6">
+          <div className="w-full max-w-[860px] space-y-6">
+            <AppBreadcrumbs items={breadcrumbs} />
+            <EmptyState
+              icon={User}
+              title="Portfolio not found"
+              description="This portfolio does not exist or is not public."
+              actionLabel="Go Home"
+              onAction={() => navigate('/')}
+            />
+          </div>
+        </div>
+      </PublicLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--md3-surface-container)]">
-      <nav className="bg-white border-b border-[var(--md3-outline-variant)] px-6 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <Compass className="w-6 h-6 text-[var(--md3-primary)]" />
-          <span className="font-bold text-[var(--md3-primary)]">SECompass</span>
-        </Link>
-        <Link to="/login" className="text-sm font-medium text-[var(--md3-primary)] hover:underline">Sign In</Link>
-      </nav>
-
-      <div className="max-w-[860px] mx-auto px-6 py-12 space-y-8">
+    <PublicLayout>
+      <div className="min-h-[calc(100vh-64px)] bg-[var(--md3-surface-container)]">
+        <div className="max-w-[860px] mx-auto px-6 py-12 space-y-8">
+        <AppBreadcrumbs items={breadcrumbs} />
         <div className="bg-white rounded-2xl p-8 shadow-sm">
           <div className="flex items-start gap-6">
             <div className="w-20 h-20 rounded-full bg-[var(--md3-primary-container)] flex items-center justify-center shrink-0">
@@ -105,9 +120,10 @@ export function PublicPortfolioPage() {
         </div>
 
         <div className="text-center">
-          <ActionButton icon={Compass} label="Join SECompass" variant="primary" size="lg" onClick={() => {}} />
+          <ActionButton icon={Compass} label="Join SECompass" variant="primary" size="lg" onClick={() => navigate('/register')} />
         </div>
       </div>
-    </div>
+      </div>
+    </PublicLayout>
   );
 }

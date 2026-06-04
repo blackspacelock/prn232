@@ -6,6 +6,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { AuthDrawer } from '../components/AuthDrawer';
 import { ActionButton } from '../components/ActionButton';
 import { Snackbar } from '../components/Snackbar';
+import { PublicLayout } from '../components/PublicLayout';
 import { apiClient } from '@/lib/axios';
 import { mapAuthResponse } from '@/lib/authMapper';
 import { useAuthStore } from '@/store/authStore';
@@ -67,18 +68,19 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex h-screen bg-[var(--md3-surface-container)]">
-      <AuthDrawer />
+    <PublicLayout>
+      <div className="flex min-h-[calc(100vh-64px)] bg-[var(--md3-surface-container)]">
+        <AuthDrawer />
 
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div
-          className="bg-white rounded-3xl p-10 w-full max-w-[480px]"
-          style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.08)' }}
-        >
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <Compass className="w-8 h-8 text-[var(--md3-primary)]" />
-            <span className="text-xl font-bold text-[var(--md3-primary)]">SECompass</span>
-          </div>
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div
+            className="bg-white rounded-3xl p-10 w-full max-w-[480px]"
+            style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.08)' }}
+          >
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <Compass className="w-8 h-8 text-[var(--md3-primary)]" />
+              <span className="text-xl font-bold text-[var(--md3-primary)]">SECompass</span>
+            </div>
 
           <div className="mb-8">
             <h1 className="text-3xl font-semibold text-[var(--md3-on-surface)] mb-2">Welcome back</h1>
@@ -164,15 +166,16 @@ export function LoginPage() {
               Create account
             </Link>
           </p>
+          </div>
         </div>
-      </div>
 
-      <Snackbar
-        isOpen={snackbar.open}
-        message={snackbar.message}
-        variant="error"
-        onClose={() => setSnackbar({ open: false, message: '' })}
-      />
-    </div>
+        <Snackbar
+          isOpen={snackbar.open}
+          message={snackbar.message}
+          variant="error"
+          onClose={() => setSnackbar({ open: false, message: '' })}
+        />
+      </div>
+    </PublicLayout>
   );
 }

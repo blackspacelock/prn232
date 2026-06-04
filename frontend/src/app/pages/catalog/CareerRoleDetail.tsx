@@ -10,6 +10,7 @@ import {
 import { GET_CAREER_ROLES } from '@/graphql/queries';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { PublicLayout } from '../../components/PublicLayout';
+import { AppBreadcrumbs } from '../../components/AppBreadcrumbs';
 import { Skeleton } from '../../components/Skeleton';
 import { ActionLink } from '../../components/ActionButton';
 import type { CareerRoleDto } from '@/types/api';
@@ -115,14 +116,14 @@ export function CareerRoleDetailPage() {
   return (
     <PublicLayout>
       <div className="max-w-7xl mx-auto px-6 py-10">
-        <div className="mb-4">
-          <Link
-            to={paths.roleListPath}
-            className="inline-flex items-center gap-1 text-sm text-[var(--md3-primary)] hover:underline"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            All Career Roles
-          </Link>
+        <div className="mb-5">
+          <AppBreadcrumbs
+            items={[
+              { label: 'Home', to: '/' },
+              { label: 'Browse Roles', to: paths.roleListPath },
+              { label: role?.name ?? 'Career Role' },
+            ]}
+          />
         </div>
 
         {rolesLoading ? (

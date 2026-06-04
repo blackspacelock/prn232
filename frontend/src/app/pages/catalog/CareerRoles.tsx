@@ -5,6 +5,7 @@ import { Briefcase, ArrowRight, AlertCircle, Map, Route, Search } from 'lucide-r
 import { GET_CAREER_ROLES } from '@/graphql/queries';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { PublicLayout } from '../../components/PublicLayout';
+import { AppBreadcrumbs } from '../../components/AppBreadcrumbs';
 import { Skeleton } from '../../components/Skeleton';
 import type { CareerRoleDto } from '@/types/api';
 import { useCatalogRoutes } from './catalogRoutes';
@@ -12,8 +13,10 @@ import { useCatalogRoutes } from './catalogRoutes';
 function RoleGrid({ getDetailPath }: { getDetailPath: (id: string) => string }) {
   const [search, setSearch] = useState('');
   const { data, loading, error } = useQuery(GET_CAREER_ROLES);
-  const roles: CareerRoleDto[] =
-    (data as { careerRoles?: CareerRoleDto[] })?.careerRoles ?? [];
+  const roles = useMemo(
+    () => (data as { careerRoles?: CareerRoleDto[] })?.careerRoles ?? [],
+    [data],
+  );
   const filteredRoles = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return roles;
@@ -144,6 +147,9 @@ export function CareerRolesPage() {
   return (
     <PublicLayout>
       <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="mb-5">
+          <AppBreadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Browse Roles' }]} />
+        </div>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[var(--md3-on-surface)] mb-2">
             Explore Career Roles
