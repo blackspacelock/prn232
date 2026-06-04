@@ -10,7 +10,8 @@ public class NodeProgressRepository : GenericRepository<NodeProgress>, INodeProg
 
     public async Task<IEnumerable<NodeProgress>> GetByPersonalRoadmapAsync(Guid personalRoadmapId)
         => await _dbSet
-            .Include(np => np.Node)
+            .Include(np => np.RoadmapNode)
+                .ThenInclude(rn => rn.Node)
             .Where(np => np.PersonalRoadmapId == personalRoadmapId)
             .ToListAsync();
 

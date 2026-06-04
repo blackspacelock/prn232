@@ -32,6 +32,13 @@ public class NodeProgressService : INodeProgressService
 
         await _personalRoadmapService.RecalculateProgressAsync(np.PersonalRoadmapId);
 
+        var roadmapNode = await _uow.RoadmapNodes.GetByIdAsync(np.RoadmapNodeId);
+        if (roadmapNode != null)
+        {
+            roadmapNode.Node = (await _uow.Nodes.GetByIdAsync(roadmapNode.NodeId))!;
+            np.RoadmapNode = roadmapNode;
+        }
+
         return ServiceResult<NodeProgressDto>.Ok(_mapper.Map<NodeProgressDto>(np));
     }
 
