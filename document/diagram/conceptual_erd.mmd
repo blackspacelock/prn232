@@ -20,9 +20,13 @@ erDiagram
     %% Hierarchy & Junction Entities
     CareerRoadmap ||--o{ RoadmapNode : "has many"
     Node ||--o{ RoadmapNode : "is mapped to"
+    RoadmapNode |o--o{ RoadmapNode : "has child roadmap nodes"
+    CareerRoadmap ||--o{ RoadmapNodeEdge : "defines connections"
+    RoadmapNode ||--o{ RoadmapNodeEdge : "connects from"
+    RoadmapNode ||--o{ RoadmapNodeEdge : "connects to"
     
     PersonalRoadmap ||--o{ NodeProgress : "tracks"
-    Node ||--o{ NodeProgress : "progress status for"
+    RoadmapNode ||--o{ NodeProgress : "progress status for"
 
     Node ||--o{ LearningResource : "directly owns (1:M)"
     Node |o--o{ Node : "parent/child self-reference"

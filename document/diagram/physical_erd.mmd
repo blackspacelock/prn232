@@ -126,6 +126,23 @@ erDiagram
         UUID RoadmapNodeId PK
         UUID CareerRoadmapId FK
         UUID NodeId FK
+        UUID ParentRoadmapNodeId FK "NULLABLE"
+        INT Order
+        NVARCHAR(100) NodeType
+        NVARCHAR(100) RequirementType
+        INT PositionX "NULLABLE"
+        INT PositionY "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+        BIT IsDeleted
+    }
+
+    RoadmapNodeEdge {
+        UUID RoadmapNodeEdgeId PK
+        UUID CareerRoadmapId FK
+        UUID FromRoadmapNodeId FK
+        UUID ToRoadmapNodeId FK
+        NVARCHAR(100) EdgeType
         DATETIME CreatedAt
         DATETIME UpdatedAt
         BIT IsDeleted
@@ -134,7 +151,7 @@ erDiagram
     NodeProgress {
         UUID NodeProgressId PK
         UUID PersonalRoadmapId FK
-        UUID NodeId FK
+        UUID RoadmapNodeId FK
         INT Status
         NVARCHAR(MAX) Note "NULLABLE"
         DATETIME CreatedAt
@@ -180,9 +197,13 @@ erDiagram
     
     CareerRoadmap ||--o{ RoadmapNode : "CareerRoadmapId"
     Node ||--o{ RoadmapNode : "NodeId"
+    RoadmapNode |o--o{ RoadmapNode : "ParentRoadmapNodeId"
+    CareerRoadmap ||--o{ RoadmapNodeEdge : "CareerRoadmapId"
+    RoadmapNode ||--o{ RoadmapNodeEdge : "FromRoadmapNodeId"
+    RoadmapNode ||--o{ RoadmapNodeEdge : "ToRoadmapNodeId"
     
     PersonalRoadmap ||--o{ NodeProgress : "PersonalRoadmapId"
-    Node ||--o{ NodeProgress : "NodeId"
+    RoadmapNode ||--o{ NodeProgress : "RoadmapNodeId"
     
     Node ||--o{ LearningResource : "NodeId (1:M direct)"
     Node |o--o{ Node : "ParentNodeId"

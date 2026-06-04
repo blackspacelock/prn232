@@ -1,218 +1,172 @@
-import { useState } from 'react';
-import { AppShell } from '../../components/AppShell';
+import { useMemo, useState } from 'react';
+import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { CreateNodeDialog } from '../../components/CreateNodeDialog';
-import { FormDialog, type FormDialogField } from '../../components/FormDialog';
-import { BookOpen, ChevronDown, ChevronRight, ExternalLink, GripVertical, Plus, Save, Search, Trash2 } from 'lucide-react';
-import { appToast } from '../../components/AppToast';
+import { Skeleton } from '../../components/Skeleton';
+import { Snackbar } from '../../components/Snackbar';
+import { EmptyState } from '../../components/EmptyState';
+import { Plus, Pencil, Trash2, Network, ChevronRight, Hash, Search } from 'lucide-react';
+import { useLazyQuery } from '@apollo/client/react';
+import { useMutation } from '@tanstack/react-query';
+import { apolloClient } from '@/lib/apollo';
+import { apiClient } from '@/lib/axios';
+import { GET_NODE_CHILDREN, GET_NODE_HIERARCHY } from '@/graphql/queries';
 
-const tree = [
-  { name: 'Internet Fundamentals', active: false, children: ['How does the internet work?', 'HTTP and HTTPS', 'DNS'] },
-  { name: 'HTML', active: false, children: [] },
-  { name: 'CSS', active: false, children: [] },
-];
-
-interface Resource {
-  name: string;
-  type: string;
-  provider: string;
-  free: boolean;
-}
-
-const initialResources: Resource[] = [
-  { name: 'MDN Internet Basics', type: 'Article', provider: 'MDN', free: true },
-  { name: 'HTTP Crash Course', type: 'Video', provider: 'freeCodeCamp', free: true },
-];
+interface NodeItem { id: string; name: string; description?: string; parentNodeId?: string; order: number }
+interface NodeDto { name: string; description?: string; parentNodeId?: string; order: number }
 
 export function AdminNodeLibraryPage() {
-  const [selected, setSelected] = useState('How does the internet work?');
-  const [createOpen, setCreateOpen] = useState(false);
-  const [resources, setResources] = useState<Resource[]>(initialResources);
-  const [resourceDialogOpen, setResourceDialogOpen] = useState(false);
-  const [deleteNodeOpen, setDeleteNodeOpen] = useState(false);
-  const [deleteResource, setDeleteResource] = useState<Resource | null>(null);
+  const [parentId, setParentId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingNode, setEditingNode] = useState<NodeItem | null>(null);
+  const [form, setForm] = useState<NodeDto>({ name: '', order: 1 });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [rootId, setRootId] = useState('');
+  const [search, setSearch] = useState('');
 
-  const resourceFields: FormDialogField[] = [
-    { name: 'name', label: 'Resource name', colSpan: 2 },
-    { name: 'url', label: 'Resource URL', type: 'url', colSpan: 2 },
-    { name: 'type', label: 'Type', type: 'select', options: ['Article', 'Video', 'Course', 'Docs'], defaultValue: 'Article' },
-    { name: 'provider', label: 'Provider', defaultValue: 'MDN' },
-    { name: 'free', label: 'Free resource', type: 'checkbox', defaultValue: true, colSpan: 2 },
-  ];
+  const [loadChildren, { data: childrenData, loading, error }] = useLazyQuery(GET_NODE_CHILDREN);
+  const [loadHierarchy, { data: hierarchyData, loading: hierarchyLoading, }] = useLazyQuery(GET_NODE_HIERARCHY);
+
+  const nodes: NodeItem[] = (childrenData as { nodeChildren?: NodeItem[] })?.nodeChildren ?? [];
+  const filteredNodes = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return nodes;
+    return nodes.filter((node) =>
+      `${node.name} ${node.description ?? ''}`.toLowerCase().includes(term),
+    );
+  }, [nodes, search]);
+  const hierarchyRootName =
+    (hierarchyData as { nodeHierarchy?: { name?: string } } | undefined)?.nodeHierarchy?.name;
+
+  const invalidate = () => apolloClient.refetchQueries({ include: [GET_NODE_CHILDREN] });
+  const showError = (msg: string) => setSnackbar({ open: true, message: msg });
+
+  const createMutation = useMutation({
+    mutationFn: (dto: NodeDto) => apiClient.post('/api/nodes', dto),
+    onSuccess: async () => { await invalidate(); setShowForm(false); },
+    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create.'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: NodeDto }) => apiClient.put(`/api/nodes/${id}`, dto),
+    onSuccess: async () => { await invalidate(); setEditingNode(null); setShowForm(false); },
+    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update.'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/api/nodes/${id}`),
+    onSuccess: async () => { await invalidate(); setDeleteId(null); },
+    onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
+  });
+
+  const handleLoadChildren = (id: string) => {
+    setParentId(id);
+    loadChildren({ variables: { parentId: id } });
+  };
+
+  const handleLoadHierarchy = () => {
+    if (rootId) loadHierarchy({ variables: { rootId } });
+  };
+
+  const handleSave = () => {
+    const dto = { ...form, parentNodeId: parentId ?? undefined };
+    if (editingNode) updateMutation.mutate({ id: editingNode.id, dto });
+    else createMutation.mutate(dto);
+  };
 
   return (
-    <AppShell breadcrumb="Admin / Node Library" className="app-main--flush">
-      <div className="flex min-h-[calc(100vh-64px)]">
-        <aside className="fixed bottom-0 left-56 top-16 w-[340px] border-r border-[var(--md3-outline-variant)] bg-white">
-          <div className="border-b border-[var(--md3-outline-variant)] p-5">
-            <h1 className="mb-3 text-base font-medium text-[var(--md3-on-surface)]">Node Library</h1>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--md3-on-surface-variant)]" />
-              <input className="md3-field h-9 w-full pl-9 pr-3 text-sm" placeholder="Search nodes..." />
-            </div>
-          </div>
-          <div className="space-y-1 p-2">
-            {tree.map((root) => (
-              <div key={root.name}>
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-[var(--md3-surface-variant)]">
-                  {root.children.length ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  {root.name}
-                </button>
-                {root.children.map((child) => (
-                  <button
-                    key={child}
-                    onClick={() => setSelected(child)}
-                    className={`ml-6 flex w-[calc(100%-1.5rem)] items-center justify-between rounded-lg px-3 py-2 text-left text-sm ${selected === child ? 'bg-[var(--md3-primary-container)] text-[var(--md3-primary)]' : 'hover:bg-[var(--md3-surface-variant)]'}`}
-                  >
-                    {child}
-                    <span className="flex gap-1 opacity-50">
-                      <GripVertical className="h-3 w-3" />
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-          <AdminActionButton
-            icon={Plus}
-            label="Add node"
-            variant="primary"
-            size="md"
-            onClick={() => setCreateOpen(true)}
-            className="absolute bottom-5 left-1/2 -translate-x-1/2 shadow-lg"
-            aria-label="Add node"
-          />
-        </aside>
+    <AppShell breadcrumb="Admin / Node Library">
+      <div className="app-page">
+        <PageHeader
+          title="Node Library"
+          description="Manage learning nodes and their hierarchical structure."
+          actions={<AdminActionButton icon={Plus} label="Create Node" onClick={() => { setEditingNode(null); setForm({ name: '', order: 1 }); setShowForm(true); }} />}
+        />
 
-        <section className="ml-[340px] flex-1 p-6">
-          <div className="mb-6 flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-[var(--md3-on-surface)]">{selected}</h1>
-              <p className="text-sm text-[var(--md3-on-surface-variant)]">Edit hierarchy, description, and resources for this learning node.</p>
-            </div>
-            <AdminActionButton
-              icon={Trash2}
-              label="Delete"
-              variant="danger"
-              size="md"
-              onClick={() => setDeleteNodeOpen(true)}
-            />
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[var(--md3-on-surface)]">Browse Hierarchy</p>
+            {parentId && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-[var(--md3-surface-container)] px-2 py-1 text-xs text-[var(--md3-on-surface-variant)]">
+                <Hash className="h-3.5 w-3.5" />
+                {nodes.length} children
+              </span>
+            )}
           </div>
-
-          <div className="md3-card mb-6 grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
-            <input className="md3-field px-4" defaultValue={selected} />
-            <select className="md3-field px-4">
-              <option>Internet Fundamentals</option>
-            </select>
-            <input className="md3-field px-4" defaultValue="1" />
-            <textarea className="md3-field min-h-28 px-4 py-3 md:col-span-2" defaultValue="Understand the request/response model, protocols, DNS, and browser-server communication." />
-            <div className="md:col-span-2 flex justify-end">
-              <AdminActionButton
-                icon={Save}
-                label="Save Node"
-                variant="primary"
-                size="md"
-                onClick={() => appToast.success('Node saved')}
-              />
-            </div>
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+            <input type="text" value={rootId} onChange={(e) => setRootId(e.target.value)} placeholder="Root node UUID" className="md3-field h-11 px-4" />
+            <AdminActionButton icon={Network} label={hierarchyLoading ? 'Loading...' : 'Load Hierarchy'} onClick={handleLoadHierarchy} disabled={!rootId || hierarchyLoading} />
+            <AdminActionButton icon={ChevronRight} label="Reload Children" onClick={() => { if (parentId) loadChildren({ variables: { parentId } }); }} disabled={!parentId} />
           </div>
+        </div>
 
+        {showForm && (
           <div className="md3-card p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-medium text-[var(--md3-on-surface)]">Learning Resources ({resources.length})</h2>
-              <AdminActionButton
-                icon={BookOpen}
-                label="Add Resource"
-                onClick={() => setResourceDialogOpen(true)}
-                size="md"
+            <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">{editingNode ? 'Edit Node' : 'Create Node'}</h3>
+            <div className="space-y-3">
+              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Node name" className="md3-field w-full px-4" />
+              <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description" className="md3-field w-full px-4" />
+              <input type="number" value={form.order} onChange={(e) => setForm({ ...form, order: Number(e.target.value) })} placeholder="Order" className="md3-field w-full px-4" min={1} />
+              <div className="flex gap-3">
+                <AdminActionButton icon={Plus} label={createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save'} onClick={handleSave} disabled={!form.name || createMutation.isPending || updateMutation.isPending} />
+                <AdminActionButton icon={Trash2} label="Cancel" onClick={() => setShowForm(false)} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hierarchyRootName && (
+          <div className="md3-card p-4 mb-4 text-sm text-[var(--md3-on-surface-variant)]">
+            Hierarchy root: <strong>{hierarchyRootName}</strong> - use &quot;Load Children&quot; to browse sub-nodes.
+          </div>
+        )}
+
+        {!parentId ? (
+          <EmptyState icon={Network} title="Browse the node library" description="Enter a root node ID above and click Load Hierarchy or Load Children." actionLabel="" onAction={() => {}} />
+        ) : loading ? (
+          <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
+        ) : error ? (
+          <EmptyState icon={Network} title="Failed to load nodes" description="Please try again." actionLabel="Retry" onAction={() => loadChildren({ variables: { parentId } })} />
+        ) : (
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--md3-on-surface-variant)]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search loaded nodes"
+                className="h-11 w-full rounded-md border border-[var(--md3-outline)] bg-white pl-10 pr-4 text-sm focus:border-[var(--md3-primary)] focus:outline-none"
               />
             </div>
-            <div className="space-y-3">
-              {resources.map((resource) => (
-                <div key={resource.name} className="flex items-center gap-3 rounded-lg bg-[var(--md3-surface-container)] p-3">
-                  <ExternalLink className="h-4 w-4 text-[var(--md3-on-surface-variant)]" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-[var(--md3-on-surface)]">{resource.name}</p>
-                    <p className="text-xs text-[var(--md3-on-surface-variant)]">{resource.provider}</p>
+            <div className="grid gap-3">
+              {filteredNodes.map((node) => (
+                <div key={node.id} className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded-md bg-[var(--md3-primary-container)] px-2 py-1 text-xs font-medium text-[var(--md3-primary)]">Order {node.order}</span>
+                        <span className="truncate text-xs text-[var(--md3-on-surface-variant)]">{node.id}</span>
+                      </div>
+                      <h3 className="text-base font-semibold text-[var(--md3-on-surface)]">{node.name}</h3>
+                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--md3-on-surface-variant)]">{node.description ?? 'No description.'}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button onClick={() => handleLoadChildren(node.id)} className="rounded-md px-3 py-2 text-sm font-medium text-[var(--md3-primary)] hover:bg-[var(--md3-primary-container)]">Children</button>
+                      <button onClick={() => { setEditingNode(node); setForm({ name: node.name, description: node.description, order: node.order }); setShowForm(true); }} className="rounded-md p-2 hover:bg-[var(--md3-primary-container)]"><Pencil className="h-4 w-4 text-[var(--md3-primary)]" /></button>
+                      <button onClick={() => setDeleteId(node.id)} className="rounded-md p-2 hover:bg-[var(--md3-error-container)]"><Trash2 className="h-4 w-4 text-[var(--md3-error)]" /></button>
+                    </div>
                   </div>
-                  <span className="rounded bg-[var(--md3-surface-variant)] px-2 py-1 font-mono text-xs">{resource.type}</span>
-                  <span className="rounded-lg bg-[var(--md3-success-container)] px-2 py-1 text-xs font-medium text-[var(--md3-success)]">{resource.free ? 'Free' : 'Paid'}</span>
-                  <AdminActionButton
-                    icon={Trash2}
-                    label="Delete"
-                    variant="danger"
-                    onClick={() => setDeleteResource(resource)}
-                    size="sm"
-                    aria-label={`Delete ${resource.name}`}
-                  />
                 </div>
               ))}
             </div>
           </div>
-        </section>
+        )}
+
+        <ConfirmDialog isOpen={deleteId !== null} title="Delete Node?" message="This will permanently remove the node." confirmLabel="Delete" variant="danger" onConfirm={() => { if (deleteId) deleteMutation.mutate(deleteId); }} onCancel={() => setDeleteId(null)} />
+        <Snackbar isOpen={snackbar.open} message={snackbar.message} variant="error" onClose={() => setSnackbar({ open: false, message: '' })} />
       </div>
-
-      <CreateNodeDialog
-        isOpen={createOpen}
-        onCancel={() => setCreateOpen(false)}
-        onSave={(nodeName) => {
-          setSelected(nodeName);
-          setCreateOpen(false);
-          appToast.success('Node saved');
-        }}
-      />
-
-      <FormDialog
-        isOpen={resourceDialogOpen}
-        title="Add Learning Resource"
-        description={`Attach a resource to ${selected}.`}
-        fields={resourceFields}
-        onCancel={() => setResourceDialogOpen(false)}
-        onSubmit={(values) => {
-          setResources([
-            {
-              name: String(values.name || 'New Learning Resource'),
-              type: String(values.type || 'Article'),
-              provider: String(values.provider || 'Unknown'),
-              free: Boolean(values.free),
-            },
-            ...resources,
-          ]);
-          setResourceDialogOpen(false);
-          appToast.success('Resource added');
-        }}
-      />
-
-      <ConfirmDialog
-        isOpen={deleteNodeOpen}
-        title="Delete Node?"
-        message={`This removes ${selected} from the node library.`}
-        confirmLabel="Delete"
-        variant="danger"
-        onConfirm={() => {
-          setDeleteNodeOpen(false);
-          appToast.success('Node deleted');
-        }}
-        onCancel={() => setDeleteNodeOpen(false)}
-      />
-
-      <ConfirmDialog
-        isOpen={deleteResource !== null}
-        title="Delete Resource?"
-        message={`This removes ${deleteResource?.name ?? 'this resource'} from the selected node.`}
-        confirmLabel="Delete"
-        variant="danger"
-        onConfirm={() => {
-          if (deleteResource) {
-            setResources(resources.filter((resource) => resource !== deleteResource));
-          }
-          setDeleteResource(null);
-          appToast.success('Resource deleted');
-        }}
-        onCancel={() => setDeleteResource(null)}
-      />
     </AppShell>
   );
 }
-

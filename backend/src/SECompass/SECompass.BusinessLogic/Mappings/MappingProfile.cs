@@ -11,6 +11,8 @@ using SECompass.BusinessLogic.DTOs.Node;
 using SECompass.BusinessLogic.DTOs.NodeProgress;
 using SECompass.BusinessLogic.DTOs.PersonalRoadmap;
 using SECompass.BusinessLogic.DTOs.Profile;
+using SECompass.BusinessLogic.DTOs.RoadmapNode;
+using SECompass.BusinessLogic.DTOs.RoadmapNodeEdge;
 using SECompass.BusinessLogic.DTOs.Skill;
 using SECompass.BusinessLogic.DTOs.User;
 using SECompass.DataAccess.Entities;
@@ -51,7 +53,7 @@ public class MappingProfile : AutoMapper.Profile
         // CareerRoadmap
         CreateMap<CareerRoadmap, CareerRoadmapDto>();
         CreateMap<CareerRoadmap, CareerRoadmapWithNodesDto>()
-            .ForMember(d => d.Nodes, o => o.MapFrom(s => s.RoadmapNodes.Select(rn => rn.Node)));
+            .ForMember(d => d.Nodes, o => o.Ignore());
         CreateMap<CreateCareerRoadmapDto, CareerRoadmap>();
         CreateMap<UpdateCareerRoadmapDto, CareerRoadmap>()
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
@@ -64,6 +66,18 @@ public class MappingProfile : AutoMapper.Profile
         CreateMap<UpdateNodeDto, Node>()
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
 
+        // RoadmapNode
+        CreateMap<RoadmapNode, RoadmapNodeDto>();
+        CreateMap<CreateRoadmapNodeDto, RoadmapNode>();
+        CreateMap<UpdateRoadmapNodeDto, RoadmapNode>()
+            .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
+
+        // RoadmapNodeEdge
+        CreateMap<RoadmapNodeEdge, RoadmapNodeEdgeDto>();
+        CreateMap<CreateRoadmapNodeEdgeDto, RoadmapNodeEdge>();
+        CreateMap<UpdateRoadmapNodeEdgeDto, RoadmapNodeEdge>()
+            .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
+
         // PersonalRoadmap
         CreateMap<PersonalRoadmap, PersonalRoadmapDto>();
         CreateMap<PersonalRoadmap, PersonalRoadmapDetailDto>()
@@ -72,7 +86,8 @@ public class MappingProfile : AutoMapper.Profile
         // NodeProgress
         CreateMap<NodeProgress, NodeProgressDto>()
             .ForMember(d => d.Status, o => o.MapFrom(s => (int)s.Status))
-            .ForMember(d => d.Node, o => o.MapFrom(s => s.Node));
+            .ForMember(d => d.NodeId, o => o.MapFrom(s => s.RoadmapNode.NodeId))
+            .ForMember(d => d.Node, o => o.MapFrom(s => s.RoadmapNode.Node));
 
         // LearningResource
         CreateMap<LearningResource, LearningResourceDto>();

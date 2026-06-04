@@ -12,6 +12,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<CareerRole> CareerRoles { get; }
     IRepository<CareerRoadmap> CareerRoadmaps { get; }
     IRepository<RoadmapNode> RoadmapNodes { get; }
+    IRepository<RoadmapNodeEdge> RoadmapNodeEdges { get; }
     IRepository<Node> Nodes { get; }
     IRepository<LearningResource> LearningResources { get; }
     IRepository<GitHubRepository> GitHubRepositories { get; }

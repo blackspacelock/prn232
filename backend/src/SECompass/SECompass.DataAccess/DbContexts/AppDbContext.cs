@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<CareerRoadmap> CareerRoadmaps { get; set; }
     public DbSet<Node> Nodes { get; set; }
     public DbSet<RoadmapNode> RoadmapNodes { get; set; }
+    public DbSet<RoadmapNodeEdge> RoadmapNodeEdges { get; set; }
     public DbSet<PersonalRoadmap> PersonalRoadmaps { get; set; }
     public DbSet<NodeProgress> NodeProgresses { get; set; }
     public DbSet<LearningResource> LearningResources { get; set; }

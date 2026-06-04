@@ -1,0 +1,88 @@
+I want to create another visual roadmap seed script based on document/scripts/seed-roadmap-visual.sql.
+
+Please duplicate/adapt the same idempotent seed pattern for a new career role and roadmap:
+- Create or update one CareerRole.
+- Create or update one CareerRoadmap under that role.
+- Insert/update reusable Nodes.
+- Insert/update RoadmapNodes with roadmap-specific:
+  - RoadmapNodeId
+  - NodeId
+  - ParentRoadmapNodeId
+  - Order
+  - NodeType
+  - RequirementType
+  - PositionX
+  - PositionY
+- Insert/update RoadmapNodeEdges.
+- Insert/update LearningResources so every generated Node has at least one real http(s) ResourceUrl.
+- Keep LearningResources linked to NodeId, not RoadmapNodeId.
+- Optionally create PersonalRoadmaps and NodeProgresses for existing profiles.
+- Keep the script idempotent using fixed GUIDs and MERGE/UPDATE patterns.
+- Include SQL Server required SET options:
+  SET ANSI_NULLS ON;
+  SET ANSI_PADDING ON;
+  SET ANSI_WARNINGS ON;
+  SET ARITHABORT ON;
+  SET CONCAT_NULL_YIELDS_NULL ON;
+  SET QUOTED_IDENTIFIER ON;
+  SET NUMERIC_ROUNDABORT OFF;
+  SET NOCOUNT ON;
+
+New seed target:
+CareerRole name: <ROLE NAME>
+CareerRoadmap name: <ROADMAP NAME>
+Roadmap description: <DESCRIPTION>
+
+Roadmap topics/structure:
+<PASTE YOUR TOPICS HERE, for example:
+Root: Frontend Basics
+  - HTML
+  - CSS
+  - JavaScript
+Root: Frameworks
+  - React
+  - Next.js
+Root: Testing
+  - Unit Testing
+  - E2E Testing
+>
+
+Please create the SQL seed data with unique GUID ranges that do not conflict with the existing Software Architect sample:
+- Existing sample uses:
+  - Role: 10000000/11111111...
+  - Roadmap: 20000000...
+  - Nodes: 30000000...
+  - RoadmapNodes: 40000000...
+  - Edges: 50000000...
+  - Resources: 60000000...
+Use a new range like:
+  - Role: 11000000...
+  - Roadmap: 21000000...
+  - Nodes: 31000000...
+  - RoadmapNodes: 41000000...
+  - Edges: 51000000...
+  - Resources: 61000000...
+Important rules to remember:
+
+Nodes are reusable content.
+RoadmapNodes are the visual/layout placement for a specific roadmap.
+NodeProgresses must reference RoadmapNodeId.
+LearningResources must still reference NodeId.
+Every Node inserted into @Nodes must have at least one row in @Resources.
+Every generated LearningResource.ResourceUrl must be a real http(s) URL, not a placeholder.
+Add a SQL validation guard before merging LearningResources:
+  IF EXISTS (
+      SELECT 1
+      FROM @Nodes n
+      WHERE NOT EXISTS (
+          SELECT 1
+          FROM @Resources r
+          WHERE r.NodeId = n.NodeId
+            AND (r.ResourceUrl LIKE N'https://%' OR r.ResourceUrl LIKE N'http://%')
+      )
+  )
+  BEGIN
+      THROW 51000, 'Every generated node must have at least one learning resource with a real http(s) URL.', 1;
+  END;
+For frontend rendering, make sure every roadmap node has reasonable PositionX and PositionY.
+For hierarchy, use ParentRoadmapNodeId, not Node.ParentNodeId.

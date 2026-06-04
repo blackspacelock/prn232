@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { NavigationRail } from './NavigationRail';
 import { TopAppBar } from './TopAppBar';
+import type { BreadcrumbItem } from './breadcrumbs';
 
 interface AppShellProps {
   breadcrumb: string;
+  breadcrumbs?: BreadcrumbItem[];
   children: ReactNode;
   className?: string;
   showProgress?: {
@@ -13,11 +15,17 @@ interface AppShellProps {
   };
 }
 
-export function AppShell({ breadcrumb, children, className = '', showProgress }: AppShellProps) {
+export function AppShell({
+  breadcrumb,
+  breadcrumbs,
+  children,
+  className = '',
+  showProgress,
+}: AppShellProps) {
   return (
     <div className="app-shell">
       <NavigationRail />
-      <TopAppBar breadcrumb={breadcrumb} showProgress={showProgress} />
+      <TopAppBar breadcrumb={breadcrumb} breadcrumbs={breadcrumbs} showProgress={showProgress} />
       <main className={`app-main ${className}`}>{children}</main>
     </div>
   );

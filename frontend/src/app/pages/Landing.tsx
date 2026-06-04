@@ -1,47 +1,13 @@
-import { Link } from 'react-router';
-import { Compass, TrendingUp, Star, ArrowRight, Play, LogIn } from 'lucide-react';
+import { Compass, TrendingUp, Star, ArrowRight, Play } from 'lucide-react';
 import { ActionAnchor, ActionLink } from '../components/ActionButton';
+import { PublicLayout } from '../components/PublicLayout';
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-[var(--md3-outline-variant)] z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <Compass className="w-6 h-6 text-[var(--md3-primary)]" />
-            <span className="text-xl font-bold text-[var(--md3-primary)]">SECompass</span>
-          </Link>
-
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-base text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors">Features</a>
-            <a href="#how-it-works" className="text-base text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors">How It Works</a>
-            <a href="#market" className="text-base text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors">Market Pulse</a>
-            <a href="#pricing" className="text-base text-[var(--md3-on-surface-variant)] hover:text-[var(--md3-primary)] transition-colors">Pricing</a>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <ActionLink
-              icon={LogIn}
-              label="Sign in"
-              to="/login"
-              variant="text"
-              size="md"
-            />
-            <ActionLink
-              icon={ArrowRight}
-              label="Get started free"
-              to="/register"
-              variant="primary"
-              size="md"
-            />
-          </div>
-        </div>
-      </nav>
-
+    <PublicLayout>
       {/* Hero Section */}
       <section
-        className="pt-32 pb-20 px-6"
+        className="pt-16 pb-20 px-6"
         style={{
           background: 'linear-gradient(180deg, #EBF3FF 0%, #FFFFFF 100%)',
         }}
@@ -224,7 +190,7 @@ export function LandingPage() {
               href="#how-it-works"
               variant="neutral"
               size="lg"
-              className="border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              className="border-white bg-white/15 text-white shadow-sm hover:border-white hover:bg-white hover:text-[var(--md3-primary)]"
             />
           </div>
           <p className="text-sm text-white/70 mt-6">Free to start · No credit card required</p>
@@ -271,7 +237,7 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
-    </div>
+    </PublicLayout>
   );
 }
 

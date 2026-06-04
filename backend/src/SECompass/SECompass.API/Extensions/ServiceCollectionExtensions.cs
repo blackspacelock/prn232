@@ -17,9 +17,32 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
+        // CORS
+        var allowedOrigins = (configuration["Cors:AllowedOrigins"] ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend", policy =>
+            {
+                if (allowedOrigins.Length > 0)
+                    policy.WithOrigins(allowedOrigins);
+
+                policy
+                    .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .WithHeaders("Authorization", "Content-Type", "X-Requested-With")
+                    .AllowCredentials();
+            });
+        });
+
         // Database
         services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(
+                configuration.GetConnectionString("DefaultConnection"),
+                sqlOptions => sqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorNumbersToAdd: null)));
 
         // Unit of Work & Repositories
         services.AddScoped<IUnitOfWork, UnitOfWork>();
