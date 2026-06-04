@@ -2,10 +2,11 @@ import { ArrowRight, BookOpen, GitBranch, Hash, LogIn, Rocket, X } from 'lucide-
 import { Skeleton } from '../Skeleton';
 import { ActionButton, ActionLink } from '../ActionButton';
 import { RoadmapResourceCard } from './RoadmapResourceCard';
-import type { LearningResourceDto, NodeDto } from '@/types/api';
+import type { LearningResourceDto, NodeDto, RoadmapNodeDto } from '@/types/api';
 
 interface RoadmapTemplateInspectorProps {
   selectedNode: NodeDto | null;
+  selectedRoadmapNode?: RoadmapNodeDto | null;
   resources: LearningResourceDto[];
   resourcesLoading: boolean;
   isAuthenticated: boolean;
@@ -17,6 +18,7 @@ interface RoadmapTemplateInspectorProps {
 
 export function RoadmapTemplateInspector({
   selectedNode,
+  selectedRoadmapNode,
   resources,
   resourcesLoading,
   isAuthenticated,
@@ -42,7 +44,12 @@ export function RoadmapTemplateInspector({
                 {selectedNode && (
                   <span className="inline-flex items-center gap-1 rounded-md border border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container)] px-2 py-1 text-xs font-medium text-[var(--md3-on-surface-variant)]">
                     <Hash className="h-3.5 w-3.5" />
-                    {selectedNode.order}
+                    {selectedRoadmapNode?.order ?? selectedNode.order}
+                  </span>
+                )}
+                {selectedRoadmapNode?.requirementType && (
+                  <span className="inline-flex items-center rounded-md border border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container)] px-2 py-1 text-xs font-medium text-[var(--md3-on-surface-variant)]">
+                    {selectedRoadmapNode.requirementType}
                   </span>
                 )}
               </div>

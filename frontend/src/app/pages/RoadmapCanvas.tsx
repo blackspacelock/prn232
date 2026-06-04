@@ -12,6 +12,7 @@ import { apolloClient } from '@/lib/apollo';
 import { apiClient } from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
 import { NODE_STATUS_COLORS, type NodeStatusInt } from '@/constants/nodeStatus';
+import { RoadmapCanvasHeader } from '../components/roadmap/RoadmapCanvasHeader';
 import { RoadmapGraphCanvas, type RoadmapGraphNode } from '../components/roadmap/RoadmapGraphCanvas';
 import { RoadmapResourceCard } from '../components/roadmap/RoadmapResourceCard';
 import {
@@ -21,16 +22,13 @@ import {
   GET_LEARNING_RESOURCES_BY_NODE,
   GET_RECOMMENDED_RESOURCES,
 } from '@/graphql/queries';
-import type { CareerRoadmapWithNodesDto, UpdateNodeProgressStatusDto } from '@/types/api';
+import type {
+  CareerRoadmapWithNodesDto,
+  NodeProgressDto,
+  UpdateNodeProgressStatusDto,
+} from '@/types/api';
 
-interface ProgressNode {
-  id: string;
-  personalRoadmapId: string;
-  nodeId: string;
-  status: number;
-  note?: string;
-  node: { id: string; parentNodeId?: string; name: string; description?: string; order: number };
-}
+type ProgressNode = NodeProgressDto;
 
 interface LearningResource {
   id: string;
@@ -92,11 +90,16 @@ export function RoadmapCanvasPage() {
   const graphNodes: RoadmapGraphNode[] = useMemo(
     () =>
       progressNodes.map((np) => ({
-        id: np.nodeId,
-        parentNodeId: np.node.parentNodeId,
+        id: np.roadmapNodeId,
+        nodeId: np.nodeId,
+        parentRoadmapNodeId: np.roadmapNode.parentRoadmapNodeId,
         name: np.node.name,
         description: np.node.description,
-        order: np.node.order,
+        order: np.roadmapNode.order,
+        nodeType: np.roadmapNode.nodeType,
+        requirementType: np.roadmapNode.requirementType,
+        positionX: np.roadmapNode.positionX,
+        positionY: np.roadmapNode.positionY,
         status: np.status as NodeStatusInt,
       })),
     [progressNodes],
@@ -118,7 +121,7 @@ export function RoadmapCanvasPage() {
   });
 
   const handleNodeSelect = useCallback((node: RoadmapGraphNode) => {
-    const np = progressNodes.find((p) => p.nodeId === node.id);
+    const np = progressNodes.find((p) => p.roadmapNodeId === node.id);
     if (np) {
       setSelectedNodeProgress(np);
       setOptimisticStatus(np.status as NodeStatusInt);
@@ -174,15 +177,16 @@ export function RoadmapCanvasPage() {
       className="app-main--flush"
     >
       <div className="flex h-[calc(100vh-64px)] flex-col md:flex-row">
-        <div className="relative min-h-[520px] flex-1 overflow-hidden bg-[var(--md3-surface-container)]">
-          <div className="pointer-events-none absolute left-6 top-6 z-10 max-w-[min(620px,calc(100%-48px))] rounded-lg border border-[var(--md3-outline-variant)] bg-white/95 p-4 shadow-sm backdrop-blur">
-            <h1 className="text-2xl font-semibold leading-tight text-[var(--md3-on-surface)]">
-              {roadmapTitle}
-            </h1>
-          </div>
+        <div className="relative min-h-[520px] flex-1 overflow-hidden bg-[#fafafa]">
+          <RoadmapCanvasHeader
+            title={roadmapTitle}
+            nodeCount={graphNodes.length}
+            progress={{ completed: completedCount, total: totalCount }}
+          />
           <RoadmapGraphCanvas
             graphNodes={graphNodes}
-            selectedNodeId={selectedNodeProgress?.nodeId}
+            graphEdges={template?.edges}
+            selectedNodeId={selectedNodeProgress?.roadmapNodeId}
             onNodeSelect={handleNodeSelect}
           />
         </div>

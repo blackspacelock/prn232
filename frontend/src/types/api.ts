@@ -84,15 +84,60 @@ export interface NodeDto {
   name: string;
   description?: string;
   order: number;
+  createdAt?: string;
+}
+
+export interface RoadmapNodeDto {
+  id: string;
+  careerRoadmapId: string;
+  nodeId: string;
+  parentRoadmapNodeId?: string;
+  order: number;
+  nodeType: string;
+  requirementType: string;
+  positionX?: number;
+  positionY?: number;
+  createdAt: string;
+  node: NodeDto;
+}
+
+export interface CreateRoadmapNodeDto {
+  nodeId: string;
+  parentRoadmapNodeId?: string;
+  order: number;
+  nodeType?: string;
+  requirementType?: string;
+  positionX?: number;
+  positionY?: number;
+}
+
+export interface UpdateRoadmapNodeDto {
+  parentRoadmapNodeId?: string;
+  order?: number;
+  nodeType?: string;
+  requirementType?: string;
+  positionX?: number;
+  positionY?: number;
+}
+
+export interface RoadmapNodeEdgeDto {
+  id: string;
+  careerRoadmapId: string;
+  fromRoadmapNodeId: string;
+  toRoadmapNodeId: string;
+  edgeType: string;
+  createdAt: string;
 }
 
 // Matches backend NodeProgressDto (id field, not nodeProgressId)
 export interface NodeProgressDto {
   id: string;
   personalRoadmapId: string;
+  roadmapNodeId: string;
   nodeId: string;
   status: NodeStatusInt;
   note?: string;
+  roadmapNode: RoadmapNodeDto;
   node: NodeDto;
 }
 
@@ -134,7 +179,8 @@ export interface CareerRoadmapDto {
 }
 
 export interface CareerRoadmapWithNodesDto extends CareerRoadmapDto {
-  nodes: NodeDto[];
+  nodes: RoadmapNodeDto[];
+  edges: RoadmapNodeEdgeDto[];
 }
 
 export interface LearningResourceDto {

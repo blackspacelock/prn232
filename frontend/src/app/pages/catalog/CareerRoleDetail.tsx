@@ -1,7 +1,6 @@
 import { useQuery } from '@apollo/client/react';
 import { Link, useParams } from 'react-router';
 import {
-  ArrowRight,
   AlertCircle,
   ChevronLeft,
   Layers,
@@ -60,15 +59,6 @@ export function CareerRoleDetailPage() {
             <PageHeader
               title={role.name}
               description={role.description ?? ''}
-              actions={
-                <ActionLink
-                  icon={ArrowRight}
-                  label="View All Roadmaps"
-                  to={paths.roleRoadmapsPath(id)}
-                  variant="primary"
-                  size="md"
-                />
-              }
             />
           ) : (
             <div className="py-8 text-center">
@@ -159,14 +149,6 @@ export function CareerRoleDetailPage() {
             {role.description && (
               <p className="max-w-3xl text-sm leading-6 text-[var(--md3-on-surface-variant)]">{role.description}</p>
             )}
-            <ActionLink
-              icon={ArrowRight}
-              label="View All Roadmaps"
-              to={paths.roleRoadmapsPath(id)}
-              variant="primary"
-              size="md"
-              className="mt-5"
-            />
           </div>
         ) : (
           <div className="py-8 text-center">

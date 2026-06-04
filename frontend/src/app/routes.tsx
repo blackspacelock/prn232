@@ -19,13 +19,11 @@ import { NodeProgressReferencePage } from "./pages/reference/NodeProgressReferen
 import { UIReferencePage } from "./pages/reference/UIReference";
 import { CareerRolesPage } from "./pages/catalog/CareerRoles";
 import { CareerRoleDetailPage } from "./pages/catalog/CareerRoleDetail";
-import { CareerRoleRoadmapsPage } from "./pages/catalog/CareerRoleRoadmaps";
 import { CareerRoadmapDetailPage } from "./pages/catalog/CareerRoadmapDetail";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import {
   AuthCareerRoleDetailRedirect,
-  AuthCareerRoleRoadmapsRedirect,
   AuthCareerRolesRedirect,
   AuthRoadmapRedirect,
   PublicLegacyRoadmapRedirect,
@@ -41,7 +39,6 @@ export const router = createBrowserRouter([
   // Public catalog routes.
   { path: "/explore/career-roles", Component: CareerRolesPage },
   { path: "/explore/career-roles/:id", Component: CareerRoleDetailPage },
-  { path: "/explore/career-roles/:id/roadmaps", Component: CareerRoleRoadmapsPage },
   { path: "/explore/roadmaps/:id", Component: CareerRoadmapDetailPage },
   { path: "/career-roadmap/:id", Component: PublicLegacyRoadmapRedirect },
   {
@@ -58,16 +55,13 @@ export const router = createBrowserRouter([
       // Authenticated catalog routes.
       { path: "/career-roles", Component: CareerRolesPage },
       { path: "/career-roles/:id", Component: CareerRoleDetailPage },
-      { path: "/career-roles/:id/roadmaps", Component: CareerRoleRoadmapsPage },
       { path: "/roadmaps/:id", Component: CareerRoadmapDetailPage },
       // Legacy authenticated aliases redirect to canonical app-style catalog paths.
       { path: "/app/career-roles", Component: AuthCareerRolesRedirect },
       { path: "/app/career-roles/:id", Component: AuthCareerRoleDetailRedirect },
-      { path: "/app/career-roles/:id/roadmaps", Component: AuthCareerRoleRoadmapsRedirect },
       { path: "/app/roadmaps/:id", Component: AuthRoadmapRedirect },
       { path: "/browse/career-roles", Component: AuthCareerRolesRedirect },
       { path: "/browse/career-roles/:id", Component: AuthCareerRoleDetailRedirect },
-      { path: "/browse/career-roles/:id/roadmaps", Component: AuthCareerRoleRoadmapsRedirect },
       { path: "/browse/career-roadmap/:id", Component: AuthRoadmapRedirect },
     ],
   },

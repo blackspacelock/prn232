@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -10,11 +10,12 @@ import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apiClient } from '@/lib/axios';
 import { GET_CAREER_ROADMAPS_BY_ROLE, GET_CAREER_ROLES, GET_CAREER_ROADMAP_WITH_NODES } from '@/graphql/queries';
+import type { CreateRoadmapNodeDto, RoadmapNodeDto } from '@/types/api';
 
 interface CareerRole { id: string; name: string }
 interface CareerRoadmap { id: string; name: string; description?: string; careerRoleId: string }
-interface NodeItem { id: string; parentNodeId?: string; name: string; order: number }
 interface RoadmapDto { name: string; description?: string; careerRoleId: string }
+type RoadmapNodeForm = CreateRoadmapNodeDto & { positionXText: string; positionYText: string };
 
 export function AdminRoadmapTemplatesPage() {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
@@ -23,7 +24,15 @@ export function AdminRoadmapTemplatesPage() {
   const [editingRoadmap, setEditingRoadmap] = useState<CareerRoadmap | null>(null);
   const [form, setForm] = useState<RoadmapDto>({ name: '', careerRoleId: '' });
   const [expandedRoadmapId, setExpandedRoadmapId] = useState<string | null>(null);
-  const [nodeIdInput, setNodeIdInput] = useState('');
+  const [roadmapNodeForm, setRoadmapNodeForm] = useState<RoadmapNodeForm>({
+    nodeId: '',
+    parentRoadmapNodeId: undefined,
+    order: 1,
+    nodeType: 'Topic',
+    requirementType: 'Required',
+    positionXText: '',
+    positionYText: '',
+  });
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const { data: rolesData } = useQuery(GET_CAREER_ROLES);
@@ -40,13 +49,12 @@ export function AdminRoadmapTemplatesPage() {
   );
 
   const roadmaps: CareerRoadmap[] = (roadmapsData as { careerRoadmapsByRole?: CareerRoadmap[] })?.careerRoadmapsByRole ?? [];
-  const allNodes: NodeItem[] =
-    (roadmapNodesData as { careerRoadmapWithNodes?: { nodes: NodeItem[] } })
+  const roadmapNodes: RoadmapNodeDto[] =
+    (roadmapNodesData as { careerRoadmapWithNodes?: { nodes: RoadmapNodeDto[] } })
       ?.careerRoadmapWithNodes?.nodes ?? [];
 
-  // Nodes whose parent is NOT in the returned set are directly-assigned roots.
-  const nodeIdSet = new Set(allNodes.map((n) => n.id));
-  const assignedRootNodes = allNodes.filter((n) => !n.parentNodeId || !nodeIdSet.has(n.parentNodeId));
+  const roadmapNodeIdSet = new Set(roadmapNodes.map((n) => n.id));
+  const rootRoadmapNodes = roadmapNodes.filter((n) => !n.parentRoadmapNodeId || !roadmapNodeIdSet.has(n.parentRoadmapNodeId));
 
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
 
@@ -77,15 +85,26 @@ export function AdminRoadmapTemplatesPage() {
   });
 
   const assignNodeMutation = useMutation({
-    mutationFn: ({ roadmapId, nodeId }: { roadmapId: string; nodeId: string }) =>
-      apiClient.post(`/api/career-roadmaps/${roadmapId}/nodes/${nodeId}`),
-    onSuccess: () => { if (expandedRoadmapId) reloadNodes(expandedRoadmapId); setNodeIdInput(''); },
+    mutationFn: ({ roadmapId, dto }: { roadmapId: string; dto: CreateRoadmapNodeDto }) =>
+      apiClient.post(`/api/career-roadmaps/${roadmapId}/roadmap-nodes`, dto),
+    onSuccess: () => {
+      if (expandedRoadmapId) reloadNodes(expandedRoadmapId);
+      setRoadmapNodeForm({
+        nodeId: '',
+        parentRoadmapNodeId: undefined,
+        order: roadmapNodeForm.order + 1,
+        nodeType: roadmapNodeForm.nodeType,
+        requirementType: roadmapNodeForm.requirementType,
+        positionXText: '',
+        positionYText: '',
+      });
+    },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to assign node.'),
   });
 
   const removeNodeMutation = useMutation({
-    mutationFn: ({ roadmapId, nodeId }: { roadmapId: string; nodeId: string }) =>
-      apiClient.delete(`/api/career-roadmaps/${roadmapId}/nodes/${nodeId}`),
+    mutationFn: ({ roadmapId, roadmapNodeId }: { roadmapId: string; roadmapNodeId: string }) =>
+      apiClient.delete(`/api/career-roadmaps/${roadmapId}/roadmap-nodes/${roadmapNodeId}`),
     onSuccess: () => { if (expandedRoadmapId) reloadNodes(expandedRoadmapId); },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to remove node.'),
   });
@@ -161,7 +180,7 @@ export function AdminRoadmapTemplatesPage() {
               </thead>
               <tbody>
                 {roadmaps.map((rm) => (
-                  <>
+                  <Fragment key={rm.id}>
                     <tr key={rm.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
                       <td className="px-4 py-4">
                         <button
@@ -193,7 +212,7 @@ export function AdminRoadmapTemplatesPage() {
                               Assigned Nodes
                             </span>
                             <span className="text-xs text-[var(--md3-on-surface-variant)] ml-1">
-                              ({allNodes.length} total — {assignedRootNodes.length} root)
+                              ({roadmapNodes.length} total - {rootRoadmapNodes.length} root)
                             </span>
                           </div>
 
@@ -202,21 +221,37 @@ export function AdminRoadmapTemplatesPage() {
                               <Skeleton className="h-8 rounded" />
                               <Skeleton className="h-8 rounded" />
                             </div>
-                          ) : assignedRootNodes.length === 0 ? (
+                          ) : roadmapNodes.length === 0 ? (
                             <p className="text-sm text-[var(--md3-on-surface-variant)] py-1">
-                              No nodes assigned. Use the field below to add a root node by ID.
+                              No roadmap nodes assigned. Use the form below to add one by content node ID.
                             </p>
                           ) : (
                             <div className="space-y-1 mb-3">
-                              {assignedRootNodes.map((node) => (
-                                <div key={node.id} className="flex items-center justify-between rounded-lg bg-white border border-[var(--md3-outline-variant)] px-3 py-2">
+                              {roadmapNodes.map((roadmapNode) => (
+                                <div key={roadmapNode.id} className="flex items-center justify-between rounded-lg bg-white border border-[var(--md3-outline-variant)] px-3 py-2">
                                   <div className="min-w-0">
-                                    <p className="text-sm font-medium text-[var(--md3-on-surface)] truncate">{node.name}</p>
-                                    <p className="text-xs text-[var(--md3-on-surface-variant)] truncate font-mono">{node.id}</p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-sm font-medium text-[var(--md3-on-surface)] truncate">{roadmapNode.node.name}</p>
+                                      <span className="rounded bg-[var(--md3-surface-container)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--md3-on-surface-variant)]">
+                                        {roadmapNode.nodeType}
+                                      </span>
+                                      <span className="rounded bg-[var(--md3-surface-container)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--md3-on-surface-variant)]">
+                                        {roadmapNode.requirementType}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-[var(--md3-on-surface-variant)] truncate font-mono">RoadmapNode: {roadmapNode.id}</p>
+                                    <p className="text-xs text-[var(--md3-on-surface-variant)] truncate font-mono">Node: {roadmapNode.nodeId}</p>
+                                    <p className="text-xs text-[var(--md3-on-surface-variant)]">
+                                      Order {roadmapNode.order}
+                                      {roadmapNode.parentRoadmapNodeId ? ` - parent ${roadmapNode.parentRoadmapNodeId}` : ' - root'}
+                                      {typeof roadmapNode.positionX === 'number' && typeof roadmapNode.positionY === 'number'
+                                        ? ` - (${roadmapNode.positionX}, ${roadmapNode.positionY})`
+                                        : ''}
+                                    </p>
                                   </div>
                                   <button
                                     type="button"
-                                    onClick={() => removeNodeMutation.mutate({ roadmapId: rm.id, nodeId: node.id })}
+                                    onClick={() => removeNodeMutation.mutate({ roadmapId: rm.id, roadmapNodeId: roadmapNode.id })}
                                     disabled={removeNodeMutation.isPending}
                                     className="ml-3 shrink-0 p-1.5 rounded hover:bg-[var(--md3-error-container)] transition-colors"
                                     title="Remove node"
@@ -228,32 +263,94 @@ export function AdminRoadmapTemplatesPage() {
                             </div>
                           )}
 
-                          <div className="flex gap-2 mt-2">
+                          <div className="mt-4 grid gap-2 lg:grid-cols-[minmax(220px,1.5fr)_minmax(180px,1fr)_100px_130px_150px]">
                             <input
                               type="text"
-                              value={nodeIdInput}
-                              onChange={(e) => setNodeIdInput(e.target.value)}
-                              placeholder="Node ID (UUID) — copy from Node Library"
-                              className="md3-field flex-1 px-3 text-sm h-10"
+                              value={roadmapNodeForm.nodeId}
+                              onChange={(e) => setRoadmapNodeForm({ ...roadmapNodeForm, nodeId: e.target.value })}
+                              placeholder="Content Node ID"
+                              className="md3-field px-3 text-sm h-10"
+                            />
+                            <select
+                              value={roadmapNodeForm.parentRoadmapNodeId ?? ''}
+                              onChange={(e) => setRoadmapNodeForm({ ...roadmapNodeForm, parentRoadmapNodeId: e.target.value || undefined })}
+                              className="md3-field px-3 text-sm h-10"
+                            >
+                              <option value="">Root node</option>
+                              {roadmapNodes.map((roadmapNode) => (
+                                <option key={roadmapNode.id} value={roadmapNode.id}>
+                                  {roadmapNode.node.name}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="number"
+                              value={roadmapNodeForm.order}
+                              onChange={(e) => setRoadmapNodeForm({ ...roadmapNodeForm, order: Number(e.target.value) })}
+                              placeholder="Order"
+                              className="md3-field px-3 text-sm h-10"
+                            />
+                            <select
+                              value={roadmapNodeForm.nodeType}
+                              onChange={(e) => setRoadmapNodeForm({ ...roadmapNodeForm, nodeType: e.target.value })}
+                              className="md3-field px-3 text-sm h-10"
+                            >
+                              <option value="Topic">Topic</option>
+                              <option value="Group">Group</option>
+                              <option value="Milestone">Milestone</option>
+                            </select>
+                            <select
+                              value={roadmapNodeForm.requirementType}
+                              onChange={(e) => setRoadmapNodeForm({ ...roadmapNodeForm, requirementType: e.target.value })}
+                              className="md3-field px-3 text-sm h-10"
+                            >
+                              <option value="Required">Required</option>
+                              <option value="Recommended">Recommended</option>
+                              <option value="Optional">Optional</option>
+                            </select>
+                          </div>
+                          <div className="mt-2 grid gap-2 lg:grid-cols-[120px_120px_auto]">
+                            <input
+                              type="number"
+                              value={roadmapNodeForm.positionXText}
+                              onChange={(e) => setRoadmapNodeForm({ ...roadmapNodeForm, positionXText: e.target.value })}
+                              placeholder="X optional"
+                              className="md3-field px-3 text-sm h-10"
+                            />
+                            <input
+                              type="number"
+                              value={roadmapNodeForm.positionYText}
+                              onChange={(e) => setRoadmapNodeForm({ ...roadmapNodeForm, positionYText: e.target.value })}
+                              placeholder="Y optional"
+                              className="md3-field px-3 text-sm h-10"
                             />
                             <AdminActionButton
                               icon={Plus}
-                              label={assignNodeMutation.isPending ? 'Adding…' : 'Assign'}
+                              label={assignNodeMutation.isPending ? 'Adding...' : 'Assign Roadmap Node'}
                               onClick={() => {
-                                if (nodeIdInput.trim()) {
-                                  assignNodeMutation.mutate({ roadmapId: rm.id, nodeId: nodeIdInput.trim() });
+                                if (roadmapNodeForm.nodeId.trim()) {
+                                  const dto: CreateRoadmapNodeDto = {
+                                    nodeId: roadmapNodeForm.nodeId.trim(),
+                                    parentRoadmapNodeId: roadmapNodeForm.parentRoadmapNodeId,
+                                    order: roadmapNodeForm.order,
+                                    nodeType: roadmapNodeForm.nodeType,
+                                    requirementType: roadmapNodeForm.requirementType,
+                                    positionX: roadmapNodeForm.positionXText ? Number(roadmapNodeForm.positionXText) : undefined,
+                                    positionY: roadmapNodeForm.positionYText ? Number(roadmapNodeForm.positionYText) : undefined,
+                                  };
+                                  assignNodeMutation.mutate({ roadmapId: rm.id, dto });
                                 }
                               }}
-                              disabled={!nodeIdInput.trim() || assignNodeMutation.isPending}
+                              disabled={!roadmapNodeForm.nodeId.trim() || assignNodeMutation.isPending}
                             />
                           </div>
                           <p className="mt-1.5 text-xs text-[var(--md3-on-surface-variant)]">
-                            Assigning a root node automatically includes all its descendants in the roadmap.
+                            Parent, order, and optional X/Y are roadmap-specific. Learning resources still come from the content node.
                           </p>
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

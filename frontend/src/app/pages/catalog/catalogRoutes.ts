@@ -10,7 +10,6 @@ export function useCatalogRoutes() {
     isProtectedCatalog: !isPublicCatalog,
     roleListPath: roleBasePath,
     roleDetailPath: (id: string) => `${roleBasePath}/${id}`,
-    roleRoadmapsPath: (id: string) => `${roleBasePath}/${id}/roadmaps`,
     roadmapDetailPath: (id: string) => `${roadmapBasePath}/${id}`,
   };
 }

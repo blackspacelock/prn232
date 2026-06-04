@@ -68,10 +68,30 @@ export const GET_CAREER_ROADMAP_WITH_NODES = gql`
       isCustom
       nodes {
         id
-        parentNodeId
-        name
-        description
+        careerRoadmapId
+        nodeId
+        parentRoadmapNodeId
         order
+        nodeType
+        requirementType
+        positionX
+        positionY
+        createdAt
+        node {
+          id
+          parentNodeId
+          name
+          description
+          order
+          createdAt
+        }
+      }
+      edges {
+        id
+        careerRoadmapId
+        fromRoadmapNodeId
+        toRoadmapNodeId
+        edgeType
         createdAt
       }
     }
@@ -142,10 +162,30 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
       nodeProgresses {
         id
         personalRoadmapId
+        roadmapNodeId
         nodeId
         status
         note
         createdAt
+        roadmapNode {
+          id
+          careerRoadmapId
+          nodeId
+          parentRoadmapNodeId
+          order
+          nodeType
+          requirementType
+          positionX
+          positionY
+          createdAt
+          node {
+            id
+            parentNodeId
+            name
+            description
+            order
+          }
+        }
         node {
           id
           parentNodeId
@@ -163,10 +203,28 @@ export const GET_NODE_PROGRESS = gql`
     nodeProgress(personalRoadmapId: $personalRoadmapId) {
       id
       personalRoadmapId
+      roadmapNodeId
       nodeId
       status
       note
       createdAt
+      roadmapNode {
+        id
+        careerRoadmapId
+        nodeId
+        parentRoadmapNodeId
+        order
+        nodeType
+        requirementType
+        positionX
+        positionY
+        node {
+          id
+          name
+          description
+          order
+        }
+      }
       node {
         id
         name

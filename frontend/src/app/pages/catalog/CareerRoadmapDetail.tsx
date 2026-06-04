@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLazyQuery, useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router';
-import { AlertCircle, ChevronLeft, GitBranch, ListTree, Map as MapIcon } from 'lucide-react';
+import { AlertCircle, ChevronLeft, Map as MapIcon } from 'lucide-react';
 import {
   GET_CAREER_ROADMAP_WITH_NODES,
   GET_LEARNING_RESOURCES_BY_NODE,
@@ -14,6 +14,7 @@ import { PublicLayout } from '../../components/PublicLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { ActionLink } from '../../components/ActionButton';
 import { Snackbar } from '../../components/Snackbar';
+import { RoadmapCanvasHeader } from '../../components/roadmap/RoadmapCanvasHeader';
 import { RoadmapGraphCanvas, type RoadmapGraphNode } from '../../components/roadmap/RoadmapGraphCanvas';
 import { RoadmapTemplateInspector } from '../../components/roadmap/RoadmapTemplateInspector';
 import { apiClient } from '@/lib/axios';
@@ -21,23 +22,23 @@ import { apolloClient } from '@/lib/apollo';
 import type {
   CareerRoadmapWithNodesDto,
   LearningResourceDto,
-  NodeDto,
+  RoadmapNodeDto,
 } from '@/types/api';
 import type { NodeStatusInt } from '@/constants/nodeStatus';
 import { useCatalogRoutes } from './catalogRoutes';
 
-function getNodeDepths(nodes: NodeDto[]) {
+function getNodeDepths(nodes: RoadmapNodeDto[]) {
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const depthById = new Map<string, number>();
 
-  const resolveDepth = (node: NodeDto, visiting = new Set<string>()): number => {
+  const resolveDepth = (node: RoadmapNodeDto, visiting = new Set<string>()): number => {
     if (depthById.has(node.id)) return depthById.get(node.id)!;
-    if (!node.parentNodeId || !byId.has(node.parentNodeId) || visiting.has(node.id)) {
+    if (!node.parentRoadmapNodeId || !byId.has(node.parentRoadmapNodeId) || visiting.has(node.id)) {
       depthById.set(node.id, 0);
       return 0;
     }
     visiting.add(node.id);
-    const parent = byId.get(node.parentNodeId)!;
+    const parent = byId.get(node.parentRoadmapNodeId)!;
     const depth = resolveDepth(parent, visiting) + 1;
     depthById.set(node.id, depth);
     return depth;
@@ -61,7 +62,7 @@ export function CareerRoadmapDetailPage() {
   const paths = useCatalogRoutes();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
-  const [selectedNode, setSelectedNode] = useState<NodeDto | null>(null);
+  const [selectedRoadmapNode, setSelectedRoadmapNode] = useState<RoadmapNodeDto | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({
     open: false,
     message: '',
@@ -105,9 +106,18 @@ export function CareerRoadmapDetailPage() {
   const graphNodes: RoadmapGraphNode[] = useMemo(() => {
     if (!roadmap) return [];
     const depthById = getNodeDepths(roadmap.nodes);
-    return roadmap.nodes.map((node) => ({
-      ...node,
-      status: getTemplatePreviewStatus(depthById.get(node.id) ?? 0),
+    return roadmap.nodes.map((roadmapNode) => ({
+      id: roadmapNode.id,
+      nodeId: roadmapNode.nodeId,
+      parentRoadmapNodeId: roadmapNode.parentRoadmapNodeId,
+      name: roadmapNode.node.name,
+      description: roadmapNode.node.description,
+      order: roadmapNode.order,
+      nodeType: roadmapNode.nodeType,
+      requirementType: roadmapNode.requirementType,
+      positionX: roadmapNode.positionX,
+      positionY: roadmapNode.positionY,
+      status: getTemplatePreviewStatus(depthById.get(roadmapNode.id) ?? 0),
     }));
   }, [roadmap]);
   const levelCount = useMemo(() => {
@@ -117,44 +127,31 @@ export function CareerRoadmapDetailPage() {
   }, [roadmap]);
 
   const backPath = roadmap?.careerRoleId
-    ? paths.roleRoadmapsPath(roadmap.careerRoleId)
+    ? paths.roleDetailPath(roadmap.careerRoleId)
     : paths.roleListPath;
 
   const handleNodeSelect = (node: RoadmapGraphNode) => {
     const sourceNode = roadmap?.nodes.find((item) => item.id === node.id) ?? null;
-    setSelectedNode(sourceNode);
+    setSelectedRoadmapNode(sourceNode);
     if (sourceNode) {
-      loadResources({ variables: { nodeId: sourceNode.id } });
+      loadResources({ variables: { nodeId: sourceNode.nodeId } });
     }
   };
 
   const canvas = (
     <div className="flex h-[calc(100vh-64px)] flex-col md:flex-row">
-      <div className="relative min-h-[520px] flex-1 overflow-hidden bg-[var(--md3-surface-container)]">
-        <div className="pointer-events-none absolute left-6 top-6 z-10 max-w-[min(680px,calc(100%-48px))] rounded-lg border border-[var(--md3-outline-variant)] bg-white/95 p-4 shadow-sm backdrop-blur">
-          <div className="mb-3 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 rounded-md bg-[var(--md3-primary-container)] px-2 py-1 text-xs font-medium text-[var(--md3-primary)]">
-              <GitBranch className="h-3.5 w-3.5" />
-              {graphNodes.length} nodes
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-md bg-[var(--md3-surface-container)] px-2 py-1 text-xs font-medium text-[var(--md3-on-surface-variant)]">
-              <ListTree className="h-3.5 w-3.5" />
-              {levelCount} levels
-            </span>
-          </div>
-          <h1 className="text-2xl font-semibold leading-tight text-[var(--md3-on-surface)]">
-            {roadmap?.name ?? 'Roadmap Template'}
-          </h1>
-          {roadmap?.description && (
-            <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--md3-on-surface-variant)]">
-              {roadmap.description}
-            </p>
-          )}
-        </div>
+      <div className="relative min-h-[520px] flex-1 overflow-hidden bg-[#fafafa]">
+        <RoadmapCanvasHeader
+          title={roadmap?.name ?? 'Roadmap Template'}
+          description={roadmap?.description}
+          nodeCount={graphNodes.length}
+          levelCount={levelCount}
+        />
         {graphNodes.length > 0 ? (
           <RoadmapGraphCanvas
             graphNodes={graphNodes}
-            selectedNodeId={selectedNode?.id}
+            graphEdges={roadmap?.edges}
+            selectedNodeId={selectedRoadmapNode?.id}
             onNodeSelect={handleNodeSelect}
           />
         ) : (
@@ -167,14 +164,15 @@ export function CareerRoadmapDetailPage() {
       </div>
 
       <RoadmapTemplateInspector
-        selectedNode={selectedNode}
+        selectedNode={selectedRoadmapNode?.node ?? null}
+        selectedRoadmapNode={selectedRoadmapNode}
         resources={resources}
         resourcesLoading={resourcesLoading}
         isAuthenticated={isAuthenticated}
         generating={generateMutation.isPending}
         canGenerate={Boolean(user?.profileId)}
         onGenerate={() => generateMutation.mutate()}
-        onClose={() => setSelectedNode(null)}
+        onClose={() => setSelectedRoadmapNode(null)}
       />
 
       <Snackbar

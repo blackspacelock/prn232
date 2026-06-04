@@ -14,11 +14,6 @@ export function AuthCareerRoleDetailRedirect() {
   return <Navigate to={`/career-roles/${id ?? ''}`} replace />;
 }
 
-export function AuthCareerRoleRoadmapsRedirect() {
-  const { id } = useParams<{ id: string }>();
-  return <Navigate to={`/career-roles/${id ?? ''}/roadmaps`} replace />;
-}
-
 export function AuthRoadmapRedirect() {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={`/roadmaps/${id ?? ''}`} replace />;
