@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client/react';
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import {
   AlertCircle,
   ChevronLeft,
@@ -36,16 +36,6 @@ export function CareerRoleDetailPage() {
         ]}
       >
         <div className="app-page">
-          <div className="mb-4">
-            <Link
-              to={paths.roleListPath}
-              className="inline-flex items-center gap-1 text-sm text-[var(--md3-primary)] hover:underline"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              All Career Roles
-            </Link>
-          </div>
-
           {rolesLoading ? (
             <div className="space-y-3 mb-8">
               <Skeleton className="h-8 w-64 rounded" />

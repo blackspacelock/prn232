@@ -86,6 +86,7 @@ interface RoadmapGraphCanvasProps {
   graphNodes: RoadmapGraphNode[];
   graphEdges?: RoadmapGraphEdge[];
   selectedNodeId?: string;
+  useStatusColors?: boolean;
   onNodeSelect?: (node: RoadmapGraphNode) => void;
 }
 
@@ -114,6 +115,7 @@ function mapToFlow(
   nodes: RoadmapGraphNode[],
   graphEdges: RoadmapGraphEdge[] = [],
   selectedNodeId?: string,
+  useStatusColors = false,
 ) {
   type GraphPosition = { x: number; y: number };
   const depthById = getNodeDepths(nodes);
@@ -215,6 +217,7 @@ function mapToFlow(
         nodeType: node.nodeType,
         requirementType: node.requirementType,
         status: node.status,
+        useStatusColor: useStatusColors,
       },
     });
   });
@@ -292,19 +295,22 @@ export function RoadmapGraphCanvas({
   graphNodes,
   graphEdges = [],
   selectedNodeId,
+  useStatusColors = false,
   onNodeSelect,
 }: RoadmapGraphCanvasProps) {
   const { flowNodes, flowEdges } = useMemo(
-    () => mapToFlow(graphNodes, graphEdges, selectedNodeId),
-    [graphNodes, graphEdges, selectedNodeId],
+    () => mapToFlow(graphNodes, graphEdges, selectedNodeId, useStatusColors),
+    [graphNodes, graphEdges, selectedNodeId, useStatusColors],
   );
   const graphKey = useMemo(
     () =>
       [
         graphNodes.map((node) => node.id).join('|'),
+        graphNodes.map((node) => `${node.id}:${node.status ?? 'none'}`).join('|'),
         graphEdges.map((edge) => edge.id).join('|'),
+        useStatusColors ? 'status-colors' : 'structure-colors',
       ].join('::'),
-    [graphNodes, graphEdges],
+    [graphNodes, graphEdges, useStatusColors],
   );
   const nodeById = useMemo(() => new Map(graphNodes.map((node) => [node.id, node])), [graphNodes]);
 

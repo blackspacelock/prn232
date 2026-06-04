@@ -39,3 +39,5 @@ export const NODE_STATUS_COLORS: Record<NodeStatusInt, NodeStatusStyle> = {
     label: 'Completed',
   },
 };
+
+export const NODE_STATUS_VALUES = [0, 1, 2, 3, 4] as const satisfies readonly NodeStatusInt[];

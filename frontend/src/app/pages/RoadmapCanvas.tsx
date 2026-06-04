@@ -5,6 +5,7 @@ import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Snackbar } from '../components/Snackbar';
 import { ActionButton } from '../components/ActionButton';
+import { NodeStatusPicker } from '../components/NodeStatusPicker';
 import { X, Save } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
@@ -65,10 +66,13 @@ export function RoadmapCanvasPage() {
   const [loadResources, { data: resourcesData, loading: resourcesLoading }] = useLazyQuery(GET_LEARNING_RESOURCES_BY_NODE);
   const [loadRecommended, { data: recommendedData }] = useLazyQuery(GET_RECOMMENDED_RESOURCES);
 
-  const progressNodes: ProgressNode[] = useMemo(
-    () => (data as { personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } })?.personalRoadmapWithProgress?.nodeProgresses ?? [],
-    [data],
-  );
+  const personalRoadmapProgressNodes: ProgressNode[] =
+    (data as { personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } })
+      ?.personalRoadmapWithProgress?.nodeProgresses ?? [];
+  const refreshedProgressNodes: ProgressNode[] =
+    (progressData as { nodeProgress?: ProgressNode[] })?.nodeProgress ?? [];
+  const progressNodes: ProgressNode[] =
+    refreshedProgressNodes.length > 0 ? refreshedProgressNodes : personalRoadmapProgressNodes;
   const personalRoadmap = (data as { personalRoadmapWithProgress?: { careerRoadmapId?: string } })
     ?.personalRoadmapWithProgress;
   const careerRoadmapId = personalRoadmap?.careerRoadmapId ?? '';
@@ -100,9 +104,12 @@ export function RoadmapCanvasPage() {
         requirementType: np.roadmapNode.requirementType,
         positionX: np.roadmapNode.positionX,
         positionY: np.roadmapNode.positionY,
-        status: np.status as NodeStatusInt,
+        status:
+          selectedNodeProgress?.roadmapNodeId === np.roadmapNodeId && optimisticStatus !== null
+            ? optimisticStatus
+            : (np.status as NodeStatusInt),
       })),
-    [progressNodes],
+    [progressNodes, selectedNodeProgress?.roadmapNodeId, optimisticStatus],
   );
 
   const updateStatusMutation = useMutation({
@@ -110,6 +117,16 @@ export function RoadmapCanvasPage() {
       apiClient.put(`/api/node-progress/${nodeProgressId}/status`, dto),
     onSuccess: async () => {
       await apolloClient.refetchQueries({ include: [GET_NODE_PROGRESS] });
+      setSelectedNodeProgress((current) =>
+        current && optimisticStatus !== null
+          ? {
+              ...current,
+              status: optimisticStatus,
+              note,
+            }
+          : current,
+      );
+      setPreviousStatus(optimisticStatus);
     },
     onError: (error: unknown) => {
       if (previousStatus !== null) {
@@ -187,6 +204,7 @@ export function RoadmapCanvasPage() {
             graphNodes={graphNodes}
             graphEdges={template?.edges}
             selectedNodeId={selectedNodeProgress?.roadmapNodeId}
+            useStatusColors
             onNodeSelect={handleNodeSelect}
           />
         </div>
@@ -213,25 +231,11 @@ export function RoadmapCanvasPage() {
             <div className="flex-1 space-y-4 overflow-y-auto p-5">
               <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
                 <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Progress Status</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {([0, 1, 2, 3, 4] as NodeStatusInt[]).map((s) => {
-                    const c = NODE_STATUS_COLORS[s];
-                    return (
-                      <button
-                        key={s}
-                        onClick={() => handleStatusChange(s)}
-                        className="px-3 py-2 rounded-lg text-xs font-medium border-2 transition-all"
-                        style={{
-                          background: optimisticStatus === s ? c.fill : 'transparent',
-                          color: optimisticStatus === s ? c.text : 'var(--md3-on-surface-variant)',
-                          borderColor: optimisticStatus === s ? c.stroke : 'var(--md3-outline)',
-                        }}
-                      >
-                        {c.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                <NodeStatusPicker
+                  value={optimisticStatus ?? selectedNodeProgress.status}
+                  onChange={handleStatusChange}
+                  disabled={updateStatusMutation.isPending}
+                />
               </div>
 
               <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">

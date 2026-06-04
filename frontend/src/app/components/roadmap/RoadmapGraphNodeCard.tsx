@@ -1,5 +1,5 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
-import type { NodeStatusInt } from '@/constants/nodeStatus';
+import { NODE_STATUS_COLORS, type NodeStatusInt } from '@/constants/nodeStatus';
 
 export interface RoadmapGraphNodeCardData extends Record<string, unknown> {
   name: string;
@@ -7,6 +7,7 @@ export interface RoadmapGraphNodeCardData extends Record<string, unknown> {
   nodeType?: string;
   requirementType?: string;
   status?: NodeStatusInt;
+  useStatusColor?: boolean;
 }
 
 export type RoadmapGraphFlowNode = Node<RoadmapGraphNodeCardData, 'roadmapNode'>;
@@ -78,19 +79,24 @@ function RoadmapHandle({
   );
 }
 
-function ConnectorDot({ className }: { className: string }) {
+function ConnectorDot({ className, style }: { className: string; style?: React.CSSProperties }) {
   return (
     <span
       className={[
         'pointer-events-none absolute h-2.5 w-2.5 rounded-full border-2 border-white shadow-sm',
         className,
       ].join(' ')}
+      style={style}
     />
   );
 }
 
 export function RoadmapGraphNodeCard({ data, selected }: NodeProps<RoadmapGraphFlowNode>) {
   const style = getNodeStyle(data);
+  const statusStyle =
+    data.useStatusColor && data.status !== undefined ? NODE_STATUS_COLORS[data.status] : null;
+  const statusTextStyle = statusStyle ? { color: statusStyle.text } : undefined;
+  const statusDotStyle = statusStyle ? { backgroundColor: statusStyle.stroke } : undefined;
 
   return (
     <div
@@ -100,6 +106,15 @@ export function RoadmapGraphNodeCard({ data, selected }: NodeProps<RoadmapGraphF
         selected ? 'ring-4 ring-[#2563eb]/25' : '',
         style.className,
       ].join(' ')}
+      style={
+        statusStyle
+          ? {
+              backgroundColor: statusStyle.fill,
+              borderColor: statusStyle.stroke,
+              color: statusStyle.text,
+            }
+          : undefined
+      }
     >
       <RoadmapHandle id="left-target" type="target" position={Position.Left} />
       <RoadmapHandle id="right-target" type="target" position={Position.Right} />
@@ -123,15 +138,32 @@ export function RoadmapGraphNodeCard({ data, selected }: NodeProps<RoadmapGraphF
           style={{ top }}
         />
       ))}
-      <ConnectorDot className={`left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 ${style.dotClassName}`} />
-      <ConnectorDot className={`right-0 top-1/2 translate-x-1/2 -translate-y-1/2 ${style.dotClassName}`} />
-      <ConnectorDot className="left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 bg-[#2563eb]" />
-      <ConnectorDot className="bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 bg-[#2563eb]" />
+      <ConnectorDot
+        className={`left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 ${style.dotClassName}`}
+        style={statusDotStyle}
+      />
+      <ConnectorDot
+        className={`right-0 top-1/2 translate-x-1/2 -translate-y-1/2 ${style.dotClassName}`}
+        style={statusDotStyle}
+      />
+      <ConnectorDot
+        className="left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 bg-[#2563eb]"
+        style={statusDotStyle}
+      />
+      <ConnectorDot
+        className="bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 bg-[#2563eb]"
+        style={statusDotStyle}
+      />
 
       <div className="min-h-6">
-        <p className={`line-clamp-2 leading-tight ${style.titleClassName}`}>{data.name}</p>
+        <p className={`line-clamp-2 leading-tight ${style.titleClassName}`} style={statusTextStyle}>
+          {data.name}
+        </p>
         {(data.nodeType || data.requirementType) && (
-          <p className={`mt-1 line-clamp-1 uppercase leading-none ${style.labelClassName}`}>
+          <p
+            className={`mt-1 line-clamp-1 uppercase leading-none ${style.labelClassName}`}
+            style={statusTextStyle}
+          >
             {[data.nodeType, data.requirementType].filter(Boolean).join(' / ')}
           </p>
         )}
