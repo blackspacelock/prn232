@@ -13,7 +13,8 @@ try
     builder.Configuration.Sources.Clear();
     builder.Configuration
         .SetBasePath(builder.Environment.ContentRootPath)
-        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+        .AddEnvironmentVariables();
 
     builder.Host.UseSerilog((context, services, configuration) =>
         configuration.ReadFrom.Configuration(context.Configuration)
