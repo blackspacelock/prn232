@@ -1,0 +1,67 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: windows-latest
+
+variables:
+  buildConfiguration: Release
+  apiProject: backend/src/SECompass/SECompass.API/SECompass.API.csproj
+  azureSubscription: secompass-azure-connection
+  webAppName: secompass-api
+
+stages:
+- stage: Build
+  displayName: Build Backend
+  jobs:
+  - job: Build
+    steps:
+    - task: UseDotNet@2
+      displayName: Install .NET SDK
+      inputs:
+        packageType: sdk
+        version: 10.x
+
+    - script: dotnet restore $(apiProject)
+      displayName: Restore
+
+    - script: dotnet build $(apiProject) --configuration $(buildConfiguration) --no-restore
+      displayName: Build
+
+    - script: dotnet publish $(apiProject) --configuration $(buildConfiguration) --runtime win-x86 --self-contained true --output $(Build.ArtifactStagingDirectory)/api
+      displayName: Publish self-contained
+
+    - task: ArchiveFiles@2
+      displayName: Zip Backend
+      inputs:
+        rootFolderOrFile: $(Build.ArtifactStagingDirectory)/api
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: $(Build.ArtifactStagingDirectory)/api.zip
+        replaceExistingArchive: true
+
+    - publish: $(Build.ArtifactStagingDirectory)/api.zip
+      artifact: api
+
+- stage: Deploy
+  displayName: Deploy Backend
+  dependsOn: Build
+  jobs:
+  - deployment: DeployBackend
+    environment: production
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: api
+
+          - task: AzureWebApp@1
+            displayName: Deploy to Azure App Service
+            inputs:
+              azureSubscription: $(azureSubscription)
+              appType: webApp
+              appName: $(webAppName)
+              package: $(Pipeline.Workspace)/api/api.zip
