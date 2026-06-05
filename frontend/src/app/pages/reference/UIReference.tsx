@@ -1,4 +1,6 @@
-import { AppShell, PageHeader } from '../../components/AppShell';
+import { PageHeader } from '../../components/AppShell';
+import { PublicLayout } from '../../components/PublicLayout';
+import { AppBreadcrumbs } from '../../components/AppBreadcrumbs';
 import { AlertTriangle, Check, Code, MessageSquare, Rocket } from 'lucide-react';
 
 const buttonVariants = [
@@ -19,8 +21,10 @@ const chips = [
 
 export function UIReferencePage() {
   return (
-    <AppShell breadcrumb="UI Reference">
-      <div className="app-page">
+    <PublicLayout>
+      <main className="min-h-[calc(100vh-64px)] bg-[var(--md3-surface-container)]">
+        <div className="app-page mx-auto max-w-7xl px-6 py-10">
+        <AppBreadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'UI Reference' }]} />
         <PageHeader
           title="UI States Reference"
           description="Shared components and states for implementation handoff."
@@ -92,8 +96,9 @@ export function UIReferencePage() {
             <div className="flex justify-end gap-3"><button className="rounded-full px-5 py-2.5 text-[var(--md3-primary)]">Cancel</button><button className="rounded-full bg-[var(--md3-error)] px-5 py-2.5 text-white">Delete</button></div>
           </div>
         </section>
-      </div>
-    </AppShell>
+        </div>
+      </main>
+    </PublicLayout>
   );
 }
 

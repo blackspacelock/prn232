@@ -1,4 +1,6 @@
-import { AppShell, PageHeader } from '../../components/AppShell';
+import { PageHeader } from '../../components/AppShell';
+import { PublicLayout } from '../../components/PublicLayout';
+import { AppBreadcrumbs } from '../../components/AppBreadcrumbs';
 import { Check } from 'lucide-react';
 
 const statuses = [
@@ -17,8 +19,10 @@ const states = [
 
 export function NodeProgressReferencePage() {
   return (
-    <AppShell breadcrumb="Node Progress Reference" showProgress={{ current: 19, total: 24, percentage: 79 }}>
-      <div className="app-page">
+    <PublicLayout>
+      <main className="min-h-[calc(100vh-64px)] bg-[var(--md3-surface-container)]">
+        <div className="app-page mx-auto max-w-7xl px-6 py-10">
+        <AppBreadcrumbs items={[{ label: 'Home', to: '/' }, { label: 'Node Progress Reference' }]} />
         <PageHeader
           title="Node Progress - Interaction States"
           description="Three states of the node detail drawer and its canvas node styling."
@@ -87,7 +91,8 @@ export function NodeProgressReferencePage() {
             </tbody>
           </table>
         </section>
-      </div>
-    </AppShell>
+        </div>
+      </main>
+    </PublicLayout>
   );
 }

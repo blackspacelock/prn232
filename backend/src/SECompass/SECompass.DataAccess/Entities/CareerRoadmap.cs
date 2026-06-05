@@ -9,5 +9,6 @@ public class CareerRoadmap : BaseAuditableEntity
 
     public CareerRole CareerRole { get; set; } = null!;
     public ICollection<RoadmapNode> RoadmapNodes { get; set; } = new List<RoadmapNode>();
+    public ICollection<RoadmapNodeEdge> RoadmapNodeEdges { get; set; } = new List<RoadmapNodeEdge>();
     public ICollection<PersonalRoadmap> PersonalRoadmaps { get; set; } = new List<PersonalRoadmap>();
 }

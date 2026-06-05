@@ -17,78 +17,61 @@ import { AdminNodeLibraryPage } from "./pages/admin/NodeLibrary";
 import { AdminJobTrendsPage } from "./pages/admin/JobTrends";
 import { NodeProgressReferencePage } from "./pages/reference/NodeProgressReference";
 import { UIReferencePage } from "./pages/reference/UIReference";
+import { CareerRolesPage } from "./pages/catalog/CareerRoles";
+import { CareerRoleDetailPage } from "./pages/catalog/CareerRoleDetail";
+import { CareerRoadmapDetailPage } from "./pages/catalog/CareerRoadmapDetail";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
+import {
+  AuthCareerRoleDetailRedirect,
+  AuthCareerRolesRedirect,
+  AuthRoadmapRedirect,
+  PublicLegacyRoadmapRedirect,
+} from "./components/CatalogRouteRedirects";
 
 export const router = createBrowserRouter([
+  { path: "/", Component: LandingPage },
+  { path: "/login", Component: LoginPage },
+  { path: "/register", Component: RegisterPage },
+  { path: "/portfolio/:username", Component: PublicPortfolioPage },
+  { path: "/reference/node-progress", Component: NodeProgressReferencePage },
+  { path: "/reference/ui", Component: UIReferencePage },
+  // Public catalog routes.
+  { path: "/explore/career-roles", Component: CareerRolesPage },
+  { path: "/explore/career-roles/:id", Component: CareerRoleDetailPage },
+  { path: "/explore/roadmaps/:id", Component: CareerRoadmapDetailPage },
+  { path: "/career-roadmap/:id", Component: PublicLegacyRoadmapRedirect },
   {
-    path: "/",
-    Component: LandingPage,
+    element: <ProtectedRoute />,
+    children: [
+      { path: "/dashboard", Component: DashboardPage },
+      { path: "/roadmaps", Component: RoadmapsPage },
+      { path: "/roadmap/:id", Component: RoadmapCanvasPage },
+      { path: "/mentor", Component: MentorPage },
+      { path: "/skill-gap", Component: SkillGapPage },
+      { path: "/market", Component: MarketPulsePage },
+      { path: "/portfolio", Component: PortfolioPage },
+      { path: "/settings", Component: SettingsPage },
+      // Authenticated catalog routes.
+      { path: "/career-roles", Component: CareerRolesPage },
+      { path: "/career-roles/:id", Component: CareerRoleDetailPage },
+      { path: "/roadmaps/:id", Component: CareerRoadmapDetailPage },
+      // Legacy authenticated aliases redirect to canonical app-style catalog paths.
+      { path: "/app/career-roles", Component: AuthCareerRolesRedirect },
+      { path: "/app/career-roles/:id", Component: AuthCareerRoleDetailRedirect },
+      { path: "/app/roadmaps/:id", Component: AuthRoadmapRedirect },
+      { path: "/browse/career-roles", Component: AuthCareerRolesRedirect },
+      { path: "/browse/career-roles/:id", Component: AuthCareerRoleDetailRedirect },
+      { path: "/browse/career-roadmap/:id", Component: AuthRoadmapRedirect },
+    ],
   },
   {
-    path: "/login",
-    Component: LoginPage,
-  },
-  {
-    path: "/register",
-    Component: RegisterPage,
-  },
-  {
-    path: "/dashboard",
-    Component: DashboardPage,
-  },
-  {
-    path: "/roadmaps",
-    Component: RoadmapsPage,
-  },
-  {
-    path: "/roadmap/:id",
-    Component: RoadmapCanvasPage,
-  },
-  {
-    path: "/mentor",
-    Component: MentorPage,
-  },
-  {
-    path: "/skill-gap",
-    Component: SkillGapPage,
-  },
-  {
-    path: "/market",
-    Component: MarketPulsePage,
-  },
-  {
-    path: "/portfolio",
-    Component: PortfolioPage,
-  },
-  {
-    path: "/portfolio/:username",
-    Component: PublicPortfolioPage,
-  },
-  {
-    path: "/settings",
-    Component: SettingsPage,
-  },
-  {
-    path: "/admin/career-roles",
-    Component: AdminCareerRolesPage,
-  },
-  {
-    path: "/admin/roadmaps",
-    Component: AdminRoadmapTemplatesPage,
-  },
-  {
-    path: "/admin/nodes",
-    Component: AdminNodeLibraryPage,
-  },
-  {
-    path: "/admin/job-trends",
-    Component: AdminJobTrendsPage,
-  },
-  {
-    path: "/reference/node-progress",
-    Component: NodeProgressReferencePage,
-  },
-  {
-    path: "/reference/ui",
-    Component: UIReferencePage,
+    element: <AdminRoute />,
+    children: [
+      { path: "/admin/career-roles", Component: AdminCareerRolesPage },
+      { path: "/admin/roadmaps", Component: AdminRoadmapTemplatesPage },
+      { path: "/admin/nodes", Component: AdminNodeLibraryPage },
+      { path: "/admin/job-trends", Component: AdminJobTrendsPage },
+    ],
   },
 ]);

@@ -27,7 +27,7 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         var roadmap = await _uow.CareerRoadmaps.GetByIdAsync(careerRoadmapId);
         if (roadmap == null) return ServiceResult<PersonalRoadmapDetailDto>.Fail("Career roadmap not found.");
 
-        var roadmapNodes = await _uow.RoadmapNodes.FindAsync(rn => rn.CareerRoadmapId == careerRoadmapId);
+        var roadmapNodeIds = await GetRoadmapNodeIdsAsync(careerRoadmapId);
 
         var personalRoadmap = new PersonalRoadmap
         {
@@ -38,11 +38,11 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         };
         await _uow.PersonalRoadmaps.AddAsync(personalRoadmap);
 
-        var nodeProgresses = roadmapNodes.Select(rn => new NodeProgress
+        var nodeProgresses = roadmapNodeIds.Select(nodeId => new NodeProgress
         {
             Id = Guid.NewGuid(),
             PersonalRoadmapId = personalRoadmap.Id,
-            NodeId = rn.NodeId,
+            RoadmapNodeId = nodeId,
             Status = NodeProgressStatus.NotStarted
         }).ToList();
 
@@ -51,6 +51,16 @@ public class PersonalRoadmapService : IPersonalRoadmapService
 
         var result = await _uow.PersonalRoadmaps.GetWithNodesAndProgressAsync(personalRoadmap.Id);
         return ServiceResult<PersonalRoadmapDetailDto>.Ok(_mapper.Map<PersonalRoadmapDetailDto>(result));
+    }
+
+    private async Task<List<Guid>> GetRoadmapNodeIdsAsync(Guid careerRoadmapId)
+    {
+        var roadmapNodes = await _uow.RoadmapNodes.FindAsync(rn => rn.CareerRoadmapId == careerRoadmapId);
+        return roadmapNodes
+            .OrderBy(rn => rn.Order)
+            .ThenBy(rn => rn.CreatedAt)
+            .Select(rn => rn.Id)
+            .ToList();
     }
 
     public async Task<ServiceResult<List<PersonalRoadmapDto>>> GetByProfileAsync(Guid profileId)

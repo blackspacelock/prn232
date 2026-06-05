@@ -15,6 +15,7 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<CareerRole>? _careerRoles;
     private IRepository<CareerRoadmap>? _careerRoadmaps;
     private IRepository<RoadmapNode>? _roadmapNodes;
+    private IRepository<RoadmapNodeEdge>? _roadmapNodeEdges;
     private IRepository<Node>? _nodes;
     private IRepository<LearningResource>? _learningResources;
     private IRepository<GitHubRepository>? _gitHubRepositories;
@@ -34,6 +35,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<CareerRole> CareerRoles => _careerRoles ??= new GenericRepository<CareerRole>(_context);
     public IRepository<CareerRoadmap> CareerRoadmaps => _careerRoadmaps ??= new GenericRepository<CareerRoadmap>(_context);
     public IRepository<RoadmapNode> RoadmapNodes => _roadmapNodes ??= new GenericRepository<RoadmapNode>(_context);
+    public IRepository<RoadmapNodeEdge> RoadmapNodeEdges => _roadmapNodeEdges ??= new GenericRepository<RoadmapNodeEdge>(_context);
     public IRepository<Node> Nodes => _nodes ??= new GenericRepository<Node>(_context);
     public IRepository<LearningResource> LearningResources => _learningResources ??= new GenericRepository<LearningResource>(_context);
     public IRepository<GitHubRepository> GitHubRepositories => _gitHubRepositories ??= new GenericRepository<GitHubRepository>(_context);

@@ -1,342 +1,278 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { useParams } from 'react-router';
 import { AppShell } from '../components/AppShell';
-import { appToast } from '../components/AppToast';
-import { StatusChip, type NodeStatus } from '../components/StatusChip';
-import { ActionAnchor, ActionButton } from '../components/ActionButton';
-import { ExternalLink, Save, ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react';
+import { Skeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
+import { Snackbar } from '../components/Snackbar';
+import { ActionButton } from '../components/ActionButton';
+import { NodeStatusPicker } from '../components/NodeStatusPicker';
+import { X, Save } from 'lucide-react';
+import { useQuery, useLazyQuery } from '@apollo/client/react';
+import { useMutation } from '@tanstack/react-query';
+import { apolloClient } from '@/lib/apollo';
+import { apiClient } from '@/lib/axios';
+import { useAuthStore } from '@/store/authStore';
+import { NODE_STATUS_COLORS, type NodeStatusInt } from '@/constants/nodeStatus';
+import { RoadmapCanvasHeader } from '../components/roadmap/RoadmapCanvasHeader';
+import { RoadmapGraphCanvas, type RoadmapGraphNode } from '../components/roadmap/RoadmapGraphCanvas';
+import { RoadmapResourceCard } from '../components/roadmap/RoadmapResourceCard';
+import {
+  GET_CAREER_ROADMAP_WITH_NODES,
+  GET_PERSONAL_ROADMAP_WITH_PROGRESS,
+  GET_NODE_PROGRESS,
+  GET_LEARNING_RESOURCES_BY_NODE,
+  GET_RECOMMENDED_RESOURCES,
+} from '@/graphql/queries';
+import type {
+  CareerRoadmapWithNodesDto,
+  NodeProgressDto,
+  UpdateNodeProgressStatusDto,
+} from '@/types/api';
 
-interface RoadmapNode {
+type ProgressNode = NodeProgressDto;
+
+interface LearningResource {
   id: string;
-  title: string;
-  status: NodeStatus;
-  children?: string[];
-  position: { x: number; y: number };
+  nodeId?: string;
+  name: string;
+  resourceUrl: string;
+  resourceType: string;
+  provider?: string;
+  isFree: boolean;
+  createdAt?: string;
 }
 
-const nodes: RoadmapNode[] = [
-  { id: '1', title: 'Internet Basics', status: 'completed', children: ['2', '3'], position: { x: 400, y: 100 } },
-  { id: '2', title: 'HTML & CSS', status: 'completed', children: ['4', '5'], position: { x: 300, y: 200 } },
-  { id: '3', title: 'JavaScript', status: 'completed', children: ['4', '5'], position: { x: 500, y: 200 } },
-  { id: '4', title: 'React', status: 'in-progress', children: ['6', '7'], position: { x: 300, y: 300 } },
-  { id: '5', title: 'TypeScript', status: 'in-progress', children: ['7'], position: { x: 500, y: 300 } },
-  { id: '6', title: 'Node.js', status: 'paused', children: ['8', '9'], position: { x: 200, y: 400 } },
-  { id: '7', title: 'Testing', status: 'skipped', children: ['9'], position: { x: 400, y: 400 } },
-  { id: '8', title: 'Deployment', status: 'not-started', children: ['10'], position: { x: 200, y: 500 } },
-  { id: '9', title: 'Performance', status: 'not-started', children: ['10'], position: { x: 400, y: 500 } },
-  { id: '10', title: 'CI/CD', status: 'not-started', position: { x: 300, y: 600 } },
-];
-
 export function RoadmapCanvasPage() {
-  const [selectedNode, setSelectedNode] = useState<string | null>('4');
-  const [nodeStatus, setNodeStatus] = useState<NodeStatus>('in-progress');
-  const [note, setNote] = useState('');
+  const { id: personalRoadmapId } = useParams<{ id: string }>();
+  const user = useAuthStore((s) => s.user);
+  const profileId = user?.profileId ?? '';
 
-  const selectedNodeData = nodes.find(n => n.id === selectedNode);
+  const [selectedNodeProgress, setSelectedNodeProgress] = useState<ProgressNode | null>(null);
+  const [optimisticStatus, setOptimisticStatus] = useState<NodeStatusInt | null>(null);
+  const [previousStatus, setPreviousStatus] = useState<NodeStatusInt | null>(null);
+  const [note, setNote] = useState('');
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+
+  const { data, loading, error, refetch } = useQuery(GET_PERSONAL_ROADMAP_WITH_PROGRESS, {
+    variables: { personalRoadmapId },
+    skip: !personalRoadmapId,
+  });
+
+  const { data: progressData } = useQuery(GET_NODE_PROGRESS, {
+    variables: { personalRoadmapId },
+    skip: !personalRoadmapId,
+  });
+
+  const [loadResources, { data: resourcesData, loading: resourcesLoading }] = useLazyQuery(GET_LEARNING_RESOURCES_BY_NODE);
+  const [loadRecommended, { data: recommendedData }] = useLazyQuery(GET_RECOMMENDED_RESOURCES);
+
+  const personalRoadmapProgressNodes: ProgressNode[] =
+    (data as { personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } })
+      ?.personalRoadmapWithProgress?.nodeProgresses ?? [];
+  const refreshedProgressNodes: ProgressNode[] =
+    (progressData as { nodeProgress?: ProgressNode[] })?.nodeProgress ?? [];
+  const progressNodes: ProgressNode[] =
+    refreshedProgressNodes.length > 0 ? refreshedProgressNodes : personalRoadmapProgressNodes;
+  const personalRoadmap = (data as { personalRoadmapWithProgress?: { careerRoadmapId?: string } })
+    ?.personalRoadmapWithProgress;
+  const careerRoadmapId = personalRoadmap?.careerRoadmapId ?? '';
+
+  const { data: templateData } = useQuery(GET_CAREER_ROADMAP_WITH_NODES, {
+    variables: { roadmapId: careerRoadmapId },
+    skip: !careerRoadmapId,
+  });
+  const template: CareerRoadmapWithNodesDto | null =
+    (templateData as { careerRoadmapWithNodes?: CareerRoadmapWithNodesDto })
+      ?.careerRoadmapWithNodes ?? null;
+  const roadmapTitle = template?.name ?? 'Personal Roadmap';
+
+  const summary: Array<{ status: number }> =
+    (progressData as { nodeProgress?: Array<{ status: number }> })?.nodeProgress ?? [];
+  const resources: LearningResource[] = (resourcesData as { learningResourcesByNode?: LearningResource[] })?.learningResourcesByNode ?? [];
+  const recommended: LearningResource[] = (recommendedData as { recommendedResources?: LearningResource[] })?.recommendedResources ?? [];
+
+  const graphNodes: RoadmapGraphNode[] = useMemo(
+    () =>
+      progressNodes.map((np) => ({
+        id: np.roadmapNodeId,
+        nodeId: np.nodeId,
+        parentRoadmapNodeId: np.roadmapNode.parentRoadmapNodeId,
+        name: np.node.name,
+        description: np.node.description,
+        order: np.roadmapNode.order,
+        nodeType: np.roadmapNode.nodeType,
+        requirementType: np.roadmapNode.requirementType,
+        positionX: np.roadmapNode.positionX,
+        positionY: np.roadmapNode.positionY,
+        status:
+          selectedNodeProgress?.roadmapNodeId === np.roadmapNodeId && optimisticStatus !== null
+            ? optimisticStatus
+            : (np.status as NodeStatusInt),
+      })),
+    [progressNodes, selectedNodeProgress?.roadmapNodeId, optimisticStatus],
+  );
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ nodeProgressId, dto }: { nodeProgressId: string; dto: UpdateNodeProgressStatusDto }) =>
+      apiClient.put(`/api/node-progress/${nodeProgressId}/status`, dto),
+    onSuccess: async () => {
+      await apolloClient.refetchQueries({ include: [GET_NODE_PROGRESS] });
+      setSelectedNodeProgress((current) =>
+        current && optimisticStatus !== null
+          ? {
+              ...current,
+              status: optimisticStatus,
+              note,
+            }
+          : current,
+      );
+      setPreviousStatus(optimisticStatus);
+    },
+    onError: (error: unknown) => {
+      if (previousStatus !== null) {
+        setOptimisticStatus(previousStatus);
+      }
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update status.';
+      setSnackbar({ open: true, message: msg });
+    },
+  });
+
+  const handleNodeSelect = useCallback((node: RoadmapGraphNode) => {
+    const np = progressNodes.find((p) => p.roadmapNodeId === node.id);
+    if (np) {
+      setSelectedNodeProgress(np);
+      setOptimisticStatus(np.status as NodeStatusInt);
+      setPreviousStatus(np.status as NodeStatusInt);
+      setNote(np.note ?? '');
+      loadResources({ variables: { nodeId: np.nodeId } });
+      loadRecommended({ variables: { profileId, nodeId: np.nodeId } });
+    }
+  }, [progressNodes, profileId, loadResources, loadRecommended]);
+
+  const handleStatusChange = (newStatus: NodeStatusInt) => {
+    setPreviousStatus(optimisticStatus);
+    setOptimisticStatus(newStatus);
+  };
+
+  const handleSave = () => {
+    if (!selectedNodeProgress || optimisticStatus === null) return;
+    updateStatusMutation.mutate({
+      nodeProgressId: selectedNodeProgress.id,
+      dto: { status: optimisticStatus, note: note || undefined },
+    });
+  };
+
+  const completedCount = summary.filter((n: { status: number }) => n.status === 4).length;
+  const totalCount = summary.length;
+
+  if (loading) {
+    return (
+      <AppShell breadcrumb="Roadmap Canvas" className="app-main--flush">
+        <Skeleton className="flex-1" />
+      </AppShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppShell breadcrumb="Roadmap Canvas">
+        <EmptyState icon={X} title="Failed to load roadmap" description="Please try again." actionLabel="Retry" onAction={refetch} />
+      </AppShell>
+    );
+  }
+
+  const currentColors = optimisticStatus !== null ? NODE_STATUS_COLORS[optimisticStatus] : NODE_STATUS_COLORS[0];
 
   return (
     <AppShell
-        breadcrumb="Roadmaps / Frontend Developer"
-        showProgress={{ current: 18, total: 24, percentage: 75 }}
-        className="app-main--flush"
-      >
-      <div className="flex h-[calc(100vh-64px)]">
-        {/* Canvas Area */}
-        <div className="flex-1 relative overflow-hidden" style={{ backgroundImage: 'radial-gradient(circle, #DADCE0 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
-          <h1 className="absolute top-6 left-6 text-4xl font-bold text-[var(--md3-on-surface)]">
-            Frontend Developer Roadmap
-          </h1>
-
-          {/* Controls */}
-          <div className="absolute top-6 right-6 bg-white rounded-xl shadow-md p-2 flex flex-col gap-2">
-            <button className="w-10 h-10 flex items-center justify-center hover:bg-[var(--md3-surface-variant)] rounded-lg transition-colors">
-              <ZoomIn className="w-5 h-5 text-[var(--md3-on-surface-variant)]" />
-            </button>
-            <button className="w-10 h-10 flex items-center justify-center hover:bg-[var(--md3-surface-variant)] rounded-lg transition-colors">
-              <ZoomOut className="w-5 h-5 text-[var(--md3-on-surface-variant)]" />
-            </button>
-            <button className="w-10 h-10 flex items-center justify-center hover:bg-[var(--md3-surface-variant)] rounded-lg transition-colors">
-              <Maximize2 className="w-5 h-5 text-[var(--md3-on-surface-variant)]" />
-            </button>
-          </div>
-
-          {/* Legend */}
-          <div className="absolute bottom-6 left-6 bg-white rounded-xl shadow-md p-4">
-            <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase mb-3">Legend</p>
-            <div className="space-y-2">
-              <LegendItem color="var(--md3-status-completed-stroke)" label="Done" />
-              <LegendItem color="var(--md3-status-in-progress-stroke)" label="In Progress" />
-              <LegendItem color="var(--md3-status-paused-stroke)" label="Paused" />
-              <LegendItem color="var(--md3-status-skipped-stroke)" label="Skipped" />
-              <LegendItem color="var(--md3-status-not-started-stroke)" label="Not Started" />
-            </div>
-          </div>
-
-          {/* Nodes and Edges */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
-            {nodes.map(node => {
-              if (!node.children) return null;
-              return node.children.map(childId => {
-                const child = nodes.find(n => n.id === childId);
-                if (!child) return null;
-
-                const isActive = node.status === 'in-progress' || node.status === 'completed';
-
-                return (
-                  <line
-                    key={`${node.id}-${childId}`}
-                    x1={node.position.x + 80}
-                    y1={node.position.y + 22}
-                    x2={child.position.x + 80}
-                    y2={child.position.y + 22}
-                    stroke={isActive ? 'var(--md3-primary)' : 'var(--md3-outline)'}
-                    strokeWidth="2"
-                    markerEnd="url(#arrowhead)"
-                  />
-                );
-              });
-            })}
-            <defs>
-              <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                <polygon points="0 0, 10 3, 0 6" fill="var(--md3-outline)" />
-              </marker>
-            </defs>
-          </svg>
-
-          {/* Nodes */}
-          <div className="absolute inset-0" style={{ zIndex: 2 }}>
-            {nodes.map(node => (
-              <RoadmapNodeComponent
-                key={node.id}
-                node={node}
-                isSelected={selectedNode === node.id}
-                onClick={() => setSelectedNode(node.id)}
-              />
-            ))}
-          </div>
+      breadcrumb="Roadmaps / Canvas"
+      breadcrumbs={[
+        { label: 'Roadmaps', to: '/roadmaps' },
+        { label: roadmapTitle },
+      ]}
+      showProgress={totalCount > 0 ? { current: completedCount, total: totalCount, percentage: Math.round((completedCount / totalCount) * 100) } : undefined}
+      className="app-main--flush"
+    >
+      <div className="flex h-[calc(100vh-64px)] flex-col md:flex-row">
+        <div className="relative min-h-[520px] flex-1 overflow-hidden bg-[#fafafa]">
+          <RoadmapCanvasHeader
+            title={roadmapTitle}
+            nodeCount={graphNodes.length}
+            progress={{ completed: completedCount, total: totalCount }}
+          />
+          <RoadmapGraphCanvas
+            graphNodes={graphNodes}
+            graphEdges={template?.edges}
+            selectedNodeId={selectedNodeProgress?.roadmapNodeId}
+            useStatusColors
+            onNodeSelect={handleNodeSelect}
+          />
         </div>
 
-        {/* Node Details Drawer */}
-        {selectedNode && selectedNodeData && (
-          <div className="w-[400px] bg-white border-l border-[var(--md3-outline-variant)] shadow-xl flex flex-col">
-            <div className="p-6 border-b border-[var(--md3-outline-variant)]">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)] mb-2">
-                    {selectedNodeData.title}
-                  </h2>
-                  <StatusChip status={nodeStatus} />
+        {selectedNodeProgress && (
+          <div className="flex w-full flex-col overflow-hidden border-l border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container)] shadow-xl md:w-[420px]">
+            <div className="border-b border-[var(--md3-outline-variant)] bg-white p-6">
+              <div className="flex items-start justify-between">
+                <div className="min-w-0">
+                  <h2 className="line-clamp-2 text-xl font-semibold leading-tight text-[var(--md3-on-surface)]">{selectedNodeProgress.node.name}</h2>
+                  <span
+                    className="mt-3 inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
+                    style={{ background: currentColors.fill, color: currentColors.text, border: `1px solid ${currentColors.stroke}` }}
+                  >
+                    {currentColors.label}
+                  </span>
                 </div>
-                <button
-                  onClick={() => setSelectedNode(null)}
-                  className="w-10 h-10 flex items-center justify-center hover:bg-[var(--md3-surface-variant)] rounded-full transition-colors"
-                >
+                <button onClick={() => setSelectedNodeProgress(null)} className="w-10 h-10 flex items-center justify-center hover:bg-[var(--md3-surface-variant)] rounded-full transition-colors">
                   <X className="w-5 h-5 text-[var(--md3-on-surface-variant)]" />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Progress Status */}
-              <div>
-                <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">
-                  Progress Status
-                </p>
-                <div className="flex gap-2">
-                  <StatusButton
-                    label="Not Started"
-                    active={nodeStatus === 'not-started'}
-                    onClick={() => setNodeStatus('not-started')}
-                  />
-                  <StatusButton
-                    label="In Progress"
-                    active={nodeStatus === 'in-progress'}
-                    onClick={() => setNodeStatus('in-progress')}
-                  />
-                  <StatusButton
-                    label="Done"
-                    active={nodeStatus === 'completed'}
-                    onClick={() => setNodeStatus('completed')}
-                  />
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <StatusButton
-                    label="Paused"
-                    active={nodeStatus === 'paused'}
-                    onClick={() => setNodeStatus('paused')}
-                  />
-                  <StatusButton
-                    label="Skipped"
-                    active={nodeStatus === 'skipped'}
-                    onClick={() => setNodeStatus('skipped')}
-                  />
-                </div>
+            <div className="flex-1 space-y-4 overflow-y-auto p-5">
+              <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
+                <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Progress Status</p>
+                <NodeStatusPicker
+                  value={optimisticStatus ?? selectedNodeProgress.status}
+                  onChange={handleStatusChange}
+                  disabled={updateStatusMutation.isPending}
+                />
               </div>
 
-              {/* Note */}
-              <div>
-                <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">
-                  Note
-                </p>
+              <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
+                <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Note</p>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Optional note..."
-                  className="w-full h-24 px-4 py-3 bg-white border-2 border-[var(--md3-outline)] rounded focus:border-[var(--md3-primary)] focus:outline-none resize-none"
+                  className="w-full h-24 px-4 py-3 bg-white border-2 border-[var(--md3-outline)] rounded-lg focus:border-[var(--md3-primary)] focus:outline-none resize-none text-sm"
                 />
               </div>
 
-              <ActionButton
-                icon={Save}
-                label="Save progress"
-                variant="primary"
-                size="lg"
-                onClick={() => appToast.success(
-                  `Progress updated - ${selectedNodeData?.title ?? 'Node'} marked ${nodeStatus.replace('-', ' ')}`,
-                  {
-                    actionLabel: 'Undo',
-                    onAction: () => appToast.info('Progress update reverted'),
-                  },
+              <ActionButton icon={Save} label={updateStatusMutation.isPending ? 'Saving...' : 'Save progress'} variant="primary" size="lg" onClick={handleSave} disabled={updateStatusMutation.isPending} className="w-full" />
+
+              <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
+                <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Learning Resources</p>
+                {resourcesLoading ? (
+                  <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
+                ) : resources.length === 0 ? (
+                  <p className="text-sm text-[var(--md3-on-surface-variant)]">No resources for this node.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {resources.map((r) => (
+                      <RoadmapResourceCard key={r.id} resource={r} />
+                    ))}
+                    {recommended.map((r) => (
+                      <RoadmapResourceCard key={`rec-${r.id}`} resource={r} recommended />
+                    ))}
+                  </div>
                 )}
-                className="w-full"
-              />
-
-              <div className="h-px bg-[var(--md3-outline-variant)]" />
-
-              {/* Learning Resources */}
-              <div>
-                <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">
-                  Learning Resources
-                </p>
-                <div className="space-y-3">
-                  <ResourceCard
-                    title="React Official Docs"
-                    type="Article"
-                    provider="Meta"
-                    isFree
-                  />
-                  <ResourceCard
-                    title="React Complete Guide"
-                    type="Course"
-                    provider="Udemy"
-                    isFree={false}
-                  />
-                </div>
               </div>
             </div>
           </div>
         )}
       </div>
 
+      <Snackbar isOpen={snackbar.open} message={snackbar.message} variant="error" onClose={() => setSnackbar({ open: false, message: '' })} />
     </AppShell>
-  );
-}
-
-function RoadmapNodeComponent({ node, isSelected, onClick }: { node: RoadmapNode; isSelected: boolean; onClick: () => void }) {
-  const getStatusStyles = (status: RoadmapNode['status']) => {
-    const styles = {
-      'completed': {
-        bg: 'var(--md3-status-completed-fill)',
-        text: 'var(--md3-status-completed-text)',
-        border: 'var(--md3-status-completed-stroke)',
-      },
-      'in-progress': {
-        bg: 'var(--md3-status-in-progress-fill)',
-        text: 'var(--md3-status-in-progress-text)',
-        border: 'var(--md3-status-in-progress-stroke)',
-      },
-      'paused': {
-        bg: 'var(--md3-status-paused-fill)',
-        text: 'var(--md3-status-paused-text)',
-        border: 'var(--md3-status-paused-stroke)',
-      },
-      'skipped': {
-        bg: 'var(--md3-status-skipped-fill)',
-        text: 'var(--md3-status-skipped-text)',
-        border: 'var(--md3-status-skipped-stroke)',
-      },
-      'not-started': {
-        bg: 'var(--md3-status-not-started-fill)',
-        text: 'var(--md3-status-not-started-text)',
-        border: 'var(--md3-status-not-started-stroke)',
-      },
-    };
-    return styles[status];
-  };
-
-  const styles = getStatusStyles(node.status);
-
-  return (
-    <button
-      onClick={onClick}
-      className="absolute px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer hover:scale-105"
-      style={{
-        left: `${node.position.x}px`,
-        top: `${node.position.y}px`,
-        minWidth: '160px',
-        backgroundColor: styles.bg,
-        color: styles.text,
-        border: `2px solid ${styles.border}`,
-        boxShadow: isSelected
-          ? `0 4px 8px rgba(0,0,0,0.12), 0 0 0 2px ${styles.border}`
-          : '0 1px 2px rgba(0,0,0,0.10)',
-      }}
-    >
-      {node.title}
-      <div
-        className="absolute top-2 right-2 w-2 h-2 rounded-full"
-        style={{ backgroundColor: styles.border }}
-      />
-    </button>
-  );
-}
-
-function LegendItem({ color, label }: { color: string; label: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-      <span className="text-xs text-[var(--md3-on-surface-variant)]">{label}</span>
-    </div>
-  );
-}
-
-function StatusButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex-1 px-3 py-2 rounded-full text-xs font-medium border-2 transition-all ${
-        active
-          ? 'bg-[var(--md3-primary-container)] border-[var(--md3-status-in-progress-stroke)] text-[var(--md3-primary)]'
-          : 'bg-white border-[var(--md3-outline)] text-[var(--md3-on-surface-variant)]'
-      }`}
-    >
-      {active && <span className="mr-1">✓</span>}
-      {label}
-    </button>
-  );
-}
-
-function ResourceCard({ title, type, provider, isFree }: { title: string; type: string; provider: string; isFree: boolean }) {
-  return (
-    <div className="bg-[var(--md3-surface-container)] rounded-lg p-3">
-      <h4 className="text-sm font-medium text-[var(--md3-on-surface)] mb-2">{title}</h4>
-      <div className="flex items-center gap-2 mb-2">
-        <span className="px-2 py-0.5 bg-[var(--md3-surface-variant)] border border-[var(--md3-outline)] rounded text-xs font-mono">
-          {type}
-        </span>
-        <span className="text-xs text-[var(--md3-on-surface-variant)]">{provider}</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span
-          className="px-2 py-0.5 rounded text-xs font-medium"
-          style={{
-            backgroundColor: isFree ? 'var(--md3-success-container)' : 'var(--md3-surface-variant)',
-            color: isFree ? 'var(--md3-success)' : 'var(--md3-on-surface-variant)',
-          }}
-        >
-          {isFree ? 'Free' : 'Paid'}
-        </span>
-        <ActionAnchor icon={ExternalLink} label="Open" href="#" variant="text" />
-      </div>
-    </div>
   );
 }

@@ -2,245 +2,125 @@ import { useState } from 'react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { FormDialog, type FormDialogField } from '../../components/FormDialog';
+import { Skeleton } from '../../components/Skeleton';
+import { Snackbar } from '../../components/Snackbar';
+import { EmptyState } from '../../components/EmptyState';
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
-import { appToast } from '../../components/AppToast';
+import { useQuery } from '@apollo/client/react';
+import { useMutation } from '@tanstack/react-query';
+import { apolloClient } from '@/lib/apollo';
+import { apiClient } from '@/lib/axios';
+import { GET_CAREER_ROLES } from '@/graphql/queries';
 
-interface CareerRole {
-  id: number;
-  name: string;
-  description: string;
-  roadmapCount: number;
-  createdDate: string;
-}
-
-const mockRoles: CareerRole[] = [
-  { id: 1, name: 'Frontend Developer', description: 'Build user interfaces with modern frameworks', roadmapCount: 3, createdDate: 'Jan 15, 2025' },
-  { id: 2, name: 'Backend Developer', description: 'Develop server-side applications and APIs', roadmapCount: 2, createdDate: 'Jan 20, 2025' },
-  { id: 3, name: 'Full Stack Developer', description: 'Combine frontend and backend development skills', roadmapCount: 4, createdDate: 'Feb 1, 2025' },
-  { id: 4, name: 'DevOps Engineer', description: 'Manage infrastructure and deployment pipelines', roadmapCount: 2, createdDate: 'Feb 10, 2025' },
-  { id: 5, name: 'Mobile Developer', description: 'Create native and cross-platform mobile apps', roadmapCount: 2, createdDate: 'Feb 15, 2025' },
-];
+interface CareerRole { id: string; name: string; description?: string; createdAt: string }
+interface CareerRoleDto { name: string; description?: string }
 
 export function AdminCareerRolesPage() {
-  const [roles, setRoles] = useState<CareerRole[]>(mockRoles);
   const [searchQuery, setSearchQuery] = useState('');
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; roleId: number | null }>({
-    isOpen: false,
-    roleId: null,
-  });
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingRole, setEditingRole] = useState<CareerRole | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<CareerRoleDto>({ name: '', description: '' });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
-  const filteredRoles = roles.filter(role =>
-    role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    role.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const { data, loading, error, refetch } = useQuery(GET_CAREER_ROLES);
+  const roles: CareerRole[] = ((data as { careerRoles?: CareerRole[] })?.careerRoles ?? []).filter((r) =>
+    r.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleDelete = (roleId: number) => {
-    setDeleteConfirm({ isOpen: true, roleId });
-  };
+  const invalidate = () => apolloClient.refetchQueries({ include: [GET_CAREER_ROLES] });
+  const showError = (msg: string) => setSnackbar({ open: true, message: msg });
 
-  const confirmDelete = () => {
-    if (deleteConfirm.roleId) {
-      setRoles(roles.filter(r => r.id !== deleteConfirm.roleId));
-      appToast.success('Career role deleted successfully');
-      setDeleteConfirm({ isOpen: false, roleId: null });
-    }
-  };
+  const createMutation = useMutation({
+    mutationFn: (dto: CareerRoleDto) => apiClient.post('/api/career-roles', dto),
+    onSuccess: async () => { await invalidate(); setShowForm(false); setForm({ name: '', description: '' }); },
+    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create.'),
+  });
 
-  const roleFields: FormDialogField[] = [
-    {
-      name: 'name',
-      label: 'Role name',
-      defaultValue: editingRole?.name ?? '',
-      colSpan: 2,
-    },
-    {
-      name: 'description',
-      label: 'Description',
-      type: 'textarea',
-      defaultValue: editingRole?.description ?? '',
-      colSpan: 2,
-    },
-  ];
+  const updateMutation = useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: CareerRoleDto }) => apiClient.put(`/api/career-roles/${id}`, dto),
+    onSuccess: async () => { await invalidate(); setEditingRole(null); setShowForm(false); },
+    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update.'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/api/career-roles/${id}`),
+    onSuccess: async () => { await invalidate(); setDeleteId(null); },
+    onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
+  });
+
+  const handleSave = () => {
+    if (editingRole) updateMutation.mutate({ id: editingRole.id, dto: form });
+    else createMutation.mutate(form);
+  };
 
   return (
     <AppShell breadcrumb="Admin / Career Roles">
       <div className="app-page">
         <PageHeader
           title="Career Roles"
-          description="Define target career paths available to students."
-          actions={
-          <AdminActionButton
-            icon={Plus}
-            label="New Career Role"
-            variant="primary"
-            size="md"
-            onClick={() => setCreateModalOpen(true)}
-          />
-          }
+          description="Manage the career roles available for roadmap generation."
+          actions={<AdminActionButton icon={Plus} label="Create Role" onClick={() => { setEditingRole(null); setForm({ name: '', description: '' }); setShowForm(true); }} />}
         />
 
-        {/* Search */}
-        <div className="md3-panel flex items-center gap-3 p-4">
-        <div className="relative max-w-xs">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search career roles..."
-            className="md3-field w-full pl-12 pr-4"
-          />
-        </div>
-        </div>
-
-        {/* Data Table */}
-        <div className="md3-card overflow-hidden">
-          <table className="md3-data-table">
-            <thead>
-              <tr className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
-                <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider">
-                  Description
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider">
-                  Roadmaps
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRoles.map((role, index) => (
-                <tr
-                  key={role.id}
-                  className={`border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)] transition-colors ${
-                    index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                  }`}
-                >
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-[var(--md3-on-surface)]">
-                      {role.name}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-[var(--md3-on-surface-variant)] line-clamp-2">
-                      {role.description}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-[var(--md3-primary-container)] text-[var(--md3-primary)] rounded-lg text-xs font-medium">
-                      {role.roadmapCount}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs text-[var(--md3-on-surface-variant)]">
-                      {role.createdDate}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <AdminActionButton
-                        icon={Pencil}
-                        label="Edit"
-                        onClick={() => setEditingRole(role)}
-                      />
-                      <AdminActionButton
-                        icon={Trash2}
-                        label="Delete"
-                        variant="danger"
-                        onClick={() => handleDelete(role.id)}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--md3-outline-variant)]">
-            <span className="text-sm font-medium text-[var(--md3-on-surface-variant)]">
-              Showing 1–{filteredRoles.length} of {roles.length}
-            </span>
-            <div className="flex items-center gap-2">
-              <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)] transition-colors">
-                <svg className="w-5 h-5 text-[var(--md3-on-surface-variant)]" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--md3-primary)] text-white text-sm font-medium">
-                1
-              </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)] text-sm font-medium hover:bg-[var(--md3-primary)] hover:text-white transition-colors">
-                2
-              </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)] transition-colors">
-                <svg className="w-5 h-5 text-[var(--md3-on-surface-variant)]" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
+        {showForm && (
+          <div className="md3-card p-6">
+            <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">{editingRole ? 'Edit Role' : 'Create Role'}</h3>
+            <div className="space-y-3">
+              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Role name" className="md3-field w-full px-4" />
+              <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (optional)" className="md3-field w-full px-4" />
+              <div className="flex gap-3">
+                <AdminActionButton icon={Plus} label={createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save'} onClick={handleSave} disabled={!form.name || createMutation.isPending || updateMutation.isPending} />
+                <AdminActionButton icon={Trash2} label="Cancel" onClick={() => setShowForm(false)} />
+              </div>
             </div>
+          </div>
+        )}
+
+        <div className="md3-panel flex items-center gap-3 p-4">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search roles..." className="md3-field w-full pl-12 pr-4" />
           </div>
         </div>
 
-        {/* Delete Confirmation Dialog */}
-        <ConfirmDialog
-          isOpen={deleteConfirm.isOpen}
-          title="Delete Career Role?"
-          message="Are you sure you want to delete this career role? This action cannot be undone and will affect all associated roadmaps."
-          confirmLabel="Delete"
-          variant="danger"
-          onConfirm={confirmDelete}
-          onCancel={() => setDeleteConfirm({ isOpen: false, roleId: null })}
-        />
+        {loading ? (
+          <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
+        ) : error ? (
+          <EmptyState icon={Plus} title="Failed to load roles" description="Please try again." actionLabel="Retry" onAction={refetch} />
+        ) : (
+          <div className="md3-card overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Role Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Description</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Created</th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roles.map((role) => (
+                  <tr key={role.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
+                    <td className="px-6 py-4 text-sm font-medium text-[var(--md3-on-surface)]">{role.name}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{role.description ?? '—'}</td>
+                    <td className="px-6 py-4 text-xs text-[var(--md3-on-surface-variant)]">{new Date(role.createdAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => { setEditingRole(role); setForm({ name: role.name, description: role.description }); setShowForm(true); }} className="p-2 hover:bg-[var(--md3-primary-container)] rounded-lg transition-colors"><Pencil className="w-4 h-4 text-[var(--md3-primary)]" /></button>
+                        <button onClick={() => setDeleteId(role.id)} className="p-2 hover:bg-[var(--md3-error-container)] rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-[var(--md3-error)]" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        <FormDialog
-          isOpen={createModalOpen || editingRole !== null}
-          title={editingRole ? 'Edit Career Role' : 'Create Career Role'}
-          description="Add or update a target career path for roadmap generation."
-          fields={roleFields}
-          onCancel={() => {
-            setCreateModalOpen(false);
-            setEditingRole(null);
-          }}
-          onSubmit={(values) => {
-            const name = String(values.name || 'New Career Role');
-            const description = String(values.description || 'Draft role description');
-
-            if (editingRole) {
-              setRoles(roles.map((role) => (
-                role.id === editingRole.id ? { ...role, name, description } : role
-              )));
-              appToast.success('Career role updated');
-            } else {
-              setRoles([
-                {
-                  id: roles.length + 1,
-                  name,
-                  description,
-                  roadmapCount: 0,
-                  createdDate: 'Today',
-                },
-                ...roles,
-              ]);
-              appToast.success('Career role created');
-            }
-
-            setCreateModalOpen(false);
-            setEditingRole(null);
-          }}
-        />
+        <ConfirmDialog isOpen={deleteId !== null} title="Delete Career Role?" message="This will permanently remove the career role." confirmLabel="Delete" variant="danger" onConfirm={() => { if (deleteId) deleteMutation.mutate(deleteId); }} onCancel={() => setDeleteId(null)} />
+        <Snackbar isOpen={snackbar.open} message={snackbar.message} variant="error" onClose={() => setSnackbar({ open: false, message: '' })} />
       </div>
     </AppShell>
   );
 }
-

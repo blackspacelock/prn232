@@ -364,13 +364,13 @@ namespace SECompass.DataAccess.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<Guid>("NodeId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("PersonalRoadmapId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoadmapNodeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Status")
@@ -381,9 +381,11 @@ namespace SECompass.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("NodeId");
+                    b.HasIndex("RoadmapNodeId");
 
-                    b.HasIndex("PersonalRoadmapId");
+                    b.HasIndex("PersonalRoadmapId", "RoadmapNodeId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("NodeProgresses", (string)null);
                 });
@@ -488,16 +490,95 @@ namespace SECompass.DataAccess.Migrations
                     b.Property<Guid>("NodeId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("NodeType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasDefaultValue("Topic");
+
+                    b.Property<int>("Order")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<Guid?>("ParentRoadmapNodeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("PositionX")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PositionY")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RequirementType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasDefaultValue("Required");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CareerRoadmapId");
-
                     b.HasIndex("NodeId");
 
+                    b.HasIndex("ParentRoadmapNodeId");
+
+                    b.HasIndex("CareerRoadmapId", "NodeId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
                     b.ToTable("RoadmapNodes", (string)null);
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.RoadmapNodeEdge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("RoadmapNodeEdgeId");
+
+                    b.Property<Guid>("CareerRoadmapId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EdgeType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasDefaultValue("Next");
+
+                    b.Property<Guid>("FromRoadmapNodeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<Guid>("ToRoadmapNodeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromRoadmapNodeId");
+
+                    b.HasIndex("ToRoadmapNodeId");
+
+                    b.HasIndex("CareerRoadmapId", "FromRoadmapNodeId", "ToRoadmapNodeId", "EdgeType")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("RoadmapNodeEdges", (string)null);
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.Skill", b =>
@@ -708,21 +789,21 @@ namespace SECompass.DataAccess.Migrations
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.NodeProgress", b =>
                 {
-                    b.HasOne("SECompass.DataAccess.Entities.Node", "Node")
-                        .WithMany("NodeProgresses")
-                        .HasForeignKey("NodeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("SECompass.DataAccess.Entities.PersonalRoadmap", "PersonalRoadmap")
                         .WithMany("NodeProgresses")
                         .HasForeignKey("PersonalRoadmapId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Node");
+                    b.HasOne("SECompass.DataAccess.Entities.RoadmapNode", "RoadmapNode")
+                        .WithMany("NodeProgresses")
+                        .HasForeignKey("RoadmapNodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("PersonalRoadmap");
+
+                    b.Navigation("RoadmapNode");
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.PersonalRoadmap", b =>
@@ -769,9 +850,43 @@ namespace SECompass.DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SECompass.DataAccess.Entities.RoadmapNode", "ParentRoadmapNode")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentRoadmapNodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("CareerRoadmap");
 
                     b.Navigation("Node");
+
+                    b.Navigation("ParentRoadmapNode");
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.RoadmapNodeEdge", b =>
+                {
+                    b.HasOne("SECompass.DataAccess.Entities.CareerRoadmap", "CareerRoadmap")
+                        .WithMany("RoadmapNodeEdges")
+                        .HasForeignKey("CareerRoadmapId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SECompass.DataAccess.Entities.RoadmapNode", "FromRoadmapNode")
+                        .WithMany("OutgoingEdges")
+                        .HasForeignKey("FromRoadmapNodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SECompass.DataAccess.Entities.RoadmapNode", "ToRoadmapNode")
+                        .WithMany("IncomingEdges")
+                        .HasForeignKey("ToRoadmapNodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CareerRoadmap");
+
+                    b.Navigation("FromRoadmapNode");
+
+                    b.Navigation("ToRoadmapNode");
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.Skill", b =>
@@ -800,6 +915,8 @@ namespace SECompass.DataAccess.Migrations
                 {
                     b.Navigation("PersonalRoadmaps");
 
+                    b.Navigation("RoadmapNodeEdges");
+
                     b.Navigation("RoadmapNodes");
                 });
 
@@ -819,8 +936,6 @@ namespace SECompass.DataAccess.Migrations
 
                     b.Navigation("LearningResources");
 
-                    b.Navigation("NodeProgresses");
-
                     b.Navigation("RoadmapNodes");
                 });
 
@@ -838,6 +953,17 @@ namespace SECompass.DataAccess.Migrations
                     b.Navigation("PersonalRoadmaps");
 
                     b.Navigation("Skills");
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.RoadmapNode", b =>
+                {
+                    b.Navigation("Children");
+
+                    b.Navigation("IncomingEdges");
+
+                    b.Navigation("NodeProgresses");
+
+                    b.Navigation("OutgoingEdges");
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.User", b =>
