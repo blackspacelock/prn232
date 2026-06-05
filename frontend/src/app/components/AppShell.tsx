@@ -40,7 +40,7 @@ interface PageHeaderProps {
 export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
     <div className="app-page-header">
-      <div>
+      <div className="min-w-0 text-left">
         <h1 className="app-page-title">{title}</h1>
         <p className="app-page-subtitle">{description}</p>
       </div>
