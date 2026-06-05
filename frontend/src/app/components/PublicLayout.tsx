@@ -22,7 +22,7 @@ export function PublicLayout({
   return (
     <div className="min-h-screen bg-white">
       <nav className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-[var(--md3-outline-variant)] z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
+        <div className="h-full w-full px-6 flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-8">
             <Link to="/" className="flex shrink-0 items-center gap-2">
               <Compass className="w-6 h-6 text-[var(--md3-primary)]" />
