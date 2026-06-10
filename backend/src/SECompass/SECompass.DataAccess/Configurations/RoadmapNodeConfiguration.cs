@@ -31,16 +31,16 @@ public class RoadmapNodeConfiguration : IEntityTypeConfiguration<RoadmapNode>
         builder.HasOne(rn => rn.CareerRoadmap)
             .WithMany(cr => cr.RoadmapNodes)
             .HasForeignKey(rn => rn.CareerRoadmapId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
 
         builder.HasOne(rn => rn.Node)
             .WithMany(n => n.RoadmapNodes)
             .HasForeignKey(rn => rn.NodeId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
 
         builder.HasOne(rn => rn.ParentRoadmapNode)
             .WithMany(rn => rn.Children)
             .HasForeignKey(rn => rn.ParentRoadmapNodeId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

@@ -27,6 +27,6 @@ public class UserRefreshTokenConfiguration : IEntityTypeConfiguration<UserRefres
         builder.HasOne(t => t.User)
             .WithMany(u => u.UserRefreshTokens)
             .HasForeignKey(t => t.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

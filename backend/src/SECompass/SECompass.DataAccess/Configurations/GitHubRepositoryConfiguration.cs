@@ -26,6 +26,6 @@ public class GitHubRepositoryConfiguration : IEntityTypeConfiguration<GitHubRepo
             .WithMany(p => p.GitHubRepositories)
             .HasForeignKey(g => g.ProfileId)
             .HasPrincipalKey(p => p.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

@@ -24,6 +24,6 @@ public class CareerRoadmapConfiguration : IEntityTypeConfiguration<CareerRoadmap
         builder.HasOne(r => r.CareerRole)
             .WithMany(cr => cr.CareerRoadmaps)
             .HasForeignKey(r => r.CareerRoleId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

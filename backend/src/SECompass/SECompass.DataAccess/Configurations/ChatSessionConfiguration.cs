@@ -24,6 +24,6 @@ public class ChatSessionConfiguration : IEntityTypeConfiguration<ChatSession>
             .WithMany(p => p.ChatSessions)
             .HasForeignKey(c => c.ProfileId)
             .HasPrincipalKey(p => p.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

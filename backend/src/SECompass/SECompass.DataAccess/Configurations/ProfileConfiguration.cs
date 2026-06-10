@@ -25,6 +25,6 @@ public class ProfileConfiguration : IEntityTypeConfiguration<Profile>
         builder.HasOne(p => p.User)
             .WithOne(u => u.Profile)
             .HasForeignKey<Profile>(p => p.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

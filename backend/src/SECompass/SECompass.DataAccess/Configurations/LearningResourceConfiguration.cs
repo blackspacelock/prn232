@@ -26,6 +26,6 @@ public class LearningResourceConfiguration : IEntityTypeConfiguration<LearningRe
         builder.HasOne(lr => lr.Node)
             .WithMany(n => n.LearningResources)
             .HasForeignKey(lr => lr.NodeId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

@@ -727,7 +727,7 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.CareerRole", "CareerRole")
                         .WithMany("CareerRoadmaps")
                         .HasForeignKey("CareerRoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("CareerRole");
@@ -738,7 +738,7 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.ChatSession", "ChatSession")
                         .WithMany("ChatMessages")
                         .HasForeignKey("ChatSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("ChatSession");
@@ -749,7 +749,7 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.Profile", "Profile")
                         .WithMany("ChatSessions")
                         .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("Profile");
@@ -760,7 +760,7 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.Profile", "Profile")
                         .WithMany("GitHubRepositories")
                         .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("Profile");
@@ -771,7 +771,7 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.Node", "Node")
                         .WithMany("LearningResources")
                         .HasForeignKey("NodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("Node");
@@ -782,7 +782,7 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.Node", "ParentNode")
                         .WithMany("Children")
                         .HasForeignKey("ParentNodeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.ClientCascade);
 
                     b.Navigation("ParentNode");
                 });
@@ -792,13 +792,13 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.PersonalRoadmap", "PersonalRoadmap")
                         .WithMany("NodeProgresses")
                         .HasForeignKey("PersonalRoadmapId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("SECompass.DataAccess.Entities.RoadmapNode", "RoadmapNode")
                         .WithMany("NodeProgresses")
                         .HasForeignKey("RoadmapNodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("PersonalRoadmap");
@@ -811,13 +811,13 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.CareerRoadmap", "CareerRoadmap")
                         .WithMany("PersonalRoadmaps")
                         .HasForeignKey("CareerRoadmapId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("SECompass.DataAccess.Entities.Profile", "Profile")
                         .WithMany("PersonalRoadmaps")
                         .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("CareerRoadmap");
@@ -830,7 +830,7 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.User", "User")
                         .WithOne("Profile")
                         .HasForeignKey("SECompass.DataAccess.Entities.Profile", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -841,19 +841,19 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.CareerRoadmap", "CareerRoadmap")
                         .WithMany("RoadmapNodes")
                         .HasForeignKey("CareerRoadmapId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("SECompass.DataAccess.Entities.Node", "Node")
                         .WithMany("RoadmapNodes")
                         .HasForeignKey("NodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("SECompass.DataAccess.Entities.RoadmapNode", "ParentRoadmapNode")
                         .WithMany("Children")
                         .HasForeignKey("ParentRoadmapNodeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.ClientCascade);
 
                     b.Navigation("CareerRoadmap");
 
@@ -867,19 +867,19 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.CareerRoadmap", "CareerRoadmap")
                         .WithMany("RoadmapNodeEdges")
                         .HasForeignKey("CareerRoadmapId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("SECompass.DataAccess.Entities.RoadmapNode", "FromRoadmapNode")
                         .WithMany("OutgoingEdges")
                         .HasForeignKey("FromRoadmapNodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("SECompass.DataAccess.Entities.RoadmapNode", "ToRoadmapNode")
                         .WithMany("IncomingEdges")
                         .HasForeignKey("ToRoadmapNodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("CareerRoadmap");
@@ -894,7 +894,7 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.Profile", "Profile")
                         .WithMany("Skills")
                         .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("Profile");
@@ -905,7 +905,7 @@ namespace SECompass.DataAccess.Migrations
                     b.HasOne("SECompass.DataAccess.Entities.User", "User")
                         .WithMany("UserRefreshTokens")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.Navigation("User");

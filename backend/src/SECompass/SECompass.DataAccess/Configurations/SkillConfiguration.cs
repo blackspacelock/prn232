@@ -24,6 +24,6 @@ public class SkillConfiguration : IEntityTypeConfiguration<Skill>
             .WithMany(p => p.Skills)
             .HasForeignKey(s => s.ProfileId)
             .HasPrincipalKey(p => p.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }
