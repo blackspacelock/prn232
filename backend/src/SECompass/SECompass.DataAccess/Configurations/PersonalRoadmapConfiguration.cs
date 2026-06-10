@@ -30,6 +30,6 @@ public class PersonalRoadmapConfiguration : IEntityTypeConfiguration<PersonalRoa
         builder.HasOne(pr => pr.CareerRoadmap)
             .WithMany(cr => cr.PersonalRoadmaps)
             .HasForeignKey(pr => pr.CareerRoadmapId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

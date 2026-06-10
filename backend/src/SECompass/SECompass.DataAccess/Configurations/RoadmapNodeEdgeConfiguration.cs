@@ -32,11 +32,11 @@ public class RoadmapNodeEdgeConfiguration : IEntityTypeConfiguration<RoadmapNode
         builder.HasOne(e => e.FromRoadmapNode)
             .WithMany(n => n.OutgoingEdges)
             .HasForeignKey(e => e.FromRoadmapNodeId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(e => e.ToRoadmapNode)
             .WithMany(n => n.IncomingEdges)
             .HasForeignKey(e => e.ToRoadmapNodeId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

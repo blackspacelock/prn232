@@ -32,6 +32,6 @@ public class NodeProgressConfiguration : IEntityTypeConfiguration<NodeProgress>
         builder.HasOne(np => np.RoadmapNode)
             .WithMany(rn => rn.NodeProgresses)
             .HasForeignKey(np => np.RoadmapNodeId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

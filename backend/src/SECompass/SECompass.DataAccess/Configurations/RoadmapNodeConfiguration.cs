@@ -41,6 +41,6 @@ public class RoadmapNodeConfiguration : IEntityTypeConfiguration<RoadmapNode>
         builder.HasOne(rn => rn.ParentRoadmapNode)
             .WithMany(rn => rn.Children)
             .HasForeignKey(rn => rn.ParentRoadmapNodeId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
