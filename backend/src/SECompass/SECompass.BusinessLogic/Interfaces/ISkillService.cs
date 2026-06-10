@@ -6,6 +6,6 @@ namespace SECompass.BusinessLogic.Interfaces;
 public interface ISkillService
 {
     Task<ServiceResult<SkillDto>> AddSkillAsync(AddSkillDto dto);
-    Task<ServiceResult<bool>> RemoveSkillAsync(Guid skillId);
+    Task<ServiceResult<bool>> RemoveSkillAsync(Guid skillId, bool physicalDelete = false);
     Task<ServiceResult<List<SkillDto>>> GetSkillsByProfileAsync(Guid profileId);
 }

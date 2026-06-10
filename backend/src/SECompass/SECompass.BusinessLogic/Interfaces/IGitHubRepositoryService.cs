@@ -7,5 +7,5 @@ public interface IGitHubRepositoryService
 {
     Task<ServiceResult<GitHubRepositoryDto>> AddAsync(AddGitHubRepoDto dto);
     Task<ServiceResult<List<GitHubRepositoryDto>>> GetByProfileAsync(Guid profileId);
-    Task<ServiceResult<bool>> RemoveAsync(Guid repoId);
+    Task<ServiceResult<bool>> RemoveAsync(Guid repoId, bool physicalDelete = false);
 }

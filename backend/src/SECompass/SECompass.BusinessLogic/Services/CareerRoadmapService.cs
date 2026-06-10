@@ -157,37 +157,31 @@ public class CareerRoadmapService : ICareerRoadmapService
         return ServiceResult<RoadmapNodeDto>.Ok(_mapper.Map<RoadmapNodeDto>(roadmapNode));
     }
 
-    public async Task<ServiceResult<bool>> RemoveRoadmapNodeAsync(Guid roadmapId, Guid roadmapNodeId)
+    public async Task<ServiceResult<bool>> RemoveRoadmapNodeAsync(Guid roadmapId, Guid roadmapNodeId, bool physicalDelete = false)
     {
         var rns = await _uow.RoadmapNodes.FindAsync(rn => rn.Id == roadmapNodeId && rn.CareerRoadmapId == roadmapId);
         var rn = rns.FirstOrDefault();
         if (rn == null) return ServiceResult<bool>.Fail("Roadmap node not found.");
-
-        var hasChildren = await _uow.RoadmapNodes.ExistsAsync(child => child.ParentRoadmapNodeId == roadmapNodeId);
-        if (hasChildren) return ServiceResult<bool>.Fail("Cannot remove a roadmap node that still has child roadmap nodes.");
-
-        var hasProgress = await _uow.NodeProgresses.ExistsAsync(np => np.RoadmapNodeId == roadmapNodeId);
-        if (hasProgress) return ServiceResult<bool>.Fail("Cannot remove a roadmap node that already has personal progress.");
 
         var edges = await _uow.RoadmapNodeEdges.FindAsync(e =>
             e.CareerRoadmapId == roadmapId &&
             (e.FromRoadmapNodeId == roadmapNodeId || e.ToRoadmapNodeId == roadmapNodeId));
         foreach (var edge in edges)
         {
-            _uow.RoadmapNodeEdges.Delete(edge);
+            _uow.RoadmapNodeEdges.Delete(edge, physicalDelete);
         }
 
-        _uow.RoadmapNodes.Delete(rn);
+        _uow.RoadmapNodes.Delete(rn, physicalDelete);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }
 
-    public async Task<ServiceResult<bool>> RemoveNodeAsync(Guid roadmapId, Guid nodeId)
+    public async Task<ServiceResult<bool>> RemoveNodeAsync(Guid roadmapId, Guid nodeId, bool physicalDelete = false)
     {
         var rns = await _uow.RoadmapNodes.FindAsync(rn => rn.CareerRoadmapId == roadmapId && rn.NodeId == nodeId);
         var rn = rns.FirstOrDefault();
         if (rn == null) return ServiceResult<bool>.Fail("Assignment not found.");
-        var result = await RemoveRoadmapNodeAsync(roadmapId, rn.Id);
+        var result = await RemoveRoadmapNodeAsync(roadmapId, rn.Id, physicalDelete);
         if (!result.Success) return result;
         return ServiceResult<bool>.Ok(true);
     }
@@ -235,13 +229,13 @@ public class CareerRoadmapService : ICareerRoadmapService
         return ServiceResult<RoadmapNodeEdgeDto>.Ok(_mapper.Map<RoadmapNodeEdgeDto>(edge));
     }
 
-    public async Task<ServiceResult<bool>> DeleteEdgeAsync(Guid roadmapId, Guid edgeId)
+    public async Task<ServiceResult<bool>> DeleteEdgeAsync(Guid roadmapId, Guid edgeId, bool physicalDelete = false)
     {
         var edges = await _uow.RoadmapNodeEdges.FindAsync(e => e.Id == edgeId && e.CareerRoadmapId == roadmapId);
         var edge = edges.FirstOrDefault();
         if (edge == null) return ServiceResult<bool>.Fail("Roadmap node edge not found.");
 
-        _uow.RoadmapNodeEdges.Delete(edge);
+        _uow.RoadmapNodeEdges.Delete(edge, physicalDelete);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }
@@ -260,11 +254,11 @@ public class CareerRoadmapService : ICareerRoadmapService
         return ServiceResult<CareerRoadmapDto>.Ok(_mapper.Map<CareerRoadmapDto>(roadmap));
     }
 
-    public async Task<ServiceResult<bool>> DeleteAsync(Guid id)
+    public async Task<ServiceResult<bool>> DeleteAsync(Guid id, bool physicalDelete = false)
     {
         var roadmap = await _uow.CareerRoadmaps.GetByIdAsync(id);
         if (roadmap == null) return ServiceResult<bool>.Fail("Career roadmap not found.");
-        _uow.CareerRoadmaps.Delete(roadmap);
+        _uow.CareerRoadmaps.Delete(roadmap, physicalDelete);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

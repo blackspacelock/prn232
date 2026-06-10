@@ -9,7 +9,7 @@ import { ExternalLink, Lock, Trash2, Plus, Sparkles } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
-import { apiClient } from '@/lib/axios';
+import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
 import { GET_GITHUB_REPOS_BY_PROFILE, GET_PORTFOLIO_ANALYSIS } from '@/graphql/queries';
 import type { AddGitHubRepoDto } from '@/types/api';
@@ -62,7 +62,7 @@ export function PortfolioPage() {
   });
 
   const deleteRepoMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/api/github-repositories/${id}`),
+    mutationFn: (id: string) => deleteWithCascadeMode(`/api/github-repositories/${id}`),
     onSuccess: async () => {
       await apolloClient.refetchQueries({ include: [GET_GITHUB_REPOS_BY_PROFILE] });
       setDeleteId(null);

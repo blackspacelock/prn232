@@ -94,11 +94,11 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         return ServiceResult<decimal>.Ok(percentage);
     }
 
-    public async Task<ServiceResult<bool>> DeleteAsync(Guid personalRoadmapId)
+    public async Task<ServiceResult<bool>> DeleteAsync(Guid personalRoadmapId, bool physicalDelete = false)
     {
         var roadmap = await _uow.PersonalRoadmaps.GetByIdAsync(personalRoadmapId);
         if (roadmap == null) return ServiceResult<bool>.Fail("Personal roadmap not found.");
-        _uow.PersonalRoadmaps.Delete(roadmap);
+        _uow.PersonalRoadmaps.Delete(roadmap, physicalDelete);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

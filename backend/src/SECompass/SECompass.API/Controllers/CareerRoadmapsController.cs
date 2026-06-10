@@ -37,9 +37,9 @@ public class CareerRoadmapsController : ControllerBase
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, [FromQuery(Name = "delete")] bool physicalDelete = false)
     {
-        var result = await _service.DeleteAsync(id);
+        var result = await _service.DeleteAsync(id, physicalDelete);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }
@@ -77,9 +77,9 @@ public class CareerRoadmapsController : ControllerBase
     [HttpDelete("{id:guid}/roadmap-nodes/{roadmapNodeId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RemoveRoadmapNode(Guid id, Guid roadmapNodeId)
+    public async Task<IActionResult> RemoveRoadmapNode(Guid id, Guid roadmapNodeId, [FromQuery(Name = "delete")] bool physicalDelete = false)
     {
-        var result = await _service.RemoveRoadmapNodeAsync(id, roadmapNodeId);
+        var result = await _service.RemoveRoadmapNodeAsync(id, roadmapNodeId, physicalDelete);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }
@@ -87,9 +87,9 @@ public class CareerRoadmapsController : ControllerBase
     [HttpDelete("{id:guid}/nodes/{nodeId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RemoveNode(Guid id, Guid nodeId)
+    public async Task<IActionResult> RemoveNode(Guid id, Guid nodeId, [FromQuery(Name = "delete")] bool physicalDelete = false)
     {
-        var result = await _service.RemoveNodeAsync(id, nodeId);
+        var result = await _service.RemoveNodeAsync(id, nodeId, physicalDelete);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }
@@ -117,9 +117,9 @@ public class CareerRoadmapsController : ControllerBase
     [HttpDelete("{id:guid}/edges/{edgeId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteEdge(Guid id, Guid edgeId)
+    public async Task<IActionResult> DeleteEdge(Guid id, Guid edgeId, [FromQuery(Name = "delete")] bool physicalDelete = false)
     {
-        var result = await _service.DeleteEdgeAsync(id, edgeId);
+        var result = await _service.DeleteEdgeAsync(id, edgeId, physicalDelete);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }

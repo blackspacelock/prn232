@@ -72,11 +72,11 @@ public class LearningResourceService : ILearningResourceService
         return ServiceResult<LearningResourceDto>.Ok(_mapper.Map<LearningResourceDto>(resource));
     }
 
-    public async Task<ServiceResult<bool>> DeleteAsync(Guid id)
+    public async Task<ServiceResult<bool>> DeleteAsync(Guid id, bool physicalDelete = false)
     {
         var resource = await _uow.LearningResources.GetByIdAsync(id);
         if (resource == null) return ServiceResult<bool>.Fail("Learning resource not found.");
-        _uow.LearningResources.Delete(resource);
+        _uow.LearningResources.Delete(resource, physicalDelete);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

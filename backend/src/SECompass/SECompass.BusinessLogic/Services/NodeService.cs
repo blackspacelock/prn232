@@ -79,11 +79,11 @@ public class NodeService : INodeService
         return ServiceResult<NodeDto>.Ok(_mapper.Map<NodeDto>(node));
     }
 
-    public async Task<ServiceResult<bool>> DeleteAsync(Guid id)
+    public async Task<ServiceResult<bool>> DeleteAsync(Guid id, bool physicalDelete = false)
     {
         var node = await _uow.Nodes.GetByIdAsync(id);
         if (node == null) return ServiceResult<bool>.Fail("Node not found.");
-        _uow.Nodes.Delete(node);
+        _uow.Nodes.Delete(node, physicalDelete);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

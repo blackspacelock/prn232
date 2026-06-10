@@ -25,9 +25,9 @@ public class GitHubRepositoriesController : ControllerBase
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Remove(Guid id)
+    public async Task<IActionResult> Remove(Guid id, [FromQuery(Name = "delete")] bool physicalDelete = false)
     {
-        var result = await _service.RemoveAsync(id);
+        var result = await _service.RemoveAsync(id, physicalDelete);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }

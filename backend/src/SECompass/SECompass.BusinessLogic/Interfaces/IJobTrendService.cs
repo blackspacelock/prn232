@@ -11,5 +11,5 @@ public interface IJobTrendService
     Task<ServiceResult<List<JobTrendDto>>> GetBySkillAsync(string techSkill);
     Task<ServiceResult<List<JobTrendDto>>> GetBySnapshotDateAsync(DateTime date);
     Task<ServiceResult<JobTrendDto>> UpdateAsync(Guid id, UpdateJobTrendDto dto);
-    Task<ServiceResult<bool>> DeleteAsync(Guid id);
+    Task<ServiceResult<bool>> DeleteAsync(Guid id, bool physicalDelete = false);
 }

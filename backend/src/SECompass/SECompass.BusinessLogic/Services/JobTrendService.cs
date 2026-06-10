@@ -77,11 +77,11 @@ public class JobTrendService : IJobTrendService
         return ServiceResult<JobTrendDto>.Ok(_mapper.Map<JobTrendDto>(trend));
     }
 
-    public async Task<ServiceResult<bool>> DeleteAsync(Guid id)
+    public async Task<ServiceResult<bool>> DeleteAsync(Guid id, bool physicalDelete = false)
     {
         var trend = await _uow.JobTrends.GetByIdAsync(id);
         if (trend == null) return ServiceResult<bool>.Fail("Job trend not found.");
-        _uow.JobTrends.Delete(trend);
+        _uow.JobTrends.Delete(trend, physicalDelete);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

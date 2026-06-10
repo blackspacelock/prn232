@@ -9,5 +9,5 @@ public interface IPersonalRoadmapService
     Task<ServiceResult<List<PersonalRoadmapDto>>> GetByProfileAsync(Guid profileId);
     Task<ServiceResult<PersonalRoadmapDetailDto>> GetWithProgressAsync(Guid personalRoadmapId);
     Task<ServiceResult<decimal>> RecalculateProgressAsync(Guid personalRoadmapId);
-    Task<ServiceResult<bool>> DeleteAsync(Guid personalRoadmapId);
+    Task<ServiceResult<bool>> DeleteAsync(Guid personalRoadmapId, bool physicalDelete = false);
 }

@@ -32,11 +32,11 @@ public class SkillService : ISkillService
         return ServiceResult<SkillDto>.Ok(_mapper.Map<SkillDto>(skill));
     }
 
-    public async Task<ServiceResult<bool>> RemoveSkillAsync(Guid skillId)
+    public async Task<ServiceResult<bool>> RemoveSkillAsync(Guid skillId, bool physicalDelete = false)
     {
         var skill = await _uow.Skills.GetByIdAsync(skillId);
         if (skill == null) return ServiceResult<bool>.Fail("Skill not found.");
-        _uow.Skills.Delete(skill);
+        _uow.Skills.Delete(skill, physicalDelete);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

@@ -10,5 +10,5 @@ public interface INodeService
     Task<ServiceResult<List<NodeDto>>> GetChildrenAsync(Guid parentId);
     Task<ServiceResult<NodeHierarchyDto>> GetHierarchyAsync(Guid rootId);
     Task<ServiceResult<NodeDto>> UpdateAsync(Guid id, UpdateNodeDto dto);
-    Task<ServiceResult<bool>> DeleteAsync(Guid id);
+    Task<ServiceResult<bool>> DeleteAsync(Guid id, bool physicalDelete = false);
 }

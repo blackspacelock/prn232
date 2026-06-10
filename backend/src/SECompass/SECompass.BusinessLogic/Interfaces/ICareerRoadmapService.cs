@@ -14,11 +14,11 @@ public interface ICareerRoadmapService
     Task<ServiceResult<RoadmapNodeDto>> AssignNodeAsync(Guid roadmapId, CreateRoadmapNodeDto dto);
     Task<ServiceResult<RoadmapNodeDto>> AssignNodeAsync(Guid roadmapId, Guid nodeId);
     Task<ServiceResult<RoadmapNodeDto>> UpdateRoadmapNodeAsync(Guid roadmapId, Guid roadmapNodeId, UpdateRoadmapNodeDto dto);
-    Task<ServiceResult<bool>> RemoveRoadmapNodeAsync(Guid roadmapId, Guid roadmapNodeId);
-    Task<ServiceResult<bool>> RemoveNodeAsync(Guid roadmapId, Guid nodeId);
+    Task<ServiceResult<bool>> RemoveRoadmapNodeAsync(Guid roadmapId, Guid roadmapNodeId, bool physicalDelete = false);
+    Task<ServiceResult<bool>> RemoveNodeAsync(Guid roadmapId, Guid nodeId, bool physicalDelete = false);
     Task<ServiceResult<RoadmapNodeEdgeDto>> CreateEdgeAsync(Guid roadmapId, CreateRoadmapNodeEdgeDto dto);
     Task<ServiceResult<RoadmapNodeEdgeDto>> UpdateEdgeAsync(Guid roadmapId, Guid edgeId, UpdateRoadmapNodeEdgeDto dto);
-    Task<ServiceResult<bool>> DeleteEdgeAsync(Guid roadmapId, Guid edgeId);
+    Task<ServiceResult<bool>> DeleteEdgeAsync(Guid roadmapId, Guid edgeId, bool physicalDelete = false);
     Task<ServiceResult<CareerRoadmapDto>> UpdateAsync(Guid id, UpdateCareerRoadmapDto dto);
-    Task<ServiceResult<bool>> DeleteAsync(Guid id);
+    Task<ServiceResult<bool>> DeleteAsync(Guid id, bool physicalDelete = false);
 }

@@ -35,9 +35,9 @@ public class NodesController : ControllerBase
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, [FromQuery(Name = "delete")] bool physicalDelete = false)
     {
-        var result = await _nodeService.DeleteAsync(id);
+        var result = await _nodeService.DeleteAsync(id, physicalDelete);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }
