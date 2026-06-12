@@ -3,10 +3,11 @@ import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Search, TrendingUp } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { GET_JOB_TRENDS_BY_REGION, GET_TOP_TRENDING_SKILLS } from '@/graphql/queries';
+import { getSkillColor, hashLabel, SkillChip } from '../components/SkillChip';
 
 interface JobTrend {
   id: string;
@@ -44,7 +45,7 @@ export function MarketPulsePage() {
   const chartData = (searchQuery
     ? topSkills.filter((s) => s.techSkill.toLowerCase().includes(searchQuery.toLowerCase()))
     : topSkills
-  ).map((s) => ({ name: s.techSkill, score: s.trendScore }));
+  ).map((s) => ({ name: s.techSkill, score: s.trendScore, color: getSkillColor(hashLabel(s.techSkill)).accent }));
 
   const handleRegionChange = (newRegion: string) => {
     setRegion(newRegion);
@@ -106,7 +107,11 @@ export function MarketPulsePage() {
                       <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#5F6368' }} />
                       <YAxis tick={{ fontSize: 12, fill: '#5F6368' }} domain={[0, 100]} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="score" fill="#1A73E8" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                        {chartData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -140,18 +145,22 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
 }
 
 function SkillCard({ trend }: { trend: JobTrend }) {
+  const color = getSkillColor(hashLabel(trend.techSkill));
+
   return (
-    <div className="md3-card p-5">
-      <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-2">{trend.techSkill}</h3>
+    <div className={`rounded-xl border p-5 shadow-sm ${color.bg} ${color.border}`}>
+      <div className="mb-3">
+        <SkillChip label={trend.techSkill} size="sm" />
+      </div>
       <div className="flex items-baseline gap-1 mb-2">
-        <span className="text-3xl font-bold text-[var(--md3-on-surface)]">{trend.trendScore}</span>
+        <span className={`text-3xl font-bold ${color.text}`}>{trend.trendScore}</span>
         <span className="text-lg text-[var(--md3-on-surface-variant)]">/100</span>
       </div>
       <div className="h-1.5 bg-[var(--md3-outline-variant)] rounded-full overflow-hidden mb-3">
-        <div className="h-full bg-[var(--md3-primary)] rounded-full" style={{ width: `${trend.trendScore}%` }} />
+        <div className="h-full rounded-full" style={{ width: `${trend.trendScore}%`, backgroundColor: color.accent }} />
       </div>
       {trend.source && (
-        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[var(--md3-primary-container)] text-[var(--md3-primary)]">{trend.source}</span>
+        <span className={`px-2 py-0.5 rounded text-xs font-medium border bg-white/70 ${color.text} ${color.border}`}>{trend.source}</span>
       )}
     </div>
   );

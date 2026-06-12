@@ -11,6 +11,7 @@ import { useMutation } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { appendCachedListItem, removeCachedListItem, replaceCachedListItem } from '@/lib/apolloCache';
 import { GET_JOB_TRENDS_BY_REGION } from '@/graphql/queries';
+import { SkillChip } from '../../components/SkillChip';
 
 interface JobTrend { id: string; techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
 interface JobTrendDto { techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
@@ -98,7 +99,9 @@ export function AdminJobTrendsPage() {
               <tbody>
                 {trends.map((trend) => (
                   <tr key={trend.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
-                    <td className="px-6 py-4 text-sm font-medium text-[var(--md3-on-surface)]">{trend.techSkill}</td>
+                    <td className="px-6 py-4">
+                      <SkillChip label={trend.techSkill} size="sm" />
+                    </td>
                     <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{trend.region ?? '—'}</td>
                     <td className="px-6 py-4 text-sm font-medium text-[var(--md3-primary)]">{trend.trendScore}</td>
                     <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{trend.source ?? '—'}</td>

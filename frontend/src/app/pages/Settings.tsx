@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ActionButton } from '../components/ActionButton';
-import { SkillChip, hashLabel } from '../components/SkillChip';
+import { SkillChip, getSkillCategoryColorIndex } from '../components/SkillChip';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import {
@@ -461,7 +461,7 @@ export function SettingsPage() {
                         <SkillChip
                           key={skill.id}
                           label={skill.skillName}
-                          colorIndex={hashLabel(category)}
+                          colorIndex={getSkillCategoryColorIndex(category)}
                           onRemove={() => setDeleteSkillId(skill.id)}
                         />
                       ))}

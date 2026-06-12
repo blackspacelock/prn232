@@ -4,7 +4,7 @@ import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Download, SlidersHorizontal } from 'lucide-react';
 import { ActionButton } from '../components/ActionButton';
-import { SkillChip, hashLabel } from '../components/SkillChip';
+import { SkillChip, getSkillCategoryColorIndex } from '../components/SkillChip';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, ResponsiveContainer } from 'recharts';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
@@ -92,7 +92,7 @@ export function SkillGapPage() {
               <div className="flex flex-wrap gap-2 mb-6">
                 {skillGap.matchedSkills.length > 0 ? (
                   skillGap.matchedSkills.map((skill) => (
-                    <SkillChip key={skill.id} label={skill.name} colorIndex={hashLabel(skill.category)} size="sm" />
+                    <SkillChip key={skill.id} label={skill.name} colorIndex={getSkillCategoryColorIndex(skill.category)} size="sm" />
                   ))
                 ) : (
                   <p className="text-sm text-[var(--md3-on-surface-variant)]">No required skills matched yet.</p>
@@ -105,7 +105,7 @@ export function SkillGapPage() {
               <div className="flex flex-wrap gap-2 mb-6">
                 {skillGap.missingSkills.length > 0 ? (
                   skillGap.missingSkills.map((skill) => (
-                    <SkillChip key={skill.id} label={skill.name} colorIndex={hashLabel(skill.category)} size="sm" />
+                    <SkillChip key={skill.id} label={skill.name} colorIndex={getSkillCategoryColorIndex(skill.category)} size="sm" />
                   ))
                 ) : (
                   <p className="text-sm text-[var(--md3-on-surface-variant)]">You're covering every required skill.</p>

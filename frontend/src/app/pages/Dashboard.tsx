@@ -5,8 +5,10 @@ import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Compass, TrendingUp, Code, BarChart2, Rocket, Sparkles, Plus, ArrowRight } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, PolarAngleAxis, PolarGrid, Radar, RadarChart } from 'recharts';
+import { Cell } from 'recharts';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
+import { getSkillColor, hashLabel, SkillChip } from '../components/SkillChip';
 import {
   GET_USER_BY_ID,
   GET_PERSONAL_ROADMAPS_BY_PROFILE,
@@ -56,7 +58,7 @@ export function DashboardPage() {
   const topSkills: Array<{ techSkill: string; trendScore: number }> =
     (topSkillsData as { topTrendingSkills?: Array<{ techSkill: string; trendScore: number }> })?.topTrendingSkills ?? [];
   const topSkillName = topSkills[0]?.techSkill ?? '—';
-  const trendChartData = topSkills.map((s) => ({ name: s.techSkill, score: s.trendScore }));
+  const trendChartData = topSkills.map((s) => ({ name: s.techSkill, score: s.trendScore, color: getSkillColor(hashLabel(s.techSkill)).accent }));
 
   const githubRepoCount = ((githubData as { gitHubRepositoriesByProfile?: unknown[] })?.gitHubRepositoriesByProfile ?? []).length;
 
@@ -121,7 +123,7 @@ export function DashboardPage() {
                     title="Top Skill"
                     value={topSkillName}
                     subtitle="Top trending skill"
-                    badge={topSkillName !== '—' ? 'Trending' : undefined}
+                    badge={topSkillName !== '—' ? topSkillName : undefined}
                     iconBg="var(--md3-warning-container)"
                   />
                   <StatCard
@@ -153,7 +155,11 @@ export function DashboardPage() {
                         <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#5F6368' }} />
                         <YAxis tick={{ fontSize: 12, fill: '#5F6368' }} domain={[0, 100]} />
                         <Tooltip />
-                        <Bar dataKey="score" fill="#1A73E8" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                          {trendChartData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} />
+                          ))}
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   )}
@@ -254,7 +260,7 @@ function StatCard({ icon, value, subtitle, trend, trendUp, badge, showProgress, 
         </div>
       )}
       {badge && (
-        <div className="inline-flex items-center px-2 py-1 bg-[var(--md3-primary-container)] text-[var(--md3-primary)] rounded text-xs font-medium">{badge}</div>
+        <SkillChip label={badge} size="sm" />
       )}
     </div>
   );
