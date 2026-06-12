@@ -23,11 +23,11 @@ public class ChatController : ControllerBase
     }
 
     [HttpPost("sessions/{sessionId:guid}/messages")]
-    [ProducesResponseType(typeof(ChatMessageDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(SendMessageResultDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SendMessage(Guid sessionId, [FromBody] SendMessageDto dto)
+    public async Task<IActionResult> SendMessage(Guid sessionId, [FromBody] SendMessageDto dto, CancellationToken cancellationToken)
     {
-        var result = await _chatService.SendMessageAsync(sessionId, dto);
+        var result = await _chatService.SendMessageAsync(sessionId, dto, cancellationToken);
         if (!result.Success) return NotFound(result.Error);
         return CreatedAtAction(nameof(SendMessage), result.Data);
     }

@@ -25,6 +25,7 @@ export function MentorPage() {
   const profileId = user?.profileId ?? '';
   const [message, setMessage] = useState('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -38,10 +39,6 @@ export function MentorPage() {
   const sessions: ChatSession[] = (sessionsData as { chatSessionsByProfile?: ChatSession[] })?.chatSessionsByProfile ?? [];
   const activeSession = (messagesData as { chatSessionWithMessages?: { title?: string; messages?: ChatMessage[] } })?.chatSessionWithMessages;
   const messages: ChatMessage[] = useMemo(() => activeSession?.messages ?? [], [activeSession]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   const createSessionMutation = useMutation({
     // Backend: POST /api/chat/sessions?profileId=... with body { title }
@@ -65,22 +62,31 @@ export function MentorPage() {
   });
 
   const sendMessageMutation = useMutation({
-    // Backend SendMessageDto: { Sender, MessageContent }
+    // Backend SendMessageDto: { Sender, MessageContent } -> returns { userMessage, assistantMessage }
     mutationFn: ({ sessionId, dto }: { sessionId: string; dto: SendMessageDto }) =>
       apiClient.post(`/api/chat/sessions/${sessionId}/messages`, dto).then((r) => r.data),
     onSuccess: async (_data, { sessionId }) => {
       await loadMessages({ variables: { sessionId } });
-      setMessage('');
+      setPendingUserMessage(null);
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, { dto }) => {
+      setPendingUserMessage(null);
+      setMessage(dto.messageContent);
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to send message.';
       setSnackbar({ open: true, message: msg });
     },
   });
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, pendingUserMessage, sendMessageMutation.isPending]);
+
   const handleSend = () => {
     if (!message.trim() || !activeSessionId) return;
-    const dto: SendMessageDto = { sender: 'User', messageContent: message.trim() };
+    const content = message.trim();
+    const dto: SendMessageDto = { sender: 'User', messageContent: content };
+    setPendingUserMessage(content);
+    setMessage('');
     sendMessageMutation.mutate({ sessionId: activeSessionId, dto });
   };
 
@@ -164,6 +170,25 @@ export function MentorPage() {
                 </div>
               )
             )}
+            {pendingUserMessage && (
+              <div className="flex justify-end">
+                <div className="max-w-[70%] bg-[var(--md3-primary)] text-white px-4 py-3 rounded-2xl rounded-tr-sm opacity-70">
+                  <p className="text-sm">{pendingUserMessage}</p>
+                </div>
+              </div>
+            )}
+            {sendMessageMutation.isPending && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-[var(--md3-primary-container)] flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-[var(--md3-primary)]" />
+                </div>
+                <div className="bg-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[var(--md3-on-surface-variant)] animate-bounce [animation-delay:0ms]" />
+                  <span className="w-2 h-2 rounded-full bg-[var(--md3-on-surface-variant)] animate-bounce [animation-delay:150ms]" />
+                  <span className="w-2 h-2 rounded-full bg-[var(--md3-on-surface-variant)] animate-bounce [animation-delay:300ms]" />
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -174,7 +199,13 @@ export function MentorPage() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                placeholder={activeSessionId ? 'Ask your AI Mentor...' : 'Create a session first...'}
+                placeholder={
+                  !activeSessionId
+                    ? 'Create a session first...'
+                    : sendMessageMutation.isPending
+                      ? 'AI Mentor is thinking...'
+                      : 'Ask your AI Mentor...'
+                }
                 disabled={!activeSessionId || sendMessageMutation.isPending}
                 className="flex-1 h-12 px-4 bg-white border-2 border-[var(--md3-outline)] rounded-full focus:border-[var(--md3-primary)] focus:outline-none disabled:opacity-50"
               />
