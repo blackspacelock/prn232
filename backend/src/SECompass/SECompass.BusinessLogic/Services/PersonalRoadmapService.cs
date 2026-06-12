@@ -104,7 +104,7 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         return ServiceResult<bool>.Ok(true);
     }
 
-    public async Task<ServiceResult<bool>> SetActiveAsync(Guid personalRoadmapId)
+    public async Task<ServiceResult<bool>> ToggleActiveAsync(Guid personalRoadmapId)
     {
         var roadmap = await _uow.PersonalRoadmaps.GetByIdAsync(personalRoadmapId);
         if (roadmap == null) return ServiceResult<bool>.Fail("Personal roadmap not found.");

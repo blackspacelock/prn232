@@ -86,13 +86,36 @@ export function RoadmapsPage() {
   });
 
   const activateMutation = useMutation({
-    mutationFn: (id: string) => apiClient.put(`/api/personal-roadmaps/${id}/activate`),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_PERSONAL_ROADMAPS_BY_PROFILE] });
+    mutationFn: (id: string) => apiClient.put(`/api/personal-roadmaps/${id}/toggle-active`),
+    onMutate: async (id: string) => {
+      const queryOptions = {
+        query: GET_PERSONAL_ROADMAPS_BY_PROFILE,
+        variables: { profileId },
+      };
+      const previousRoadmaps = apolloClient.cache.readQuery<{ personalRoadmapsByProfile?: PersonalRoadmap[] }>(queryOptions);
+
+      apolloClient.cache.updateQuery<{ personalRoadmapsByProfile?: PersonalRoadmap[] }>(queryOptions, (current) => {
+        if (!current?.personalRoadmapsByProfile) return current;
+        return {
+          personalRoadmapsByProfile: current.personalRoadmapsByProfile.map((roadmap) =>
+            roadmap.id === id ? { ...roadmap, isActive: !roadmap.isActive } : roadmap
+          ),
+        };
+      });
+
+      return { previousRoadmaps, queryOptions };
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update active roadmap.';
       showError(msg);
+    },
+    onSettled: (_data, error, _variables, context) => {
+      if (error && context?.previousRoadmaps) {
+        apolloClient.cache.writeQuery({
+          ...context.queryOptions,
+          data: context.previousRoadmaps,
+        });
+      }
     },
   });
 
@@ -150,7 +173,7 @@ export function RoadmapsPage() {
                 roadmap={roadmap}
                 onDelete={() => setDeleteId(roadmap.id)}
                 onActivate={() => activateMutation.mutate(roadmap.id)}
-                activating={activateMutation.isPending}
+                activating={activateMutation.isPending && activateMutation.variables === roadmap.id}
               />
             ))}
           </div>

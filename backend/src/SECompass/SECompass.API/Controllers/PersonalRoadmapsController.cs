@@ -34,13 +34,18 @@ public class PersonalRoadmapsController : ControllerBase
         return Ok();
     }
 
-    [HttpPut("{id:guid}/activate")]
+    [HttpPut("{id:guid}/toggle-active")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Activate(Guid id)
+    public async Task<IActionResult> ToggleActive(Guid id)
     {
-        var result = await _service.SetActiveAsync(id);
+        var result = await _service.ToggleActiveAsync(id);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }
+
+    [HttpPut("{id:guid}/activate")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public Task<IActionResult> Activate(Guid id) => ToggleActive(id);
 }
