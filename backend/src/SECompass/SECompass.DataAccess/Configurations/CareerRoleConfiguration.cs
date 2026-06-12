@@ -15,8 +15,5 @@ public class CareerRoleConfiguration : IEntityTypeConfiguration<CareerRole>
         builder.Property(r => r.Description).IsRequired(false);
         builder.Property(r => r.CreatedAt).IsRequired();
         builder.Property(r => r.UpdatedAt).IsRequired(false);
-        builder.Property(r => r.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(r => !r.IsDeleted);
     }
 }

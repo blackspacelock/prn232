@@ -16,13 +16,10 @@ public class ChatMessageConfiguration : IEntityTypeConfiguration<ChatMessage>
         builder.Property(m => m.MessageContent).IsRequired();
         builder.Property(m => m.CreatedAt).IsRequired();
         builder.Property(m => m.UpdatedAt).IsRequired(false);
-        builder.Property(m => m.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(m => !m.IsDeleted);
 
         builder.HasOne(m => m.ChatSession)
             .WithMany(s => s.ChatMessages)
             .HasForeignKey(m => m.ChatSessionId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

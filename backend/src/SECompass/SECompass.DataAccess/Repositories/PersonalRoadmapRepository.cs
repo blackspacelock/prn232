@@ -10,7 +10,7 @@ public class PersonalRoadmapRepository : GenericRepository<PersonalRoadmap>, IPe
 
     public async Task<PersonalRoadmap?> GetWithNodesAndProgressAsync(Guid personalRoadmapId)
         => await _dbSet
-            .Include(pr => pr.NodeProgresses.Where(np => !np.IsDeleted))
+            .Include(pr => pr.NodeProgresses)
                 .ThenInclude(np => np.RoadmapNode)
                     .ThenInclude(rn => rn.Node)
             .Include(pr => pr.CareerRoadmap)

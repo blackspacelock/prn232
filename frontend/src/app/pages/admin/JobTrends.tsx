@@ -9,7 +9,7 @@ import { Plus, Pencil, Trash2, TrendingUp } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
-import { apiClient } from '@/lib/axios';
+import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { GET_JOB_TRENDS_BY_REGION } from '@/graphql/queries';
 
 interface JobTrend { id: string; techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
@@ -42,7 +42,7 @@ export function AdminJobTrendsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/api/job-trends/${id}`),
+    mutationFn: (id: string) => deleteWithCascadeMode(`/api/job-trends/${id}`),
     onSuccess: async () => { await invalidate(); setDeleteId(null); },
     onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
   });

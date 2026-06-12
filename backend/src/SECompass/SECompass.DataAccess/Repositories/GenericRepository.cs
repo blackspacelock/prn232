@@ -35,9 +35,5 @@ public class GenericRepository<T> : IRepository<T> where T : BaseAuditableEntity
         => _dbSet.Update(entity);
 
     public void Delete(T entity)
-    {
-        entity.IsDeleted = true;
-        entity.UpdatedAt = DateTime.Now;
-        _dbSet.Update(entity);
-    }
+        => _context.Delete(entity);
 }

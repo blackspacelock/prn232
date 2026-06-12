@@ -66,6 +66,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAIRecommendationService, AIRecommendationService>();
         services.AddScoped<IJobTrendService, JobTrendService>();
 
+        // AI Virtual Mentor (OpenAI gpt-4o-mini)
+        services.AddHttpClient<IAiMentorService, OpenAiMentorService>(client =>
+        {
+            var baseUrl = configuration["OpenAI:BaseUrl"];
+            client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(baseUrl) ? "https://api.openai.com/v1/" : baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
+
         // AutoMapper
         services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
