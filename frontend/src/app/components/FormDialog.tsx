@@ -16,6 +16,7 @@ interface FormDialogProps {
   isOpen: boolean;
   title: string;
   description?: string;
+  notice?: string;
   fields: FormDialogField[];
   submitLabel?: string;
   onCancel: () => void;
@@ -26,6 +27,7 @@ export function FormDialog({
   isOpen,
   title,
   description,
+  notice,
   fields,
   submitLabel = 'Save',
   onCancel,
@@ -55,6 +57,11 @@ export function FormDialog({
             <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)]">{title}</h2>
             {description && (
               <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">{description}</p>
+            )}
+            {notice && (
+              <p className="mt-3 rounded-lg bg-[var(--md3-primary-container)] px-3 py-2 text-sm text-[var(--md3-on-primary-container)]">
+                {notice}
+              </p>
             )}
           </div>
           <button

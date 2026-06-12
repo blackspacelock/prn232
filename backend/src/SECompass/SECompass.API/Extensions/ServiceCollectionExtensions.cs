@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SECompass.API.BackgroundServices;
 using SECompass.API.GraphQL.Queries;
 using SECompass.BusinessLogic.Interfaces;
 using SECompass.BusinessLogic.Mappings;
@@ -55,6 +56,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<ISkillService, SkillService>();
+        services.AddScoped<ITechnicalSkillService, TechnicalSkillService>();
         services.AddScoped<ICareerRoleService, CareerRoleService>();
         services.AddScoped<ICareerRoadmapService, CareerRoadmapService>();
         services.AddScoped<IPersonalRoadmapService, PersonalRoadmapService>();
@@ -62,9 +64,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INodeProgressService, NodeProgressService>();
         services.AddScoped<ILearningResourceService, LearningResourceService>();
         services.AddScoped<IGitHubRepositoryService, GitHubRepositoryService>();
+        services.AddScoped<IPublicPortfolioService, PublicPortfolioService>();
         services.AddScoped<IChatService, ChatService>();
-        services.AddScoped<IAIRecommendationService, AIRecommendationService>();
+        services.AddScoped<ISkillGapService, SkillGapService>();
         services.AddScoped<IJobTrendService, JobTrendService>();
+        services.AddScoped<IJobScrapingSettingsService, JobScrapingSettingsService>();
+        services.AddScoped<IJobScrapingSourceService, JobScrapingSourceService>();
 
         // AI Virtual Mentor (OpenAI gpt-4o-mini)
         services.AddHttpClient<IAiMentorService, OpenAiMentorService>(client =>
@@ -73,6 +78,22 @@ public static class ServiceCollectionExtensions
             client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(baseUrl) ? "https://api.openai.com/v1/" : baseUrl);
             client.Timeout = TimeSpan.FromSeconds(60);
         });
+
+        services.AddHttpClient<IAIRecommendationService, AIRecommendationService>(client =>
+        {
+            var baseUrl = configuration["OpenAI:BaseUrl"];
+            client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(baseUrl) ? "https://api.openai.com/v1/" : baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(90);
+        });
+
+        // Job Trend scraping (Market Pulse weekly job board scrape)
+        services.AddHttpClient<IJobTrendScrapingService, JobTrendScrapingService>(client =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddHostedService<JobTrendScrapingBackgroundService>();
 
         // AutoMapper
         services.AddAutoMapper(typeof(MappingProfile).Assembly);

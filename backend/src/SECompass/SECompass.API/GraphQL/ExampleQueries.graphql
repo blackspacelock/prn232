@@ -247,6 +247,11 @@ query GetPortfolioAnalysis {
     overallSummary
     strengths
     recommendations
+    repositoryAnalyses {
+      repositoryId
+      repositoryName
+      summary
+    }
   }
 }
 

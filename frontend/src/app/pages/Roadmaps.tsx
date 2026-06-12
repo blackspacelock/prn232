@@ -5,32 +5,28 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { LinearProgress } from '../components/LinearProgress';
 import { StatusChip } from '../components/StatusChip';
+import { ActiveBadge } from '../components/ActiveBadge';
 import { ActionButton, ActionLink } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
+import { ToggleSwitch } from '../components/ToggleSwitch';
 import { FolderOpen, MoreVertical, Rocket, Search, Trash2 } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { apolloClient } from '@/lib/apollo';
+import { removeCachedListItem } from '@/lib/apolloCache';
 import {
   GET_PERSONAL_ROADMAPS_BY_PROFILE,
   GET_CAREER_ROLES,
   GET_CAREER_ROADMAPS_BY_ROLE,
 } from '@/graphql/queries';
-import type { GeneratePersonalRoadmapRequestDto } from '@/types/api';
+import type { GeneratePersonalRoadmapRequestDto, PersonalRoadmapDto } from '@/types/api';
 
 interface CareerRole { id: string; name: string; description?: string }
 interface CareerRoadmap { id: string; name: string; description?: string }
-interface PersonalRoadmap {
-  id: string;
-  profileId: string;
-  careerRoadmapId: string;
-  note?: string;
-  progressPercentage: number;
-  createdAt: string;
-}
+type PersonalRoadmap = PersonalRoadmapDto;
 
 export function RoadmapsPage() {
   const navigate = useNavigate();
@@ -56,17 +52,18 @@ export function RoadmapsPage() {
   const roadmaps = searchQuery
     ? allRoadmaps.filter((r) =>
         new Date(r.createdAt).toLocaleDateString().includes(searchQuery) ||
+        (r.careerRoadmapName ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (r.note ?? '').toLowerCase().includes(searchQuery.toLowerCase())
       )
     : allRoadmaps;
   const careerRoles: CareerRole[] = (rolesData as { careerRoles?: CareerRole[] })?.careerRoles ?? [];
   const careerRoadmaps: CareerRoadmap[] = (roadmapsByRoleData as { careerRoadmapsByRole?: CareerRoadmap[] })?.careerRoadmapsByRole ?? [];
+  const personalRoadmapsQueryOptions = { query: GET_PERSONAL_ROADMAPS_BY_PROFILE, variables: { profileId } };
 
   const generateMutation = useMutation({
     mutationFn: (dto: GeneratePersonalRoadmapRequestDto) =>
       apiClient.post<{ id: string }>('/api/personal-roadmaps/generate', dto).then((r) => r.data),
     onSuccess: async (data) => {
-      await apolloClient.refetchQueries({ include: [GET_PERSONAL_ROADMAPS_BY_PROFILE] });
       setIsModalOpen(false);
       navigate(`/roadmap/${data.id}`);
     },
@@ -78,14 +75,47 @@ export function RoadmapsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWithCascadeMode(`/api/personal-roadmaps/${id}`),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_PERSONAL_ROADMAPS_BY_PROFILE] });
+    onSuccess: (_data, id) => {
+      removeCachedListItem<PersonalRoadmap>(personalRoadmapsQueryOptions, 'personalRoadmapsByProfile', id);
       setDeleteId(null);
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete roadmap.';
       showError(msg);
       setDeleteId(null);
+    },
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: (id: string) => apiClient.put(`/api/personal-roadmaps/${id}/toggle-active`),
+    onMutate: async (id: string) => {
+      const queryOptions = {
+        ...personalRoadmapsQueryOptions,
+      };
+      const previousRoadmaps = apolloClient.cache.readQuery<{ personalRoadmapsByProfile?: PersonalRoadmap[] }>(queryOptions);
+
+      apolloClient.cache.updateQuery<{ personalRoadmapsByProfile?: PersonalRoadmap[] }>(queryOptions, (current) => {
+        if (!current?.personalRoadmapsByProfile) return current;
+        return {
+          personalRoadmapsByProfile: current.personalRoadmapsByProfile.map((roadmap) =>
+            roadmap.id === id ? { ...roadmap, isActive: !roadmap.isActive } : roadmap
+          ),
+        };
+      });
+
+      return { previousRoadmaps, queryOptions };
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update active roadmap.';
+      showError(msg);
+    },
+    onSettled: (_data, error, _variables, context) => {
+      if (error && context?.previousRoadmaps) {
+        apolloClient.cache.writeQuery({
+          ...context.queryOptions,
+          data: context.previousRoadmaps,
+        });
+      }
     },
   });
 
@@ -138,7 +168,13 @@ export function RoadmapsPage() {
         {roadmaps.length > 0 ? (
           <div className="desktop-grid-3">
             {roadmaps.map((roadmap) => (
-              <RoadmapCard key={roadmap.id} roadmap={roadmap} onDelete={() => setDeleteId(roadmap.id)} />
+              <RoadmapCard
+                key={roadmap.id}
+                roadmap={roadmap}
+                onDelete={() => setDeleteId(roadmap.id)}
+                onActivate={() => activateMutation.mutate(roadmap.id)}
+                activating={activateMutation.isPending && activateMutation.variables === roadmap.id}
+              />
             ))}
           </div>
         ) : (
@@ -193,7 +229,7 @@ export function RoadmapsPage() {
   );
 }
 
-function RoadmapCard({ roadmap, onDelete }: { roadmap: PersonalRoadmap; onDelete: () => void }) {
+function RoadmapCard({ roadmap, onDelete, onActivate, activating }: { roadmap: PersonalRoadmap; onDelete: () => void; onActivate: () => void; activating: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const progress = Math.round(roadmap.progressPercentage);
   const getProgressColor = () => {
@@ -205,7 +241,16 @@ function RoadmapCard({ roadmap, onDelete }: { roadmap: PersonalRoadmap; onDelete
   return (
     <div className="md3-card relative p-5 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between mb-3">
-        <h3 className="text-base font-medium text-[var(--md3-on-surface)]">Roadmap</h3>
+        <div className="min-w-0 pr-3">
+          <h3 className="truncate text-base font-medium text-[var(--md3-on-surface)]">
+            {roadmap.careerRoadmapName || 'Roadmap'}
+          </h3>
+          {roadmap.careerRoadmapDescription && (
+            <p className="mt-1 line-clamp-2 text-xs text-[var(--md3-on-surface-variant)]">
+              {roadmap.careerRoadmapDescription}
+            </p>
+          )}
+        </div>
         <button onClick={() => setMenuOpen(!menuOpen)} className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--md3-on-surface-variant)] hover:bg-[var(--md3-surface-variant)]" aria-label="Roadmap actions">
           <MoreVertical className="h-5 w-5" />
         </button>
@@ -226,6 +271,7 @@ function RoadmapCard({ roadmap, onDelete }: { roadmap: PersonalRoadmap; onDelete
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
+        {roadmap.isActive && <ActiveBadge />}
         {progress === 100 ? (
           <StatusChip status="completed" count={0} label="Completed" />
         ) : progress > 0 ? (
@@ -235,11 +281,23 @@ function RoadmapCard({ roadmap, onDelete }: { roadmap: PersonalRoadmap; onDelete
         )}
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-[var(--md3-outline-variant)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[var(--md3-outline-variant)]">
         <span className="text-xs text-[var(--md3-on-surface-variant)]">
           {new Date(roadmap.createdAt).toLocaleDateString()}
         </span>
-        <ActionLink icon={FolderOpen} label="Open" to={`/roadmap/${roadmap.id}`} />
+        <div className="flex items-center gap-2">
+          <ToggleSwitch
+            checked={roadmap.isActive}
+            disabled={activating}
+            loading={activating}
+            label="Active"
+            loadingLabel="Updating..."
+            activeTone="success"
+            aria-label={roadmap.isActive ? 'Deactivate roadmap' : 'Activate roadmap'}
+            onChange={onActivate}
+          />
+          <ActionLink icon={FolderOpen} label="Open" to={`/roadmap/${roadmap.id}`} />
+        </div>
       </div>
     </div>
   );

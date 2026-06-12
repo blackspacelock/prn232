@@ -11,6 +11,7 @@ using SECompass.BusinessLogic.DTOs.Node;
 using SECompass.BusinessLogic.DTOs.NodeProgress;
 using SECompass.BusinessLogic.DTOs.PersonalRoadmap;
 using SECompass.BusinessLogic.DTOs.Profile;
+using SECompass.BusinessLogic.DTOs.PublicPortfolio;
 using SECompass.BusinessLogic.DTOs.RoadmapNode;
 using SECompass.BusinessLogic.DTOs.RoadmapNodeEdge;
 using SECompass.BusinessLogic.DTOs.Skill;
@@ -35,14 +36,17 @@ public class MappingProfile : AutoMapper.Profile
             .ForMember(d => d.UserId, o => o.MapFrom(s => s.UserId));
         CreateMap<DataAccess.Entities.Profile, ProfileWithSkillsDto>()
             .ForMember(d => d.UserId, o => o.MapFrom(s => s.UserId))
-            .ForMember(d => d.Skills, o => o.MapFrom(s => s.Skills));
+            .ForMember(d => d.FullName, o => o.MapFrom(s => s.User.FullName))
+            .ForMember(d => d.AvatarUrl, o => o.MapFrom(s => s.User.AvatarUrl))
+            .ForMember(d => d.Skills, o => o.MapFrom(s => s.ProfileTechnicalSkills));
         CreateMap<UpdateProfileDto, DataAccess.Entities.Profile>()
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
 
         // Skill
-        CreateMap<Skill, SkillDto>();
-        CreateMap<AddSkillDto, Skill>()
-            .ForMember(d => d.ProfileId, o => o.MapFrom(s => s.ProfileId));
+        CreateMap<TechnicalSkill, TechnicalSkillDto>();
+        CreateMap<ProfileTechnicalSkill, SkillDto>()
+            .ForMember(d => d.SkillName, o => o.MapFrom(s => s.TechnicalSkill.Name))
+            .ForMember(d => d.Category, o => o.MapFrom(s => s.TechnicalSkill.Category));
 
         // CareerRole
         CreateMap<CareerRole, CareerRoleDto>();
@@ -79,8 +83,12 @@ public class MappingProfile : AutoMapper.Profile
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
 
         // PersonalRoadmap
-        CreateMap<PersonalRoadmap, PersonalRoadmapDto>();
+        CreateMap<PersonalRoadmap, PersonalRoadmapDto>()
+            .ForMember(d => d.CareerRoadmapName, o => o.MapFrom(s => s.CareerRoadmap.Name))
+            .ForMember(d => d.CareerRoadmapDescription, o => o.MapFrom(s => s.CareerRoadmap.Description));
         CreateMap<PersonalRoadmap, PersonalRoadmapDetailDto>()
+            .ForMember(d => d.CareerRoadmapName, o => o.MapFrom(s => s.CareerRoadmap.Name))
+            .ForMember(d => d.CareerRoadmapDescription, o => o.MapFrom(s => s.CareerRoadmap.Description))
             .ForMember(d => d.NodeProgresses, o => o.MapFrom(s => s.NodeProgresses));
 
         // NodeProgress
@@ -98,6 +106,15 @@ public class MappingProfile : AutoMapper.Profile
         // GitHubRepository
         CreateMap<GitHubRepository, GitHubRepositoryDto>();
         CreateMap<AddGitHubRepoDto, GitHubRepository>();
+        CreateMap<UpdateGitHubRepoDto, GitHubRepository>()
+            .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
+
+        // PublicPortfolio
+        CreateMap<PublicPortfolio, PublicPortfolioDto>()
+            .ForMember(d => d.CachedPortfolioAnalysis, o => o.Ignore());
+        CreateMap<UpdatePublicPortfolioDto, PublicPortfolio>()
+            .ForMember(d => d.IsPublic, o => o.MapFrom((src, dest) => src.IsPublic ?? dest.IsPublic))
+            .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
 
         // ChatSession
         CreateMap<ChatSession, ChatSessionDto>();
@@ -114,5 +131,22 @@ public class MappingProfile : AutoMapper.Profile
         CreateMap<CreateJobTrendDto, JobTrend>();
         CreateMap<UpdateJobTrendDto, JobTrend>()
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
+
+        // JobScrapingSetting
+        CreateMap<JobScrapingSetting, JobScrapingSettingDto>();
+        CreateMap<UpdateJobScrapingSettingDto, JobScrapingSetting>();
+
+        // JobScrapingSource
+        CreateMap<JobScrapingSource, JobScrapingSourceDto>();
+        CreateMap<CreateJobScrapingSourceDto, JobScrapingSource>();
+        CreateMap<UpdateJobScrapingSourceDto, JobScrapingSource>()
+            .ForMember(d => d.Name, o => o.MapFrom((src, dest) => src.Name ?? dest.Name))
+            .ForMember(d => d.Region, o => o.MapFrom((src, dest) => src.Region ?? dest.Region))
+            .ForMember(d => d.Enabled, o => o.MapFrom((src, dest) => src.Enabled ?? dest.Enabled))
+            .ForMember(d => d.Url, o => o.MapFrom((src, dest) => src.Url ?? dest.Url))
+            .ForMember(d => d.JobCardXPath, o => o.MapFrom((src, dest) => src.JobCardXPath ?? dest.JobCardXPath))
+            .ForMember(d => d.TitleXPath, o => o.MapFrom((src, dest) => src.TitleXPath ?? dest.TitleXPath))
+            .ForMember(d => d.TagsXPath, o => o.MapFrom((src, dest) => src.TagsXPath ?? dest.TagsXPath))
+            .ForMember(d => d.MaxPostings, o => o.MapFrom((src, dest) => src.MaxPostings ?? dest.MaxPostings));
     }
 }

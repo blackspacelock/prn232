@@ -1,10 +1,11 @@
 erDiagram
-    %% Standalone Entity
-    JobTrend 
+    %% Standalone Entities (Market Pulse / Job Trend Scraping)
+    JobTrend
+    JobScrapingSetting
+    JobScrapingSource
 
     %% Core User & Profile Entities
     User ||--|| Profile : "1:1 (Shared PK)"
-    Profile ||--o{ Skill : "has many"
     Profile ||--o{ GitHubRepository : "owns"
     Profile ||--o{ ChatSession : "initiates"
     ChatSession ||--o{ ChatMessage : "contains"
@@ -30,3 +31,9 @@ erDiagram
 
     Node ||--o{ LearningResource : "directly owns (1:M)"
     Node |o--o{ Node : "parent/child self-reference"
+
+    %% Skill Taxonomy Entities
+    Profile ||--o{ ProfileTechnicalSkill : "has skills"
+    TechnicalSkill ||--o{ ProfileTechnicalSkill : "is selected by profiles"
+    Node ||--o{ NodeTechnicalSkill : "requires skills"
+    TechnicalSkill ||--o{ NodeTechnicalSkill : "is required by nodes"

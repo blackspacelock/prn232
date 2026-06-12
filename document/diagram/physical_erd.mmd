@@ -12,6 +12,31 @@ erDiagram
         BIT IsDeleted
     }
 
+    JobScrapingSetting {
+        UUID JobScrapingSettingId PK
+        BIT Enabled
+        NVARCHAR(20) Frequency
+        NVARCHAR(8) TimeOfDay
+        NVARCHAR(20) DayOfWeek
+        DATETIME LastRunAt "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt "NULLABLE"
+    }
+
+    JobScrapingSource {
+        UUID JobScrapingSourceId PK
+        NVARCHAR(100) Name
+        NVARCHAR(100) Region
+        BIT Enabled
+        NVARCHAR(1000) Url
+        NVARCHAR(1000) JobCardXPath
+        NVARCHAR(1000) TitleXPath
+        NVARCHAR(1000) TagsXPath
+        INT MaxPostings
+        DATETIME CreatedAt
+        DATETIME UpdatedAt "NULLABLE"
+    }
+
     User {
         UUID UserId PK
         NVARCHAR(255) FullName
@@ -33,16 +58,6 @@ erDiagram
         NVARCHAR(255) University "NULLABLE"
         NVARCHAR(255) Major "NULLABLE"
         INT StudiedYear "NULLABLE"
-        DATETIME CreatedAt
-        DATETIME UpdatedAt
-        BIT IsDeleted
-    }
-
-    Skill {
-        UUID SkillId PK
-        UUID ProfileId FK
-        NVARCHAR(255) SkillName
-        NVARCHAR(MAX) Note "NULLABLE"
         DATETIME CreatedAt
         DATETIME UpdatedAt
         BIT IsDeleted
@@ -106,6 +121,7 @@ erDiagram
         UUID CareerRoadmapId FK
         NVARCHAR(MAX) Note "NULLABLE"
         DECIMAL(5_2) ProgressPercentage
+        BIT IsActive
         DATETIME CreatedAt
         DATETIME UpdatedAt
         BIT IsDeleted
@@ -172,6 +188,31 @@ erDiagram
         BIT IsDeleted
     }
 
+    TechnicalSkill {
+        UUID TechnicalSkillId PK
+        NVARCHAR(255) Name "UNIQUE"
+        NVARCHAR(100) Category
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+    }
+
+    ProfileTechnicalSkill {
+        UUID ProfileTechnicalSkillId PK
+        UUID ProfileId FK
+        UUID TechnicalSkillId FK
+        NVARCHAR(MAX) Note "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+    }
+
+    NodeTechnicalSkill {
+        UUID NodeTechnicalSkillId PK
+        UUID NodeId FK
+        UUID TechnicalSkillId FK
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
+    }
+
     UserRefreshToken {
         UUID UserRefreshTokenId PK
         UUID UserId FK
@@ -185,7 +226,6 @@ erDiagram
 
     %% Physical Relationships
     User ||--|| Profile : "UserId (1:1 Shared PK)"
-    Profile ||--o{ Skill : "ProfileId"
     Profile ||--o{ GitHubRepository : "ProfileId"
     Profile ||--o{ ChatSession : "ProfileId"
     ChatSession ||--o{ ChatMessage : "ChatSessionId"
@@ -207,3 +247,8 @@ erDiagram
     
     Node ||--o{ LearningResource : "NodeId (1:M direct)"
     Node |o--o{ Node : "ParentNodeId"
+
+    Profile ||--o{ ProfileTechnicalSkill : "ProfileId"
+    TechnicalSkill ||--o{ ProfileTechnicalSkill : "TechnicalSkillId"
+    Node ||--o{ NodeTechnicalSkill : "NodeId"
+    TechnicalSkill ||--o{ NodeTechnicalSkill : "TechnicalSkillId"

@@ -10,8 +10,11 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
     public DbSet<Profile> Profiles { get; set; }
-    public DbSet<Skill> Skills { get; set; }
+    public DbSet<TechnicalSkill> TechnicalSkills { get; set; }
+    public DbSet<NodeTechnicalSkill> NodeTechnicalSkills { get; set; }
+    public DbSet<ProfileTechnicalSkill> ProfileTechnicalSkills { get; set; }
     public DbSet<GitHubRepository> GitHubRepositories { get; set; }
+    public DbSet<PublicPortfolio> PublicPortfolios { get; set; }
     public DbSet<ChatSession> ChatSessions { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<CareerRole> CareerRoles { get; set; }
@@ -23,11 +26,8 @@ public class AppDbContext : DbContext
     public DbSet<NodeProgress> NodeProgresses { get; set; }
     public DbSet<LearningResource> LearningResources { get; set; }
     public DbSet<JobTrend> JobTrends { get; set; }
-
-    public void Delete(BaseAuditableEntity entity)
-    {
-        Entry(entity).State = EntityState.Deleted;
-    }
+    public DbSet<JobScrapingSetting> JobScrapingSettings { get; set; }
+    public DbSet<JobScrapingSource> JobScrapingSources { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,7 +37,7 @@ public class AppDbContext : DbContext
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await ApplyDeleteCascadeAsync(cancellationToken);
+        await ApplyPhysicalDeleteCascadeAsync(cancellationToken);
 
         var entries = ChangeTracker.Entries<BaseAuditableEntity>();
         foreach (var entry in entries)
@@ -55,7 +55,7 @@ public class AppDbContext : DbContext
         return result;
     }
 
-    private async Task ApplyDeleteCascadeAsync(CancellationToken cancellationToken)
+    private async Task ApplyPhysicalDeleteCascadeAsync(CancellationToken cancellationToken)
     {
         var deleteQueue = new Queue<BaseAuditableEntity>();
         var deleteQueued = new HashSet<string>();
@@ -98,12 +98,17 @@ public class AppDbContext : DbContext
 
             case Profile profile:
                 await CascadeRangeAsync(
-                    Skills.Where(s => s.ProfileId == profile.UserId),
+                    ProfileTechnicalSkills.Where(s => s.ProfileId == profile.UserId),
                     queue,
                     queued,
                     cancellationToken);
                 await CascadeRangeAsync(
                     GitHubRepositories.Where(r => r.ProfileId == profile.UserId),
+                    queue,
+                    queued,
+                    cancellationToken);
+                await CascadeRangeAsync(
+                    PublicPortfolios.Where(p => p.ProfileId == profile.UserId),
                     queue,
                     queued,
                     cancellationToken);
@@ -174,6 +179,24 @@ public class AppDbContext : DbContext
                     cancellationToken);
                 await CascadeRangeAsync(
                     RoadmapNodes.Where(r => r.NodeId == node.Id),
+                    queue,
+                    queued,
+                    cancellationToken);
+                await CascadeRangeAsync(
+                    NodeTechnicalSkills.Where(nts => nts.NodeId == node.Id),
+                    queue,
+                    queued,
+                    cancellationToken);
+                break;
+
+            case TechnicalSkill technicalSkill:
+                await CascadeRangeAsync(
+                    NodeTechnicalSkills.Where(nts => nts.TechnicalSkillId == technicalSkill.Id),
+                    queue,
+                    queued,
+                    cancellationToken);
+                await CascadeRangeAsync(
+                    ProfileTechnicalSkills.Where(pts => pts.TechnicalSkillId == technicalSkill.Id),
                     queue,
                     queued,
                     cancellationToken);

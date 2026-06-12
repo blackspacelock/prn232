@@ -7,4 +7,5 @@ public class PortfolioAnalysisDto
     public string OverallSummary { get; set; } = string.Empty;
     public List<string> Strengths { get; set; } = new();
     public List<string> Recommendations { get; set; } = new();
+    public List<RepositoryAnalysisDto> RepositoryAnalyses { get; set; } = new();
 }

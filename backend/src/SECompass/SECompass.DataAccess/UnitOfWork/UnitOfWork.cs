@@ -11,7 +11,9 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<User>? _users;
     private IRepository<UserRefreshToken>? _userRefreshTokens;
     private IRepository<Profile>? _profiles;
-    private IRepository<Skill>? _skills;
+    private IRepository<TechnicalSkill>? _technicalSkills;
+    private IRepository<NodeTechnicalSkill>? _nodeTechnicalSkills;
+    private IRepository<ProfileTechnicalSkill>? _profileTechnicalSkills;
     private IRepository<CareerRole>? _careerRoles;
     private IRepository<CareerRoadmap>? _careerRoadmaps;
     private IRepository<RoadmapNode>? _roadmapNodes;
@@ -19,9 +21,12 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<Node>? _nodes;
     private IRepository<LearningResource>? _learningResources;
     private IRepository<GitHubRepository>? _gitHubRepositories;
+    private IRepository<PublicPortfolio>? _publicPortfolios;
     private IRepository<ChatSession>? _chatSessions;
     private IRepository<ChatMessage>? _chatMessages;
     private IRepository<JobTrend>? _jobTrends;
+    private IRepository<JobScrapingSetting>? _jobScrapingSettings;
+    private IRepository<JobScrapingSource>? _jobScrapingSources;
     private IPersonalRoadmapRepository? _personalRoadmaps;
     private INodeProgressRepository? _nodeProgresses;
     private IChatRepository? _chat;
@@ -31,7 +36,9 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<User> Users => _users ??= new GenericRepository<User>(_context);
     public IRepository<UserRefreshToken> UserRefreshTokens => _userRefreshTokens ??= new GenericRepository<UserRefreshToken>(_context);
     public IRepository<Profile> Profiles => _profiles ??= new GenericRepository<Profile>(_context);
-    public IRepository<Skill> Skills => _skills ??= new GenericRepository<Skill>(_context);
+    public IRepository<TechnicalSkill> TechnicalSkills => _technicalSkills ??= new GenericRepository<TechnicalSkill>(_context);
+    public IRepository<NodeTechnicalSkill> NodeTechnicalSkills => _nodeTechnicalSkills ??= new GenericRepository<NodeTechnicalSkill>(_context);
+    public IRepository<ProfileTechnicalSkill> ProfileTechnicalSkills => _profileTechnicalSkills ??= new GenericRepository<ProfileTechnicalSkill>(_context);
     public IRepository<CareerRole> CareerRoles => _careerRoles ??= new GenericRepository<CareerRole>(_context);
     public IRepository<CareerRoadmap> CareerRoadmaps => _careerRoadmaps ??= new GenericRepository<CareerRoadmap>(_context);
     public IRepository<RoadmapNode> RoadmapNodes => _roadmapNodes ??= new GenericRepository<RoadmapNode>(_context);
@@ -39,9 +46,12 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<Node> Nodes => _nodes ??= new GenericRepository<Node>(_context);
     public IRepository<LearningResource> LearningResources => _learningResources ??= new GenericRepository<LearningResource>(_context);
     public IRepository<GitHubRepository> GitHubRepositories => _gitHubRepositories ??= new GenericRepository<GitHubRepository>(_context);
+    public IRepository<PublicPortfolio> PublicPortfolios => _publicPortfolios ??= new GenericRepository<PublicPortfolio>(_context);
     public IRepository<ChatSession> ChatSessions => _chatSessions ??= new GenericRepository<ChatSession>(_context);
     public IRepository<ChatMessage> ChatMessages => _chatMessages ??= new GenericRepository<ChatMessage>(_context);
     public IRepository<JobTrend> JobTrends => _jobTrends ??= new GenericRepository<JobTrend>(_context);
+    public IRepository<JobScrapingSetting> JobScrapingSettings => _jobScrapingSettings ??= new GenericRepository<JobScrapingSetting>(_context);
+    public IRepository<JobScrapingSource> JobScrapingSources => _jobScrapingSources ??= new GenericRepository<JobScrapingSource>(_context);
     public IPersonalRoadmapRepository PersonalRoadmaps => _personalRoadmaps ??= new PersonalRoadmapRepository(_context);
     public INodeProgressRepository NodeProgresses => _nodeProgresses ??= new NodeProgressRepository(_context);
     public IChatRepository Chat => _chat ??= new ChatRepository(_context);

@@ -51,6 +51,56 @@ export interface AddSkillDto {
   note?: string;
 }
 
+// Matches backend TechnicalSkillDto
+export interface TechnicalSkillDto {
+  id: string;
+  name: string;
+  category: string;
+}
+
+// Matches backend SkillDto (a user's ProfileTechnicalSkill entry)
+export interface SkillDto {
+  id: string;
+  profileId: string;
+  technicalSkillId: string;
+  skillName: string;
+  category: string;
+  note?: string;
+  createdAt: string;
+}
+
+// Matches backend ProfileWithSkillsDto
+export interface ProfileWithSkillsDto {
+  userId: string;
+  fullName: string;
+  avatarUrl?: string;
+  bioDescription?: string;
+  phoneNumber?: string;
+  university?: string;
+  major?: string;
+  studiedYear?: number;
+  skills: SkillDto[];
+}
+
+// Matches backend SkillGapCategoryDto
+export interface SkillGapCategoryDto {
+  category: string;
+  yourLevel: number;
+  requiredLevel: number;
+}
+
+// Matches backend SkillGapAnalysisDto
+export interface SkillGapAnalysisDto {
+  profileId: string;
+  careerRoadmapId: string;
+  requiredSkills: TechnicalSkillDto[];
+  matchedSkills: TechnicalSkillDto[];
+  missingSkills: TechnicalSkillDto[];
+  categoryBreakdown: SkillGapCategoryDto[];
+  coveragePercentage: number;
+  summary: string;
+}
+
 // Must match backend AddGitHubRepoDto exactly
 export interface AddGitHubRepoDto {
   profileId: string;
@@ -58,6 +108,57 @@ export interface AddGitHubRepoDto {
   repoUrl: string;
   description?: string;
   isPrivate: boolean;
+}
+
+export interface UpdateGitHubRepoDto {
+  repositoryName?: string;
+  repoUrl?: string;
+  description?: string;
+  isPrivate?: boolean;
+}
+
+// Matches backend GitHubRepositoryDto
+export interface GitHubRepositoryDto {
+  id: string;
+  profileId: string;
+  repositoryName: string;
+  repoUrl: string;
+  description?: string;
+  isPrivate: boolean;
+  createdAt: string;
+}
+
+// Matches backend RepositoryAnalysisDto
+export interface RepositoryAnalysisDto {
+  repositoryId: string;
+  repositoryName: string;
+  objective: string;
+  techStacks: string[];
+  summary: string;
+}
+
+// Matches backend PortfolioAnalysisDto
+export interface PortfolioAnalysisDto {
+  profileId: string;
+  repositoryNames: string[];
+  overallSummary: string;
+  strengths: string[];
+  recommendations: string[];
+  repositoryAnalyses: RepositoryAnalysisDto[];
+}
+
+export interface PublicPortfolioDto {
+  id: string;
+  profileId: string;
+  headline?: string;
+  publicBio?: string;
+  location?: string;
+  websiteUrl?: string;
+  linkedInUrl?: string;
+  contactEmail?: string;
+  isPublic: boolean;
+  lastAnalyzedAt?: string;
+  cachedPortfolioAnalysis?: PortfolioAnalysisDto;
 }
 
 // Must match backend SendMessageDto exactly
@@ -141,12 +242,28 @@ export interface NodeProgressDto {
   node: NodeDto;
 }
 
+// Matches backend PersonalRoadmapDto
+export interface PersonalRoadmapDto {
+  id: string;
+  profileId: string;
+  careerRoadmapId: string;
+  careerRoadmapName: string;
+  careerRoadmapDescription?: string;
+  note?: string;
+  progressPercentage: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface PersonalRoadmapDetailDto {
   id: string;
   profileId: string;
   careerRoadmapId: string;
+  careerRoadmapName: string;
+  careerRoadmapDescription?: string;
   note?: string;
   progressPercentage: number;
+  isActive: boolean;
   nodeProgresses: NodeProgressDto[];
 }
 
@@ -192,4 +309,77 @@ export interface LearningResourceDto {
   provider?: string;
   isFree: boolean;
   createdAt: string;
+}
+
+// Matches backend JobTrendScrapeSourceResultDto
+export interface JobTrendScrapeSourceResultDto {
+  sourceName: string;
+  region: string;
+  postingsScraped: number;
+  success: boolean;
+  error?: string;
+}
+
+// Matches backend JobTrendScrapeResultDto
+export interface JobTrendScrapeResultDto {
+  snapshotDate: string;
+  totalPostingsScraped: number;
+  trendsCreated: number;
+  trendsUpdated: number;
+  sources: JobTrendScrapeSourceResultDto[];
+}
+
+// Matches backend JobScrapingSettingDto
+export interface JobScrapingSettingDto {
+  id: string;
+  enabled: boolean;
+  frequency: 'Daily' | 'Weekly';
+  timeOfDay: string;
+  dayOfWeek: string;
+  lastRunAt?: string;
+}
+
+// Matches backend UpdateJobScrapingSettingDto
+export interface UpdateJobScrapingSettingDto {
+  enabled: boolean;
+  frequency: 'Daily' | 'Weekly';
+  timeOfDay: string;
+  dayOfWeek: string;
+}
+
+// Matches backend JobScrapingSourceDto
+export interface JobScrapingSourceDto {
+  id: string;
+  name: string;
+  region: string;
+  enabled: boolean;
+  url: string;
+  jobCardXPath: string;
+  titleXPath: string;
+  tagsXPath: string;
+  maxPostings: number;
+}
+
+// Matches backend CreateJobScrapingSourceDto
+export interface CreateJobScrapingSourceDto {
+  name: string;
+  region: string;
+  enabled: boolean;
+  url: string;
+  jobCardXPath: string;
+  titleXPath: string;
+  tagsXPath: string;
+  maxPostings: number;
+}
+
+// Matches backend UpdateJobScrapingSourceDto
+export interface UpdateJobScrapingSourceDto {
+  name?: string;
+  region?: string;
+  enabled?: boolean;
+  url?: string;
+  jobCardXPath?: string;
+  titleXPath?: string;
+  tagsXPath?: string;
+  maxPostings?: number;
 }

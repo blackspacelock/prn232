@@ -3,10 +3,11 @@ import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Search, TrendingUp } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { GET_JOB_TRENDS_BY_REGION, GET_TOP_TRENDING_SKILLS } from '@/graphql/queries';
+import { getSkillColor, hashLabel, SkillChip } from '../components/SkillChip';
 
 interface JobTrend {
   id: string;
@@ -19,6 +20,45 @@ interface JobTrend {
 }
 
 const REGIONS = ['Vietnam', 'Singapore', 'Thailand', 'Global'];
+
+const AREA_SERIES_COLORS = [
+  { stroke: '#1A73E8', fill: '#E8F0FE' },
+  { stroke: '#34A853', fill: '#E6F4EA' },
+  { stroke: '#7B1FA2', fill: '#F3E8FD' },
+];
+
+interface TrendHistoryPoint {
+  date: string;
+  [skill: string]: string | number;
+}
+
+function buildTrendHistory(trends: JobTrend[]): { skills: string[]; data: TrendHistoryPoint[] } {
+  if (trends.length === 0) return { skills: [], data: [] };
+
+  const latestDate = trends.reduce((max, t) => (t.snapshotDate > max ? t.snapshotDate : max), trends[0].snapshotDate);
+
+  const latestScores = new Map<string, number>();
+  for (const t of trends) {
+    if (t.snapshotDate !== latestDate) continue;
+    latestScores.set(t.techSkill, Math.max(latestScores.get(t.techSkill) ?? 0, t.trendScore));
+  }
+
+  const topSkills = [...latestScores.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([skill]) => skill);
+
+  const dateMap = new Map<string, TrendHistoryPoint>();
+  for (const t of trends) {
+    if (!topSkills.includes(t.techSkill)) continue;
+    const dateKey = t.snapshotDate.split('T')[0];
+    if (!dateMap.has(dateKey)) dateMap.set(dateKey, { date: dateKey });
+    dateMap.get(dateKey)![t.techSkill] = t.trendScore;
+  }
+
+  const data = [...dateMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+  return { skills: topSkills, data };
+}
 
 export function MarketPulsePage() {
   const [region, setRegion] = useState('Vietnam');
@@ -44,7 +84,9 @@ export function MarketPulsePage() {
   const chartData = (searchQuery
     ? topSkills.filter((s) => s.techSkill.toLowerCase().includes(searchQuery.toLowerCase()))
     : topSkills
-  ).map((s) => ({ name: s.techSkill, score: s.trendScore }));
+  ).map((s) => ({ name: s.techSkill, score: s.trendScore, color: getSkillColor(hashLabel(s.techSkill)).accent }));
+
+  const trendHistory = buildTrendHistory(allTrends);
 
   const handleRegionChange = (newRegion: string) => {
     setRegion(newRegion);
@@ -106,10 +148,47 @@ export function MarketPulsePage() {
                       <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#5F6368' }} />
                       <YAxis tick={{ fontSize: 12, fill: '#5F6368' }} domain={[0, 100]} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="score" fill="#1A73E8" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                        {chartData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+              )}
+            </div>
+
+            <div className="md3-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)]">Trend Over Time</h2>
+                <span className="text-sm text-[var(--md3-on-surface-variant)]">{region}</span>
+              </div>
+              {trendHistory.data.length >= 2 ? (
+                <div className="h-[280px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendHistory.data}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E8EAED" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#5F6368' }} />
+                      <YAxis tick={{ fontSize: 12, fill: '#5F6368' }} domain={[0, 100]} />
+                      <Tooltip />
+                      <Legend />
+                      {trendHistory.skills.map((skill, i) => (
+                        <Area
+                          key={skill}
+                          type="monotone"
+                          dataKey={skill}
+                          stroke={AREA_SERIES_COLORS[i].stroke}
+                          fill={AREA_SERIES_COLORS[i].fill}
+                        />
+                      ))}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--md3-on-surface-variant)] text-center py-8">
+                  Trend history builds up after weekly scrapes run.
+                </p>
               )}
             </div>
 
@@ -140,18 +219,22 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
 }
 
 function SkillCard({ trend }: { trend: JobTrend }) {
+  const color = getSkillColor(hashLabel(trend.techSkill));
+
   return (
-    <div className="md3-card p-5">
-      <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-2">{trend.techSkill}</h3>
+    <div className={`rounded-xl border p-5 shadow-sm ${color.bg} ${color.border}`}>
+      <div className="mb-3">
+        <SkillChip label={trend.techSkill} size="sm" />
+      </div>
       <div className="flex items-baseline gap-1 mb-2">
-        <span className="text-3xl font-bold text-[var(--md3-on-surface)]">{trend.trendScore}</span>
+        <span className={`text-3xl font-bold ${color.text}`}>{trend.trendScore}</span>
         <span className="text-lg text-[var(--md3-on-surface-variant)]">/100</span>
       </div>
       <div className="h-1.5 bg-[var(--md3-outline-variant)] rounded-full overflow-hidden mb-3">
-        <div className="h-full bg-[var(--md3-primary)] rounded-full" style={{ width: `${trend.trendScore}%` }} />
+        <div className="h-full rounded-full" style={{ width: `${trend.trendScore}%`, backgroundColor: color.accent }} />
       </div>
       {trend.source && (
-        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[var(--md3-primary-container)] text-[var(--md3-primary)]">{trend.source}</span>
+        <span className={`px-2 py-0.5 rounded text-xs font-medium border bg-white/70 ${color.text} ${color.border}`}>{trend.source}</span>
       )}
     </div>
   );

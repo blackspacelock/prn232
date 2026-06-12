@@ -34,7 +34,8 @@ public class PersonalRoadmapService : IPersonalRoadmapService
             Id = Guid.NewGuid(),
             ProfileId = profileId,
             CareerRoadmapId = careerRoadmapId,
-            ProgressPercentage = 0
+            ProgressPercentage = 0,
+            IsActive = false
         };
         await _uow.PersonalRoadmaps.AddAsync(personalRoadmap);
 
@@ -65,7 +66,7 @@ public class PersonalRoadmapService : IPersonalRoadmapService
 
     public async Task<ServiceResult<List<PersonalRoadmapDto>>> GetByProfileAsync(Guid profileId)
     {
-        var roadmaps = await _uow.PersonalRoadmaps.FindAsync(pr => pr.ProfileId == profileId);
+        var roadmaps = await _uow.PersonalRoadmaps.GetByProfileWithCareerRoadmapAsync(profileId);
         return ServiceResult<List<PersonalRoadmapDto>>.Ok(_mapper.Map<List<PersonalRoadmapDto>>(roadmaps));
     }
 
@@ -99,6 +100,19 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         var roadmap = await _uow.PersonalRoadmaps.GetByIdAsync(personalRoadmapId);
         if (roadmap == null) return ServiceResult<bool>.Fail("Personal roadmap not found.");
         _uow.PersonalRoadmaps.Delete(roadmap);
+        await _uow.SaveChangesAsync();
+        return ServiceResult<bool>.Ok(true);
+    }
+
+    public async Task<ServiceResult<bool>> ToggleActiveAsync(Guid personalRoadmapId)
+    {
+        var roadmap = await _uow.PersonalRoadmaps.GetByIdAsync(personalRoadmapId);
+        if (roadmap == null) return ServiceResult<bool>.Fail("Personal roadmap not found.");
+
+        roadmap.IsActive = !roadmap.IsActive;
+        roadmap.UpdatedAt = DateTime.Now;
+        _uow.PersonalRoadmaps.Update(roadmap);
+
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

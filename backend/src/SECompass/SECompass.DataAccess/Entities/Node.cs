@@ -11,4 +11,5 @@ public class Node : BaseAuditableEntity
     public ICollection<Node> Children { get; set; } = new List<Node>();
     public ICollection<LearningResource> LearningResources { get; set; } = new List<LearningResource>();
     public ICollection<RoadmapNode> RoadmapNodes { get; set; } = new List<RoadmapNode>();
+    public ICollection<NodeTechnicalSkill> NodeTechnicalSkills { get; set; } = new List<NodeTechnicalSkill>();
 }

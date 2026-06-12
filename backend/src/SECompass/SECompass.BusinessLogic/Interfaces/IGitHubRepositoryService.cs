@@ -6,6 +6,7 @@ namespace SECompass.BusinessLogic.Interfaces;
 public interface IGitHubRepositoryService
 {
     Task<ServiceResult<GitHubRepositoryDto>> AddAsync(AddGitHubRepoDto dto);
+    Task<ServiceResult<GitHubRepositoryDto>> UpdateAsync(Guid repoId, UpdateGitHubRepoDto dto);
     Task<ServiceResult<List<GitHubRepositoryDto>>> GetByProfileAsync(Guid profileId);
     Task<ServiceResult<bool>> RemoveAsync(Guid repoId);
 }

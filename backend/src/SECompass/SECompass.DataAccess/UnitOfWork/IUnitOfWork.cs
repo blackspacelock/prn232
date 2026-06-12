@@ -8,7 +8,9 @@ public interface IUnitOfWork : IDisposable
     IRepository<User> Users { get; }
     IRepository<UserRefreshToken> UserRefreshTokens { get; }
     IRepository<Profile> Profiles { get; }
-    IRepository<Skill> Skills { get; }
+    IRepository<TechnicalSkill> TechnicalSkills { get; }
+    IRepository<NodeTechnicalSkill> NodeTechnicalSkills { get; }
+    IRepository<ProfileTechnicalSkill> ProfileTechnicalSkills { get; }
     IRepository<CareerRole> CareerRoles { get; }
     IRepository<CareerRoadmap> CareerRoadmaps { get; }
     IRepository<RoadmapNode> RoadmapNodes { get; }
@@ -16,9 +18,12 @@ public interface IUnitOfWork : IDisposable
     IRepository<Node> Nodes { get; }
     IRepository<LearningResource> LearningResources { get; }
     IRepository<GitHubRepository> GitHubRepositories { get; }
+    IRepository<PublicPortfolio> PublicPortfolios { get; }
     IRepository<ChatSession> ChatSessions { get; }
     IRepository<ChatMessage> ChatMessages { get; }
     IRepository<JobTrend> JobTrends { get; }
+    IRepository<JobScrapingSetting> JobScrapingSettings { get; }
+    IRepository<JobScrapingSource> JobScrapingSources { get; }
     IPersonalRoadmapRepository PersonalRoadmaps { get; }
     INodeProgressRepository NodeProgresses { get; }
     IChatRepository Chat { get; }
