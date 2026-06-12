@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SECompass.DataAccess.DbContexts;
 
@@ -11,9 +12,11 @@ using SECompass.DataAccess.DbContexts;
 namespace SECompass.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260612080917_AddJobScrapingSources")]
+    partial class AddJobScrapingSources
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -577,12 +580,6 @@ namespace SECompass.DataAccess.Migrations
                     b.HasKey("UserId");
 
                     b.ToTable("Profiles", (string)null);
-
-                    b.HasData(new
-                    {
-                        UserId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                        CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                    });
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.ProfileTechnicalSkill", b =>
@@ -799,17 +796,6 @@ namespace SECompass.DataAccess.Migrations
                         .HasFilter("[GoogleId] IS NOT NULL");
 
                     b.ToTable("Users", (string)null);
-
-                    b.HasData(new
-                    {
-                        Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                        CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                        Email = "admin@secompass.com",
-                        FullName = "Admin Administrator",
-                        IsActive = true,
-                        PasswordHashed = "$2b$12$x60evDbGMbtCfCLsHPITg.F90EITs5NYkcp/zoKMuwzsZ3TRcqBHK",
-                        Role = 0
-                    });
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.UserRefreshToken", b =>

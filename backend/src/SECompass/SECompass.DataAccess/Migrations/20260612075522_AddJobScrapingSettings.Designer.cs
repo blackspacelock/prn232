@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SECompass.DataAccess.DbContexts;
 
@@ -11,9 +12,11 @@ using SECompass.DataAccess.DbContexts;
 namespace SECompass.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260612075522_AddJobScrapingSettings")]
+    partial class AddJobScrapingSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -224,99 +227,6 @@ namespace SECompass.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("JobScrapingSettings", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("99999999-9999-9999-9999-999999999999"),
-                            CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            DayOfWeek = "Sunday",
-                            Enabled = true,
-                            Frequency = "Weekly",
-                            TimeOfDay = "00:00:00"
-                        });
-                });
-
-            modelBuilder.Entity("SECompass.DataAccess.Entities.JobScrapingSource", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("JobScrapingSourceId");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("JobCardXPath")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int>("MaxPostings")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Region")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("TagsXPath")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("TitleXPath")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("JobScrapingSources", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
-                            CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Enabled = true,
-                            JobCardXPath = "//li[contains(@class,'jobs-search')] | //div[contains(@class,'job-search-card')]",
-                            MaxPostings = 40,
-                            Name = "LinkedIn",
-                            Region = "Global",
-                            TagsXPath = ".//*[contains(@class,'metadata')] | .//*[contains(@class,'subtitle')]",
-                            TitleXPath = ".//h3 | .//*[contains(@class,'title')]",
-                            Url = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=software%20engineer&location=Vietnam&start=0"
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444444"),
-                            CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Enabled = true,
-                            JobCardXPath = "//li[contains(@class,'job-item')]",
-                            MaxPostings = 40,
-                            Name = "CareerLink",
-                            Region = "Vietnam",
-                            TagsXPath = ".//a[contains(@class,'job-position')]",
-                            TitleXPath = ".//h5[contains(@class,'job-name')]",
-                            Url = "https://www.careerlink.vn/viec-lam/cntt-phan-mem/19"
-                        });
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.JobTrend", b =>
@@ -577,12 +487,6 @@ namespace SECompass.DataAccess.Migrations
                     b.HasKey("UserId");
 
                     b.ToTable("Profiles", (string)null);
-
-                    b.HasData(new
-                    {
-                        UserId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                        CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                    });
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.ProfileTechnicalSkill", b =>
@@ -799,17 +703,6 @@ namespace SECompass.DataAccess.Migrations
                         .HasFilter("[GoogleId] IS NOT NULL");
 
                     b.ToTable("Users", (string)null);
-
-                    b.HasData(new
-                    {
-                        Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                        CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                        Email = "admin@secompass.com",
-                        FullName = "Admin Administrator",
-                        IsActive = true,
-                        PasswordHashed = "$2b$12$x60evDbGMbtCfCLsHPITg.F90EITs5NYkcp/zoKMuwzsZ3TRcqBHK",
-                        Role = 0
-                    });
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.UserRefreshToken", b =>
