@@ -9,7 +9,6 @@ erDiagram
         DATETIME SnapshotDate
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     JobScrapingSetting {
@@ -48,7 +47,6 @@ erDiagram
         NVARCHAR(MAX) AvatarUrl "NULLABLE"
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     Profile {
@@ -60,7 +58,6 @@ erDiagram
         INT StudiedYear "NULLABLE"
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     GitHubRepository {
@@ -72,7 +69,22 @@ erDiagram
         BIT IsPrivate
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
+    }
+
+    PublicPortfolio {
+        UUID Id PK
+        UUID ProfileId FK "UNIQUE"
+        NVARCHAR(160) Headline "NULLABLE"
+        NVARCHAR(2000) PublicBio "NULLABLE"
+        NVARCHAR(120) Location "NULLABLE"
+        NVARCHAR(500) WebsiteUrl "NULLABLE"
+        NVARCHAR(500) LinkedInUrl "NULLABLE"
+        NVARCHAR(256) ContactEmail "NULLABLE"
+        BIT IsPublic
+        NVARCHAR(MAX) CachedPortfolioAnalysisJson "NULLABLE"
+        DATETIME LastAnalyzedAt "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt
     }
 
     ChatSession {
@@ -82,7 +94,6 @@ erDiagram
         NVARCHAR(MAX) Summary "NULLABLE"
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     ChatMessage {
@@ -92,7 +103,6 @@ erDiagram
         NVARCHAR(MAX) MessageContent
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     CareerRole {
@@ -101,7 +111,6 @@ erDiagram
         NVARCHAR(MAX) Description "NULLABLE"
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     CareerRoadmap {
@@ -112,7 +121,6 @@ erDiagram
         BIT IsCustom
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     PersonalRoadmap {
@@ -124,7 +132,6 @@ erDiagram
         BIT IsActive
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     Node {
@@ -135,7 +142,6 @@ erDiagram
         INT Order
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     RoadmapNode {
@@ -150,7 +156,6 @@ erDiagram
         INT PositionY "NULLABLE"
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     RoadmapNodeEdge {
@@ -161,7 +166,6 @@ erDiagram
         NVARCHAR(100) EdgeType
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     NodeProgress {
@@ -172,7 +176,6 @@ erDiagram
         NVARCHAR(MAX) Note "NULLABLE"
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     LearningResource {
@@ -185,7 +188,6 @@ erDiagram
         BIT IsFree
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     TechnicalSkill {
@@ -218,15 +220,16 @@ erDiagram
         UUID UserId FK
         NVARCHAR(512) Token
         DATETIME ExpiresAt
-        DATETIME RevokedAt
+        BIT IsRevoked
+        DATETIME RevokedAt "NULLABLE"
         DATETIME CreatedAt
         DATETIME UpdatedAt
-        BIT IsDeleted
     }
 
     %% Physical Relationships
     User ||--|| Profile : "UserId (1:1 Shared PK)"
     Profile ||--o{ GitHubRepository : "ProfileId"
+    Profile ||--|| PublicPortfolio : "ProfileId (1:1 Unique FK)"
     Profile ||--o{ ChatSession : "ProfileId"
     ChatSession ||--o{ ChatMessage : "ChatSessionId"
     User ||--o{ UserRefreshToken : "UserId"
