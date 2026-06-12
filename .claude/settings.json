@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "PowerShell(Get-Process -Name \"dotnet\" -ErrorAction SilentlyContinue)",
-      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)"
+      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "Bash(find . -iname \"*Test*\" -path \"*Chat*\" -not -path \"*/bin/*\" -not -path \"*/obj/*\" -not -path \"*/node_modules/*\")",
+      "Bash(find . -iname \"*.Tests*\" -maxdepth 4 -not -path \"*/node_modules/*\")",
+      "Bash(npm run *)"
     ]
   }
 }
