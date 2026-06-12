@@ -27,9 +27,9 @@ public class UsersController : ControllerBase
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Deactivate(Guid id, [FromQuery(Name = "delete")] bool physicalDelete = false)
+    public async Task<IActionResult> Deactivate(Guid id)
     {
-        var result = await _userService.DeactivateAsync(id, physicalDelete);
+        var result = await _userService.DeactivateAsync(id);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }

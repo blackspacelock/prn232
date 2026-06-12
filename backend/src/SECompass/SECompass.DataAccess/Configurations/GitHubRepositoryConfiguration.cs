@@ -18,9 +18,6 @@ public class GitHubRepositoryConfiguration : IEntityTypeConfiguration<GitHubRepo
         builder.Property(g => g.IsPrivate).IsRequired().HasDefaultValue(false);
         builder.Property(g => g.CreatedAt).IsRequired();
         builder.Property(g => g.UpdatedAt).IsRequired(false);
-        builder.Property(g => g.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(g => !g.IsDeleted);
 
         builder.HasOne(g => g.Profile)
             .WithMany(p => p.GitHubRepositories)

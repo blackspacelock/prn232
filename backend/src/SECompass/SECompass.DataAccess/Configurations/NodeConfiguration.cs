@@ -17,9 +17,6 @@ public class NodeConfiguration : IEntityTypeConfiguration<Node>
         builder.Property(n => n.Order).IsRequired().HasDefaultValue(0);
         builder.Property(n => n.CreatedAt).IsRequired();
         builder.Property(n => n.UpdatedAt).IsRequired(false);
-        builder.Property(n => n.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(n => !n.IsDeleted);
 
         builder.HasOne(n => n.ParentNode)
             .WithMany(n => n.Children)

@@ -40,11 +40,11 @@ public class GitHubRepositoryService : IGitHubRepositoryService
         return ServiceResult<List<GitHubRepositoryDto>>.Ok(_mapper.Map<List<GitHubRepositoryDto>>(repos));
     }
 
-    public async Task<ServiceResult<bool>> RemoveAsync(Guid repoId, bool physicalDelete = false)
+    public async Task<ServiceResult<bool>> RemoveAsync(Guid repoId)
     {
         var repo = await _uow.GitHubRepositories.GetByIdAsync(repoId);
         if (repo == null) return ServiceResult<bool>.Fail("Repository not found.");
-        _uow.GitHubRepositories.Delete(repo, physicalDelete);
+        _uow.GitHubRepositories.Delete(repo);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

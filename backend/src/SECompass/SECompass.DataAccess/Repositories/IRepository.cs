@@ -11,5 +11,5 @@ public interface IRepository<T> where T : BaseAuditableEntity
     Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);
     Task AddAsync(T entity);
     void Update(T entity);
-    void Delete(T entity, bool physicalDelete = false);
+    void Delete(T entity);
 }

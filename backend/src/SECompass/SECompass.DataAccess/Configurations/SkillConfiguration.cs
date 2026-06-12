@@ -16,9 +16,6 @@ public class SkillConfiguration : IEntityTypeConfiguration<Skill>
         builder.Property(s => s.Note).IsRequired(false);
         builder.Property(s => s.CreatedAt).IsRequired();
         builder.Property(s => s.UpdatedAt).IsRequired(false);
-        builder.Property(s => s.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(s => !s.IsDeleted);
 
         builder.HasOne(s => s.Profile)
             .WithMany(p => p.Skills)

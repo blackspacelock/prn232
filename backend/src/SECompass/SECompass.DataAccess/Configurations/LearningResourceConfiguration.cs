@@ -19,9 +19,6 @@ public class LearningResourceConfiguration : IEntityTypeConfiguration<LearningRe
         builder.Property(lr => lr.IsFree).IsRequired().HasDefaultValue(true);
         builder.Property(lr => lr.CreatedAt).IsRequired();
         builder.Property(lr => lr.UpdatedAt).IsRequired(false);
-        builder.Property(lr => lr.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(lr => !lr.IsDeleted);
 
         builder.HasOne(lr => lr.Node)
             .WithMany(n => n.LearningResources)

@@ -17,9 +17,6 @@ public class PersonalRoadmapConfiguration : IEntityTypeConfiguration<PersonalRoa
         builder.Property(pr => pr.ProgressPercentage).HasColumnType("decimal(5,2)").IsRequired().HasDefaultValue(0m);
         builder.Property(pr => pr.CreatedAt).IsRequired();
         builder.Property(pr => pr.UpdatedAt).IsRequired(false);
-        builder.Property(pr => pr.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(pr => !pr.IsDeleted);
 
         builder.HasOne(pr => pr.Profile)
             .WithMany(p => p.PersonalRoadmaps)

@@ -7,5 +7,5 @@ public interface IUserService
 {
     Task<ServiceResult<UserDto>> GetByIdAsync(Guid userId);
     Task<ServiceResult<UserDto>> UpdateAsync(Guid userId, UpdateUserDto dto);
-    Task<ServiceResult<bool>> DeactivateAsync(Guid userId, bool physicalDelete = false);
+    Task<ServiceResult<bool>> DeactivateAsync(Guid userId);
 }

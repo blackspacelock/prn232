@@ -37,29 +37,12 @@ public class UserService : IUserService
         return ServiceResult<UserDto>.Ok(_mapper.Map<UserDto>(user));
     }
 
-    public async Task<ServiceResult<bool>> DeactivateAsync(Guid userId, bool physicalDelete = false)
+    public async Task<ServiceResult<bool>> DeactivateAsync(Guid userId)
     {
         var user = await _uow.Users.GetByIdAsync(userId);
         if (user == null) return ServiceResult<bool>.Fail("User not found.");
 
-        if (physicalDelete)
-        {
-            _uow.Users.Delete(user, physicalDelete: true);
-            await _uow.SaveChangesAsync();
-            return ServiceResult<bool>.Ok(true);
-        }
-
-        user.IsActive = false;
-        _uow.Users.Update(user);
-
-        var refreshTokens = await _uow.UserRefreshTokens.FindAsync(t => t.UserId == userId && !t.IsRevoked);
-        foreach (var token in refreshTokens)
-        {
-            token.IsRevoked = true;
-            token.RevokedAt = DateTime.Now;
-            _uow.UserRefreshTokens.Update(token);
-        }
-
+        _uow.Users.Delete(user);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

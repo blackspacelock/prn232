@@ -17,12 +17,8 @@ public class RoadmapNodeEdgeConfiguration : IEntityTypeConfiguration<RoadmapNode
         builder.Property(e => e.EdgeType).IsRequired().HasMaxLength(100).HasDefaultValue("Next");
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.Property(e => e.UpdatedAt).IsRequired(false);
-        builder.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(e => !e.IsDeleted);
         builder.HasIndex(e => new { e.CareerRoadmapId, e.FromRoadmapNodeId, e.ToRoadmapNodeId, e.EdgeType })
-            .IsUnique()
-            .HasFilter("[IsDeleted] = 0");
+            .IsUnique();
 
         builder.HasOne(e => e.CareerRoadmap)
             .WithMany(r => r.RoadmapNodeEdges)

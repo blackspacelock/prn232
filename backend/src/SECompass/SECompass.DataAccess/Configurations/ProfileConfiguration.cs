@@ -18,9 +18,6 @@ public class ProfileConfiguration : IEntityTypeConfiguration<Profile>
         builder.Property(p => p.StudiedYear).IsRequired(false);
         builder.Property(p => p.CreatedAt).IsRequired();
         builder.Property(p => p.UpdatedAt).IsRequired(false);
-        builder.Property(p => p.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(p => !p.IsDeleted);
 
         builder.HasOne(p => p.User)
             .WithOne(u => u.Profile)

@@ -21,12 +21,8 @@ public class RoadmapNodeConfiguration : IEntityTypeConfiguration<RoadmapNode>
         builder.Property(rn => rn.PositionY).IsRequired(false);
         builder.Property(rn => rn.CreatedAt).IsRequired();
         builder.Property(rn => rn.UpdatedAt).IsRequired(false);
-        builder.Property(rn => rn.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(rn => !rn.IsDeleted);
         builder.HasIndex(rn => new { rn.CareerRoadmapId, rn.NodeId })
-            .IsUnique()
-            .HasFilter("[IsDeleted] = 0");
+            .IsUnique();
 
         builder.HasOne(rn => rn.CareerRoadmap)
             .WithMany(cr => cr.RoadmapNodes)

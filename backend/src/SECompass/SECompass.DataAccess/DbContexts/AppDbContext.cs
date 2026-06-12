@@ -5,8 +5,6 @@ namespace SECompass.DataAccess.DbContexts;
 
 public class AppDbContext : DbContext
 {
-    private readonly HashSet<string> _physicalDeleteKeys = new();
-
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<User> Users { get; set; }
@@ -28,7 +26,6 @@ public class AppDbContext : DbContext
 
     public void Delete(BaseAuditableEntity entity)
     {
-        _physicalDeleteKeys.Add(GetEntityKey(entity));
         Entry(entity).State = EntityState.Deleted;
     }
 
@@ -48,7 +45,6 @@ public class AppDbContext : DbContext
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.CreatedAt = DateTime.Now;
-                entry.Entity.IsDeleted = false;
             }
             else if (entry.State == EntityState.Modified)
             {
@@ -56,208 +52,149 @@ public class AppDbContext : DbContext
             }
         }
         var result = await base.SaveChangesAsync(cancellationToken);
-        _physicalDeleteKeys.Clear();
         return result;
     }
 
     private async Task ApplyDeleteCascadeAsync(CancellationToken cancellationToken)
     {
-        var now = DateTime.Now;
-        var softDeleteQueue = new Queue<BaseAuditableEntity>();
-        var physicalDeleteQueue = new Queue<BaseAuditableEntity>();
-        var softDeleteQueued = new HashSet<string>();
-        var physicalDeleteQueued = new HashSet<string>();
+        var deleteQueue = new Queue<BaseAuditableEntity>();
+        var deleteQueued = new HashSet<string>();
 
         foreach (var entry in ChangeTracker.Entries<BaseAuditableEntity>().ToList())
         {
             if (entry.State == EntityState.Deleted)
             {
-                if (_physicalDeleteKeys.Contains(GetEntityKey(entry.Entity)))
-                {
-                    Enqueue(entry.Entity, physicalDeleteQueue, physicalDeleteQueued);
-                    continue;
-                }
-
-                MarkSoftDeleted(entry.Entity, now);
-            }
-
-            if (entry.Entity.IsDeleted && entry.State is EntityState.Modified or EntityState.Added)
-            {
-                Enqueue(entry.Entity, softDeleteQueue, softDeleteQueued);
+                Enqueue(entry.Entity, deleteQueue, deleteQueued);
             }
         }
 
-        while (softDeleteQueue.Count > 0)
+        while (deleteQueue.Count > 0)
         {
-            var entity = softDeleteQueue.Dequeue();
-            await CascadeDependentsAsync(entity, physicalDelete: false, softDeleteQueue, softDeleteQueued, now, cancellationToken);
-        }
-
-        while (physicalDeleteQueue.Count > 0)
-        {
-            var entity = physicalDeleteQueue.Dequeue();
-            await CascadeDependentsAsync(entity, physicalDelete: true, physicalDeleteQueue, physicalDeleteQueued, now, cancellationToken);
+            var entity = deleteQueue.Dequeue();
+            await CascadeDependentsAsync(entity, deleteQueue, deleteQueued, cancellationToken);
         }
     }
 
     private async Task CascadeDependentsAsync(
         BaseAuditableEntity entity,
-        bool physicalDelete,
         Queue<BaseAuditableEntity> queue,
         HashSet<string> queued,
-        DateTime now,
         CancellationToken cancellationToken)
     {
         switch (entity)
         {
             case User user:
                 await CascadeRangeAsync(
-                    UserRefreshTokens.IgnoreQueryFilters().Where(t => t.UserId == user.Id && (physicalDelete || !t.IsDeleted)),
-                    physicalDelete,
+                    UserRefreshTokens.Where(t => t.UserId == user.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    Profiles.IgnoreQueryFilters().Where(p => p.UserId == user.Id && (physicalDelete || !p.IsDeleted)),
-                    physicalDelete,
+                    Profiles.Where(p => p.UserId == user.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 break;
 
             case Profile profile:
                 await CascadeRangeAsync(
-                    Skills.IgnoreQueryFilters().Where(s => s.ProfileId == profile.UserId && (physicalDelete || !s.IsDeleted)),
-                    physicalDelete,
+                    Skills.Where(s => s.ProfileId == profile.UserId),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    GitHubRepositories.IgnoreQueryFilters().Where(r => r.ProfileId == profile.UserId && (physicalDelete || !r.IsDeleted)),
-                    physicalDelete,
+                    GitHubRepositories.Where(r => r.ProfileId == profile.UserId),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    ChatSessions.IgnoreQueryFilters().Where(s => s.ProfileId == profile.UserId && (physicalDelete || !s.IsDeleted)),
-                    physicalDelete,
+                    ChatSessions.Where(s => s.ProfileId == profile.UserId),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    PersonalRoadmaps.IgnoreQueryFilters().Where(r => r.ProfileId == profile.UserId && (physicalDelete || !r.IsDeleted)),
-                    physicalDelete,
+                    PersonalRoadmaps.Where(r => r.ProfileId == profile.UserId),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 break;
 
             case ChatSession chatSession:
                 await CascadeRangeAsync(
-                    ChatMessages.IgnoreQueryFilters().Where(m => m.ChatSessionId == chatSession.Id && (physicalDelete || !m.IsDeleted)),
-                    physicalDelete,
+                    ChatMessages.Where(m => m.ChatSessionId == chatSession.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 break;
 
             case CareerRole careerRole:
                 await CascadeRangeAsync(
-                    CareerRoadmaps.IgnoreQueryFilters().Where(r => r.CareerRoleId == careerRole.Id && (physicalDelete || !r.IsDeleted)),
-                    physicalDelete,
+                    CareerRoadmaps.Where(r => r.CareerRoleId == careerRole.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 break;
 
             case CareerRoadmap careerRoadmap:
                 await CascadeRangeAsync(
-                    RoadmapNodeEdges.IgnoreQueryFilters().Where(e => e.CareerRoadmapId == careerRoadmap.Id && (physicalDelete || !e.IsDeleted)),
-                    physicalDelete,
+                    RoadmapNodeEdges.Where(e => e.CareerRoadmapId == careerRoadmap.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    RoadmapNodes.IgnoreQueryFilters().Where(n => n.CareerRoadmapId == careerRoadmap.Id && (physicalDelete || !n.IsDeleted)),
-                    physicalDelete,
+                    RoadmapNodes.Where(n => n.CareerRoadmapId == careerRoadmap.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    PersonalRoadmaps.IgnoreQueryFilters().Where(r => r.CareerRoadmapId == careerRoadmap.Id && (physicalDelete || !r.IsDeleted)),
-                    physicalDelete,
+                    PersonalRoadmaps.Where(r => r.CareerRoadmapId == careerRoadmap.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 break;
 
             case PersonalRoadmap personalRoadmap:
                 await CascadeRangeAsync(
-                    NodeProgresses.IgnoreQueryFilters().Where(p => p.PersonalRoadmapId == personalRoadmap.Id && (physicalDelete || !p.IsDeleted)),
-                    physicalDelete,
+                    NodeProgresses.Where(p => p.PersonalRoadmapId == personalRoadmap.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 break;
 
             case Node node:
                 await CascadeRangeAsync(
-                    Nodes.IgnoreQueryFilters().Where(n => n.ParentNodeId == node.Id && (physicalDelete || !n.IsDeleted)),
-                    physicalDelete,
+                    Nodes.Where(n => n.ParentNodeId == node.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    LearningResources.IgnoreQueryFilters().Where(r => r.NodeId == node.Id && (physicalDelete || !r.IsDeleted)),
-                    physicalDelete,
+                    LearningResources.Where(r => r.NodeId == node.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    RoadmapNodes.IgnoreQueryFilters().Where(r => r.NodeId == node.Id && (physicalDelete || !r.IsDeleted)),
-                    physicalDelete,
+                    RoadmapNodes.Where(r => r.NodeId == node.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 break;
 
             case RoadmapNode roadmapNode:
                 await CascadeRangeAsync(
-                    RoadmapNodes.IgnoreQueryFilters().Where(n => n.ParentRoadmapNodeId == roadmapNode.Id && (physicalDelete || !n.IsDeleted)),
-                    physicalDelete,
+                    RoadmapNodes.Where(n => n.ParentRoadmapNodeId == roadmapNode.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    RoadmapNodeEdges.IgnoreQueryFilters().Where(e =>
-                        (e.FromRoadmapNodeId == roadmapNode.Id || e.ToRoadmapNodeId == roadmapNode.Id) && (physicalDelete || !e.IsDeleted)),
-                    physicalDelete,
+                    RoadmapNodeEdges.Where(e =>
+                        e.FromRoadmapNodeId == roadmapNode.Id || e.ToRoadmapNodeId == roadmapNode.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 await CascadeRangeAsync(
-                    NodeProgresses.IgnoreQueryFilters().Where(p => p.RoadmapNodeId == roadmapNode.Id && (physicalDelete || !p.IsDeleted)),
-                    physicalDelete,
+                    NodeProgresses.Where(p => p.RoadmapNodeId == roadmapNode.Id),
                     queue,
                     queued,
-                    now,
                     cancellationToken);
                 break;
         }
@@ -273,33 +210,16 @@ public class AppDbContext : DbContext
 
     private async Task CascadeRangeAsync<T>(
         IQueryable<T> query,
-        bool physicalDelete,
         Queue<BaseAuditableEntity> queue,
         HashSet<string> queued,
-        DateTime now,
         CancellationToken cancellationToken) where T : BaseAuditableEntity
     {
         var dependents = await query.ToListAsync(cancellationToken);
         foreach (var dependent in dependents)
         {
-            if (physicalDelete)
-            {
-                Entry(dependent).State = EntityState.Deleted;
-            }
-            else
-            {
-                MarkSoftDeleted(dependent, now);
-            }
-
+            Entry(dependent).State = EntityState.Deleted;
             Enqueue(dependent, queue, queued);
         }
-    }
-
-    private void MarkSoftDeleted(BaseAuditableEntity entity, DateTime now)
-    {
-        entity.IsDeleted = true;
-        entity.UpdatedAt = now;
-        Entry(entity).State = EntityState.Modified;
     }
 
     private static string GetEntityKey(BaseAuditableEntity entity)

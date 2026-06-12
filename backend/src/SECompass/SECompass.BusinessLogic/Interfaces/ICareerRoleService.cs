@@ -9,5 +9,5 @@ public interface ICareerRoleService
     Task<ServiceResult<List<CareerRoleDto>>> GetAllAsync();
     Task<ServiceResult<CareerRoleDto>> GetByIdAsync(Guid id);
     Task<ServiceResult<CareerRoleDto>> UpdateAsync(Guid id, UpdateCareerRoleDto dto);
-    Task<ServiceResult<bool>> DeleteAsync(Guid id, bool physicalDelete = false);
+    Task<ServiceResult<bool>> DeleteAsync(Guid id);
 }

@@ -52,11 +52,11 @@ public class CareerRoleService : ICareerRoleService
         return ServiceResult<CareerRoleDto>.Ok(_mapper.Map<CareerRoleDto>(role));
     }
 
-    public async Task<ServiceResult<bool>> DeleteAsync(Guid id, bool physicalDelete = false)
+    public async Task<ServiceResult<bool>> DeleteAsync(Guid id)
     {
         var role = await _uow.CareerRoles.GetByIdAsync(id);
         if (role == null) return ServiceResult<bool>.Fail("Career role not found.");
-        _uow.CareerRoles.Delete(role, physicalDelete);
+        _uow.CareerRoles.Delete(role);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

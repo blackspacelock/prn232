@@ -19,8 +19,5 @@ public class JobTrendConfiguration : IEntityTypeConfiguration<JobTrend>
         builder.Property(jt => jt.SnapshotDate).IsRequired();
         builder.Property(jt => jt.CreatedAt).IsRequired();
         builder.Property(jt => jt.UpdatedAt).IsRequired(false);
-        builder.Property(jt => jt.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(jt => !jt.IsDeleted);
     }
 }

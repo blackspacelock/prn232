@@ -27,9 +27,9 @@ public class SkillsController : ControllerBase
     [HttpDelete("{skillId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Remove(Guid skillId, [FromQuery(Name = "delete")] bool physicalDelete = false)
+    public async Task<IActionResult> Remove(Guid skillId)
     {
-        var result = await _skillService.RemoveSkillAsync(skillId, physicalDelete);
+        var result = await _skillService.RemoveSkillAsync(skillId);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }
