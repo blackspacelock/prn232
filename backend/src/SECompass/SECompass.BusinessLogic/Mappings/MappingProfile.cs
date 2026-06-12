@@ -80,8 +80,12 @@ public class MappingProfile : AutoMapper.Profile
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
 
         // PersonalRoadmap
-        CreateMap<PersonalRoadmap, PersonalRoadmapDto>();
+        CreateMap<PersonalRoadmap, PersonalRoadmapDto>()
+            .ForMember(d => d.CareerRoadmapName, o => o.MapFrom(s => s.CareerRoadmap.Name))
+            .ForMember(d => d.CareerRoadmapDescription, o => o.MapFrom(s => s.CareerRoadmap.Description));
         CreateMap<PersonalRoadmap, PersonalRoadmapDetailDto>()
+            .ForMember(d => d.CareerRoadmapName, o => o.MapFrom(s => s.CareerRoadmap.Name))
+            .ForMember(d => d.CareerRoadmapDescription, o => o.MapFrom(s => s.CareerRoadmap.Description))
             .ForMember(d => d.NodeProgresses, o => o.MapFrom(s => s.NodeProgresses));
 
         // NodeProgress

@@ -155,6 +155,8 @@ export const GET_PERSONAL_ROADMAPS_BY_PROFILE = gql`
       id
       profileId
       careerRoadmapId
+      careerRoadmapName
+      careerRoadmapDescription
       note
       progressPercentage
       isActive
@@ -169,6 +171,8 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
       id
       profileId
       careerRoadmapId
+      careerRoadmapName
+      careerRoadmapDescription
       note
       progressPercentage
       isActive

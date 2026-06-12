@@ -9,7 +9,8 @@ import { ActiveBadge } from '../components/ActiveBadge';
 import { ActionButton, ActionLink } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
-import { FolderOpen, MoreVertical, Rocket, Search, Star, Trash2 } from 'lucide-react';
+import { ToggleSwitch } from '../components/ToggleSwitch';
+import { FolderOpen, MoreVertical, Rocket, Search, Trash2 } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -50,6 +51,7 @@ export function RoadmapsPage() {
   const roadmaps = searchQuery
     ? allRoadmaps.filter((r) =>
         new Date(r.createdAt).toLocaleDateString().includes(searchQuery) ||
+        (r.careerRoadmapName ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (r.note ?? '').toLowerCase().includes(searchQuery.toLowerCase())
       )
     : allRoadmaps;
@@ -89,7 +91,7 @@ export function RoadmapsPage() {
       await apolloClient.refetchQueries({ include: [GET_PERSONAL_ROADMAPS_BY_PROFILE] });
     },
     onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to set active roadmap.';
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update active roadmap.';
       showError(msg);
     },
   });
@@ -216,22 +218,21 @@ function RoadmapCard({ roadmap, onDelete, onActivate, activating }: { roadmap: P
   return (
     <div className="md3-card relative p-5 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between mb-3">
-        <h3 className="text-base font-medium text-[var(--md3-on-surface)]">Roadmap</h3>
+        <div className="min-w-0 pr-3">
+          <h3 className="truncate text-base font-medium text-[var(--md3-on-surface)]">
+            {roadmap.careerRoadmapName || 'Roadmap'}
+          </h3>
+          {roadmap.careerRoadmapDescription && (
+            <p className="mt-1 line-clamp-2 text-xs text-[var(--md3-on-surface-variant)]">
+              {roadmap.careerRoadmapDescription}
+            </p>
+          )}
+        </div>
         <button onClick={() => setMenuOpen(!menuOpen)} className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--md3-on-surface-variant)] hover:bg-[var(--md3-surface-variant)]" aria-label="Roadmap actions">
           <MoreVertical className="h-5 w-5" />
         </button>
         {menuOpen && (
           <div className="absolute right-4 top-14 z-10 min-w-36 rounded-xl border border-[var(--md3-outline-variant)] bg-white p-1 shadow-lg">
-            {!roadmap.isActive && (
-              <ActionButton
-                icon={Star}
-                label="Set Active"
-                variant="text"
-                disabled={activating}
-                onClick={() => { setMenuOpen(false); onActivate(); }}
-                className="w-full justify-start rounded-lg"
-              />
-            )}
             <ActionButton icon={Trash2} label="Delete" variant="danger" onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full justify-start rounded-lg" />
           </div>
         )}
@@ -257,11 +258,23 @@ function RoadmapCard({ roadmap, onDelete, onActivate, activating }: { roadmap: P
         )}
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-[var(--md3-outline-variant)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[var(--md3-outline-variant)]">
         <span className="text-xs text-[var(--md3-on-surface-variant)]">
           {new Date(roadmap.createdAt).toLocaleDateString()}
         </span>
-        <ActionLink icon={FolderOpen} label="Open" to={`/roadmap/${roadmap.id}`} />
+        <div className="flex items-center gap-2">
+          <ToggleSwitch
+            checked={roadmap.isActive}
+            disabled={activating}
+            loading={activating}
+            label="Active"
+            loadingLabel="Updating..."
+            activeTone="success"
+            aria-label={roadmap.isActive ? 'Deactivate roadmap' : 'Activate roadmap'}
+            onChange={onActivate}
+          />
+          <ActionLink icon={FolderOpen} label="Open" to={`/roadmap/${roadmap.id}`} />
+        </div>
       </div>
     </div>
   );

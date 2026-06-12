@@ -183,6 +183,8 @@ export interface PersonalRoadmapDto {
   id: string;
   profileId: string;
   careerRoadmapId: string;
+  careerRoadmapName: string;
+  careerRoadmapDescription?: string;
   note?: string;
   progressPercentage: number;
   isActive: boolean;
@@ -193,6 +195,8 @@ export interface PersonalRoadmapDetailDto {
   id: string;
   profileId: string;
   careerRoadmapId: string;
+  careerRoadmapName: string;
+  careerRoadmapDescription?: string;
   note?: string;
   progressPercentage: number;
   isActive: boolean;
