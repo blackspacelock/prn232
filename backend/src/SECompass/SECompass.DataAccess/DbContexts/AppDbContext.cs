@@ -28,11 +28,6 @@ public class AppDbContext : DbContext
     public DbSet<JobScrapingSetting> JobScrapingSettings { get; set; }
     public DbSet<JobScrapingSource> JobScrapingSources { get; set; }
 
-    public void Delete(BaseAuditableEntity entity)
-    {
-        Entry(entity).State = EntityState.Deleted;
-    }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -41,7 +36,7 @@ public class AppDbContext : DbContext
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await ApplyDeleteCascadeAsync(cancellationToken);
+        await ApplyPhysicalDeleteCascadeAsync(cancellationToken);
 
         var entries = ChangeTracker.Entries<BaseAuditableEntity>();
         foreach (var entry in entries)
@@ -59,7 +54,7 @@ public class AppDbContext : DbContext
         return result;
     }
 
-    private async Task ApplyDeleteCascadeAsync(CancellationToken cancellationToken)
+    private async Task ApplyPhysicalDeleteCascadeAsync(CancellationToken cancellationToken)
     {
         var deleteQueue = new Queue<BaseAuditableEntity>();
         var deleteQueued = new HashSet<string>();
