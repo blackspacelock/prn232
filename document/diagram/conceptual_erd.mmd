@@ -7,6 +7,7 @@ erDiagram
     %% Core User & Profile Entities
     User ||--|| Profile : "1:1 (Shared PK)"
     Profile ||--o{ GitHubRepository : "owns"
+    Profile ||--|| PublicPortfolio : "1:1 (owns portfolio)"
     Profile ||--o{ ChatSession : "initiates"
     ChatSession ||--o{ ChatMessage : "contains"
     User ||--|{ UserRefreshToken : "issues"
