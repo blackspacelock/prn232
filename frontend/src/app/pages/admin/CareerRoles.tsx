@@ -9,7 +9,7 @@ import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
-import { apiClient } from '@/lib/axios';
+import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { GET_CAREER_ROLES } from '@/graphql/queries';
 
 interface CareerRole { id: string; name: string; description?: string; createdAt: string }
@@ -44,7 +44,7 @@ export function AdminCareerRolesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/api/career-roles/${id}`),
+    mutationFn: (id: string) => deleteWithCascadeMode(`/api/career-roles/${id}`),
     onSuccess: async () => { await invalidate(); setDeleteId(null); },
     onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
   });

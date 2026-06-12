@@ -163,12 +163,6 @@ public class CareerRoadmapService : ICareerRoadmapService
         var rn = rns.FirstOrDefault();
         if (rn == null) return ServiceResult<bool>.Fail("Roadmap node not found.");
 
-        var hasChildren = await _uow.RoadmapNodes.ExistsAsync(child => child.ParentRoadmapNodeId == roadmapNodeId);
-        if (hasChildren) return ServiceResult<bool>.Fail("Cannot remove a roadmap node that still has child roadmap nodes.");
-
-        var hasProgress = await _uow.NodeProgresses.ExistsAsync(np => np.RoadmapNodeId == roadmapNodeId);
-        if (hasProgress) return ServiceResult<bool>.Fail("Cannot remove a roadmap node that already has personal progress.");
-
         var edges = await _uow.RoadmapNodeEdges.FindAsync(e =>
             e.CareerRoadmapId == roadmapId &&
             (e.FromRoadmapNodeId == roadmapNodeId || e.ToRoadmapNodeId == roadmapNodeId));

@@ -13,7 +13,7 @@ import {
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
-import { apiClient } from '@/lib/axios';
+import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
 import { GET_PROFILE_WITH_SKILLS, GET_USER_BY_ID } from '@/graphql/queries';
 import type { UpdateProfileDto, UpdateUserDto, AddSkillDto } from '@/types/api';
@@ -111,7 +111,7 @@ export function SettingsPage() {
   });
 
   const deleteSkillMutation = useMutation({
-    mutationFn: (skillId: string) => apiClient.delete(`/api/skills/${skillId}`),
+    mutationFn: (skillId: string) => deleteWithCascadeMode(`/api/skills/${skillId}`),
     onSuccess: async () => {
       await apolloClient.refetchQueries({ include: [GET_PROFILE_WITH_SKILLS] });
       setDeleteSkillId(null);
@@ -124,7 +124,7 @@ export function SettingsPage() {
   });
 
   const deactivateMutation = useMutation({
-    mutationFn: () => apiClient.put(`/api/users/${userId}/deactivate`),
+    mutationFn: () => deleteWithCascadeMode(`/api/users/${userId}`),
     onSuccess: () => {
       clearAuth();
       navigate('/login', { replace: true });

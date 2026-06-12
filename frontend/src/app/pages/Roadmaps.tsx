@@ -12,7 +12,7 @@ import { FolderOpen, MoreVertical, Rocket, Search, Trash2 } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
-import { apiClient } from '@/lib/axios';
+import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { apolloClient } from '@/lib/apollo';
 import {
   GET_PERSONAL_ROADMAPS_BY_PROFILE,
@@ -77,7 +77,7 @@ export function RoadmapsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/api/personal-roadmaps/${id}`),
+    mutationFn: (id: string) => deleteWithCascadeMode(`/api/personal-roadmaps/${id}`),
     onSuccess: async () => {
       await apolloClient.refetchQueries({ include: [GET_PERSONAL_ROADMAPS_BY_PROFILE] });
       setDeleteId(null);

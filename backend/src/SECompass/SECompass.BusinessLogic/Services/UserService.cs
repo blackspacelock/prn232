@@ -42,17 +42,7 @@ public class UserService : IUserService
         var user = await _uow.Users.GetByIdAsync(userId);
         if (user == null) return ServiceResult<bool>.Fail("User not found.");
 
-        user.IsActive = false;
-        _uow.Users.Update(user);
-
-        var refreshTokens = await _uow.UserRefreshTokens.FindAsync(t => t.UserId == userId && !t.IsRevoked);
-        foreach (var token in refreshTokens)
-        {
-            token.IsRevoked = true;
-            token.RevokedAt = DateTime.Now;
-            _uow.UserRefreshTokens.Update(token);
-        }
-
+        _uow.Users.Delete(user);
         await _uow.SaveChangesAsync();
         return ServiceResult<bool>.Ok(true);
     }

@@ -20,11 +20,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.AvatarUrl).IsRequired(false);
         builder.Property(u => u.CreatedAt).IsRequired();
         builder.Property(u => u.UpdatedAt).IsRequired(false);
-        builder.Property(u => u.IsDeleted).IsRequired().HasDefaultValue(false);
 
         builder.HasIndex(u => u.Email).IsUnique();
         builder.HasIndex(u => u.GoogleId).IsUnique().HasFilter("[GoogleId] IS NOT NULL");
-
-        builder.HasQueryFilter(u => !u.IsDeleted);
     }
 }

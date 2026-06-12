@@ -17,13 +17,10 @@ public class CareerRoadmapConfiguration : IEntityTypeConfiguration<CareerRoadmap
         builder.Property(r => r.IsCustom).IsRequired().HasDefaultValue(false);
         builder.Property(r => r.CreatedAt).IsRequired();
         builder.Property(r => r.UpdatedAt).IsRequired(false);
-        builder.Property(r => r.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(r => !r.IsDeleted);
 
         builder.HasOne(r => r.CareerRole)
             .WithMany(cr => cr.CareerRoadmaps)
             .HasForeignKey(r => r.CareerRoleId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

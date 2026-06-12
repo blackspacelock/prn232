@@ -9,7 +9,7 @@ import { Plus, Pencil, Trash2, Network, ChevronRight, Hash, Search } from 'lucid
 import { useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
-import { apiClient } from '@/lib/axios';
+import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { GET_NODE_CHILDREN, GET_NODE_HIERARCHY } from '@/graphql/queries';
 
 interface NodeItem { id: string; name: string; description?: string; parentNodeId?: string; order: number }
@@ -55,7 +55,7 @@ export function AdminNodeLibraryPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/api/nodes/${id}`),
+    mutationFn: (id: string) => deleteWithCascadeMode(`/api/nodes/${id}`),
     onSuccess: async () => { await invalidate(); setDeleteId(null); },
     onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
   });

@@ -18,15 +18,12 @@ public class UserRefreshTokenConfiguration : IEntityTypeConfiguration<UserRefres
         builder.Property(t => t.RevokedAt).IsRequired(false);
         builder.Property(t => t.CreatedAt).IsRequired();
         builder.Property(t => t.UpdatedAt).IsRequired(false);
-        builder.Property(t => t.IsDeleted).IsRequired().HasDefaultValue(false);
 
         builder.HasIndex(t => t.Token).IsUnique();
-
-        builder.HasQueryFilter(t => !t.IsDeleted);
 
         builder.HasOne(t => t.User)
             .WithMany(u => u.UserRefreshTokens)
             .HasForeignKey(t => t.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

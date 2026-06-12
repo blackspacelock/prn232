@@ -17,21 +17,17 @@ public class NodeProgressConfiguration : IEntityTypeConfiguration<NodeProgress>
         builder.Property(np => np.Note).IsRequired(false);
         builder.Property(np => np.CreatedAt).IsRequired();
         builder.Property(np => np.UpdatedAt).IsRequired(false);
-        builder.Property(np => np.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(np => !np.IsDeleted);
         builder.HasIndex(np => new { np.PersonalRoadmapId, np.RoadmapNodeId })
-            .IsUnique()
-            .HasFilter("[IsDeleted] = 0");
+            .IsUnique();
 
         builder.HasOne(np => np.PersonalRoadmap)
             .WithMany(pr => pr.NodeProgresses)
             .HasForeignKey(np => np.PersonalRoadmapId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
 
         builder.HasOne(np => np.RoadmapNode)
             .WithMany(rn => rn.NodeProgresses)
             .HasForeignKey(np => np.RoadmapNodeId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

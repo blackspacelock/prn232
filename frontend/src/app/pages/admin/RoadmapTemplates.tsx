@@ -8,7 +8,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Plus, Pencil, Trash2, Map, Network, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
-import { apiClient } from '@/lib/axios';
+import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { GET_CAREER_ROADMAPS_BY_ROLE, GET_CAREER_ROLES, GET_CAREER_ROADMAP_WITH_NODES } from '@/graphql/queries';
 import type { CreateRoadmapNodeDto, RoadmapNodeDto } from '@/types/api';
 
@@ -79,7 +79,7 @@ export function AdminRoadmapTemplatesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/api/career-roadmaps/${id}`),
+    mutationFn: (id: string) => deleteWithCascadeMode(`/api/career-roadmaps/${id}`),
     onSuccess: () => { invalidateList(); setDeleteId(null); if (expandedRoadmapId === deleteId) setExpandedRoadmapId(null); },
     onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
   });
@@ -104,7 +104,7 @@ export function AdminRoadmapTemplatesPage() {
 
   const removeNodeMutation = useMutation({
     mutationFn: ({ roadmapId, roadmapNodeId }: { roadmapId: string; roadmapNodeId: string }) =>
-      apiClient.delete(`/api/career-roadmaps/${roadmapId}/roadmap-nodes/${roadmapNodeId}`),
+      deleteWithCascadeMode(`/api/career-roadmaps/${roadmapId}/roadmap-nodes/${roadmapNodeId}`),
     onSuccess: () => { if (expandedRoadmapId) reloadNodes(expandedRoadmapId); },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to remove node.'),
   });

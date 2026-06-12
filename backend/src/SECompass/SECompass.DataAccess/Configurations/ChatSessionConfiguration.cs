@@ -16,14 +16,11 @@ public class ChatSessionConfiguration : IEntityTypeConfiguration<ChatSession>
         builder.Property(c => c.Summary).IsRequired(false);
         builder.Property(c => c.CreatedAt).IsRequired();
         builder.Property(c => c.UpdatedAt).IsRequired(false);
-        builder.Property(c => c.IsDeleted).IsRequired().HasDefaultValue(false);
-
-        builder.HasQueryFilter(c => !c.IsDeleted);
 
         builder.HasOne(c => c.Profile)
             .WithMany(p => p.ChatSessions)
             .HasForeignKey(c => c.ProfileId)
             .HasPrincipalKey(p => p.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
     }
 }

@@ -10,6 +10,6 @@ public class ChatRepository : GenericRepository<ChatSession>, IChatRepository
 
     public async Task<ChatSession?> GetSessionWithMessagesAsync(Guid chatSessionId)
         => await _dbSet
-            .Include(s => s.ChatMessages.Where(m => !m.IsDeleted).OrderBy(m => m.CreatedAt))
+            .Include(s => s.ChatMessages.OrderBy(m => m.CreatedAt))
             .FirstOrDefaultAsync(s => s.Id == chatSessionId);
 }
