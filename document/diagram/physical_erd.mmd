@@ -12,6 +12,31 @@ erDiagram
         BIT IsDeleted
     }
 
+    JobScrapingSetting {
+        UUID JobScrapingSettingId PK
+        BIT Enabled
+        NVARCHAR(20) Frequency
+        NVARCHAR(8) TimeOfDay
+        NVARCHAR(20) DayOfWeek
+        DATETIME LastRunAt "NULLABLE"
+        DATETIME CreatedAt
+        DATETIME UpdatedAt "NULLABLE"
+    }
+
+    JobScrapingSource {
+        UUID JobScrapingSourceId PK
+        NVARCHAR(100) Name
+        NVARCHAR(100) Region
+        BIT Enabled
+        NVARCHAR(1000) Url
+        NVARCHAR(1000) JobCardXPath
+        NVARCHAR(1000) TitleXPath
+        NVARCHAR(1000) TagsXPath
+        INT MaxPostings
+        DATETIME CreatedAt
+        DATETIME UpdatedAt "NULLABLE"
+    }
+
     User {
         UUID UserId PK
         NVARCHAR(255) FullName
