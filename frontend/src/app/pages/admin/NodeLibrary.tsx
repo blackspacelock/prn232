@@ -8,8 +8,8 @@ import { EmptyState } from '../../components/EmptyState';
 import { Plus, Pencil, Trash2, Network, ChevronRight, Hash, Search } from 'lucide-react';
 import { useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
-import { apolloClient } from '@/lib/apollo';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
+import { appendCachedListItem, removeCachedListItem, replaceCachedListItem } from '@/lib/apolloCache';
 import { GET_NODE_CHILDREN, GET_NODE_HIERARCHY } from '@/graphql/queries';
 
 interface NodeItem { id: string; name: string; description?: string; parentNodeId?: string; order: number }
@@ -39,24 +39,34 @@ export function AdminNodeLibraryPage() {
   const hierarchyRootName =
     (hierarchyData as { nodeHierarchy?: { name?: string } } | undefined)?.nodeHierarchy?.name;
 
-  const invalidate = () => apolloClient.refetchQueries({ include: [GET_NODE_CHILDREN] });
+  const childrenQueryOptions = parentId ? { query: GET_NODE_CHILDREN, variables: { parentId } } : null;
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
 
   const createMutation = useMutation({
-    mutationFn: (dto: NodeDto) => apiClient.post('/api/nodes', dto),
-    onSuccess: async () => { await invalidate(); setShowForm(false); },
+    mutationFn: (dto: NodeDto) => apiClient.post<NodeItem>('/api/nodes', dto).then((r) => r.data),
+    onSuccess: (node) => {
+      if (childrenQueryOptions) appendCachedListItem<NodeItem>(childrenQueryOptions, 'nodeChildren', node);
+      setShowForm(false);
+    },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create.'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: NodeDto }) => apiClient.put(`/api/nodes/${id}`, dto),
-    onSuccess: async () => { await invalidate(); setEditingNode(null); setShowForm(false); },
+    mutationFn: ({ id, dto }: { id: string; dto: NodeDto }) => apiClient.put<NodeItem>(`/api/nodes/${id}`, dto).then((r) => r.data),
+    onSuccess: (node) => {
+      if (childrenQueryOptions) replaceCachedListItem<NodeItem>(childrenQueryOptions, 'nodeChildren', node);
+      setEditingNode(null);
+      setShowForm(false);
+    },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update.'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWithCascadeMode(`/api/nodes/${id}`),
-    onSuccess: async () => { await invalidate(); setDeleteId(null); },
+    onSuccess: (_data, id) => {
+      if (childrenQueryOptions) removeCachedListItem<NodeItem>(childrenQueryOptions, 'nodeChildren', id);
+      setDeleteId(null);
+    },
     onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
   });
 

@@ -9,6 +9,8 @@ import { Plus, Pencil, Trash2, Map, Network, ChevronDown, ChevronRight, X } from
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
+import { apolloClient } from '@/lib/apollo';
+import { appendCachedListItem, removeCachedListItem, replaceCachedListItem } from '@/lib/apolloCache';
 import { GET_CAREER_ROADMAPS_BY_ROLE, GET_CAREER_ROLES, GET_CAREER_ROADMAP_WITH_NODES } from '@/graphql/queries';
 import type { CreateRoadmapNodeDto, RoadmapNodeDto } from '@/types/api';
 
@@ -57,38 +59,66 @@ export function AdminRoadmapTemplatesPage() {
   const rootRoadmapNodes = roadmapNodes.filter((n) => !n.parentRoadmapNodeId || !roadmapNodeIdSet.has(n.parentRoadmapNodeId));
 
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
+  const roadmapsQueryOptions = selectedRoleId
+    ? { query: GET_CAREER_ROADMAPS_BY_ROLE, variables: { careerRoleId: selectedRoleId } }
+    : null;
 
-  const invalidateList = () => {
-    if (selectedRoleId) refetch();
-  };
-
-  const reloadNodes = (roadmapId: string) => {
-    loadRoadmapNodes({ variables: { roadmapId } });
+  const updateExpandedRoadmapNodes = (roadmapId: string, updater: (nodes: RoadmapNodeDto[]) => RoadmapNodeDto[]) => {
+    apolloClient.cache.updateQuery<{ careerRoadmapWithNodes?: { nodes: RoadmapNodeDto[] } }>(
+      { query: GET_CAREER_ROADMAP_WITH_NODES, variables: { roadmapId } },
+      (current) => current?.careerRoadmapWithNodes
+        ? {
+            careerRoadmapWithNodes: {
+              ...current.careerRoadmapWithNodes,
+              nodes: updater(current.careerRoadmapWithNodes.nodes ?? []),
+            },
+          }
+        : current,
+    );
   };
 
   const createMutation = useMutation({
-    mutationFn: (dto: RoadmapDto) => apiClient.post('/api/career-roadmaps', dto),
-    onSuccess: () => { invalidateList(); setShowForm(false); },
+    mutationFn: (dto: RoadmapDto) => apiClient.post<CareerRoadmap>('/api/career-roadmaps', dto).then((r) => r.data),
+    onSuccess: (roadmap) => {
+      if (roadmapsQueryOptions && roadmap.careerRoleId === selectedRoleId) {
+        appendCachedListItem<CareerRoadmap>(roadmapsQueryOptions, 'careerRoadmapsByRole', roadmap);
+      }
+      setShowForm(false);
+    },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create.'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: RoadmapDto }) => apiClient.put(`/api/career-roadmaps/${id}`, dto),
-    onSuccess: () => { invalidateList(); setEditingRoadmap(null); setShowForm(false); },
+    mutationFn: ({ id, dto }: { id: string; dto: RoadmapDto }) => apiClient.put<CareerRoadmap>(`/api/career-roadmaps/${id}`, dto).then((r) => r.data),
+    onSuccess: (roadmap) => {
+      if (roadmapsQueryOptions) {
+        if (roadmap.careerRoleId === selectedRoleId) {
+          replaceCachedListItem<CareerRoadmap>(roadmapsQueryOptions, 'careerRoadmapsByRole', roadmap);
+        } else if (editingRoadmap) {
+          removeCachedListItem<CareerRoadmap>(roadmapsQueryOptions, 'careerRoadmapsByRole', editingRoadmap.id);
+        }
+      }
+      setEditingRoadmap(null);
+      setShowForm(false);
+    },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update.'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWithCascadeMode(`/api/career-roadmaps/${id}`),
-    onSuccess: () => { invalidateList(); setDeleteId(null); if (expandedRoadmapId === deleteId) setExpandedRoadmapId(null); },
+    onSuccess: (_data, id) => {
+      if (roadmapsQueryOptions) removeCachedListItem<CareerRoadmap>(roadmapsQueryOptions, 'careerRoadmapsByRole', id);
+      setDeleteId(null);
+      if (expandedRoadmapId === id) setExpandedRoadmapId(null);
+    },
     onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
   });
 
   const assignNodeMutation = useMutation({
     mutationFn: ({ roadmapId, dto }: { roadmapId: string; dto: CreateRoadmapNodeDto }) =>
-      apiClient.post(`/api/career-roadmaps/${roadmapId}/roadmap-nodes`, dto),
-    onSuccess: () => {
-      if (expandedRoadmapId) reloadNodes(expandedRoadmapId);
+      apiClient.post<RoadmapNodeDto>(`/api/career-roadmaps/${roadmapId}/roadmap-nodes`, dto).then((r) => r.data),
+    onSuccess: (roadmapNode, { roadmapId }) => {
+      updateExpandedRoadmapNodes(roadmapId, (nodes) => [...nodes, roadmapNode]);
       setRoadmapNodeForm({
         nodeId: '',
         parentRoadmapNodeId: undefined,
@@ -105,7 +135,9 @@ export function AdminRoadmapTemplatesPage() {
   const removeNodeMutation = useMutation({
     mutationFn: ({ roadmapId, roadmapNodeId }: { roadmapId: string; roadmapNodeId: string }) =>
       deleteWithCascadeMode(`/api/career-roadmaps/${roadmapId}/roadmap-nodes/${roadmapNodeId}`),
-    onSuccess: () => { if (expandedRoadmapId) reloadNodes(expandedRoadmapId); },
+    onSuccess: (_data, { roadmapId, roadmapNodeId }) => {
+      updateExpandedRoadmapNodes(roadmapId, (nodes) => nodes.filter((node) => node.id !== roadmapNodeId));
+    },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to remove node.'),
   });
 

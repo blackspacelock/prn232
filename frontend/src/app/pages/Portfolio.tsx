@@ -8,8 +8,8 @@ import { EmptyState } from '../components/EmptyState';
 import { ExternalLink, Lock, Trash2, Plus, Sparkles } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
-import { apolloClient } from '@/lib/apollo';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
+import { appendCachedListItem, removeCachedListItem } from '@/lib/apolloCache';
 import { useAuthStore } from '@/store/authStore';
 import { GET_GITHUB_REPOS_BY_PROFILE, GET_PORTFOLIO_ANALYSIS } from '@/graphql/queries';
 import type { AddGitHubRepoDto } from '@/types/api';
@@ -47,11 +47,13 @@ export function PortfolioPage() {
 
   const repos: GitHubRepo[] = (reposData as { gitHubRepositoriesByProfile?: GitHubRepo[] })?.gitHubRepositoriesByProfile ?? [];
   const analysis: PortfolioAnalysis | null = (analysisData as { portfolioAnalysis?: PortfolioAnalysis })?.portfolioAnalysis ?? null;
+  const reposQueryOptions = { query: GET_GITHUB_REPOS_BY_PROFILE, variables: { profileId } };
 
   const addRepoMutation = useMutation({
-    mutationFn: (dto: AddGitHubRepoDto) => apiClient.post('/api/github-repositories', dto),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_GITHUB_REPOS_BY_PROFILE] });
+    mutationFn: (dto: AddGitHubRepoDto) =>
+      apiClient.post<GitHubRepo>('/api/github-repositories', dto).then((r) => r.data),
+    onSuccess: (repo) => {
+      appendCachedListItem<GitHubRepo>(reposQueryOptions, 'gitHubRepositoriesByProfile', repo);
       setShowAddForm(false);
       setNewRepo({ repoUrl: '', description: '', isPrivate: false });
     },
@@ -63,8 +65,8 @@ export function PortfolioPage() {
 
   const deleteRepoMutation = useMutation({
     mutationFn: (id: string) => deleteWithCascadeMode(`/api/github-repositories/${id}`),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_GITHUB_REPOS_BY_PROFILE] });
+    onSuccess: (_data, id) => {
+      removeCachedListItem<GitHubRepo>(reposQueryOptions, 'gitHubRepositoriesByProfile', id);
       setDeleteId(null);
     },
     onError: (error: unknown) => {

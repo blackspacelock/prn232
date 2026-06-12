@@ -8,8 +8,8 @@ import { EmptyState } from '../../components/EmptyState';
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
-import { apolloClient } from '@/lib/apollo';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
+import { appendCachedListItem, removeCachedListItem, replaceCachedListItem } from '@/lib/apolloCache';
 import { GET_CAREER_ROLES } from '@/graphql/queries';
 
 interface CareerRole { id: string; name: string; description?: string; createdAt: string }
@@ -28,24 +28,24 @@ export function AdminCareerRolesPage() {
     r.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const invalidate = () => apolloClient.refetchQueries({ include: [GET_CAREER_ROLES] });
+  const rolesQueryOptions = { query: GET_CAREER_ROLES };
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
 
   const createMutation = useMutation({
-    mutationFn: (dto: CareerRoleDto) => apiClient.post('/api/career-roles', dto),
-    onSuccess: async () => { await invalidate(); setShowForm(false); setForm({ name: '', description: '' }); },
+    mutationFn: (dto: CareerRoleDto) => apiClient.post<CareerRole>('/api/career-roles', dto).then((r) => r.data),
+    onSuccess: (role) => { appendCachedListItem<CareerRole>(rolesQueryOptions, 'careerRoles', role); setShowForm(false); setForm({ name: '', description: '' }); },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create.'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: CareerRoleDto }) => apiClient.put(`/api/career-roles/${id}`, dto),
-    onSuccess: async () => { await invalidate(); setEditingRole(null); setShowForm(false); },
+    mutationFn: ({ id, dto }: { id: string; dto: CareerRoleDto }) => apiClient.put<CareerRole>(`/api/career-roles/${id}`, dto).then((r) => r.data),
+    onSuccess: (role) => { replaceCachedListItem<CareerRole>(rolesQueryOptions, 'careerRoles', role); setEditingRole(null); setShowForm(false); },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update.'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWithCascadeMode(`/api/career-roles/${id}`),
-    onSuccess: async () => { await invalidate(); setDeleteId(null); },
+    onSuccess: (_data, id) => { removeCachedListItem<CareerRole>(rolesQueryOptions, 'careerRoles', id); setDeleteId(null); },
     onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
   });
 

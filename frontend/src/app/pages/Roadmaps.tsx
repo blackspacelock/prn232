@@ -16,6 +16,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { apolloClient } from '@/lib/apollo';
+import { removeCachedListItem } from '@/lib/apolloCache';
 import {
   GET_PERSONAL_ROADMAPS_BY_PROFILE,
   GET_CAREER_ROLES,
@@ -57,12 +58,12 @@ export function RoadmapsPage() {
     : allRoadmaps;
   const careerRoles: CareerRole[] = (rolesData as { careerRoles?: CareerRole[] })?.careerRoles ?? [];
   const careerRoadmaps: CareerRoadmap[] = (roadmapsByRoleData as { careerRoadmapsByRole?: CareerRoadmap[] })?.careerRoadmapsByRole ?? [];
+  const personalRoadmapsQueryOptions = { query: GET_PERSONAL_ROADMAPS_BY_PROFILE, variables: { profileId } };
 
   const generateMutation = useMutation({
     mutationFn: (dto: GeneratePersonalRoadmapRequestDto) =>
       apiClient.post<{ id: string }>('/api/personal-roadmaps/generate', dto).then((r) => r.data),
     onSuccess: async (data) => {
-      await apolloClient.refetchQueries({ include: [GET_PERSONAL_ROADMAPS_BY_PROFILE] });
       setIsModalOpen(false);
       navigate(`/roadmap/${data.id}`);
     },
@@ -74,8 +75,8 @@ export function RoadmapsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWithCascadeMode(`/api/personal-roadmaps/${id}`),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_PERSONAL_ROADMAPS_BY_PROFILE] });
+    onSuccess: (_data, id) => {
+      removeCachedListItem<PersonalRoadmap>(personalRoadmapsQueryOptions, 'personalRoadmapsByProfile', id);
       setDeleteId(null);
     },
     onError: (error: unknown) => {
@@ -89,8 +90,7 @@ export function RoadmapsPage() {
     mutationFn: (id: string) => apiClient.put(`/api/personal-roadmaps/${id}/toggle-active`),
     onMutate: async (id: string) => {
       const queryOptions = {
-        query: GET_PERSONAL_ROADMAPS_BY_PROFILE,
-        variables: { profileId },
+        ...personalRoadmapsQueryOptions,
       };
       const previousRoadmaps = apolloClient.cache.readQuery<{ personalRoadmapsByProfile?: PersonalRoadmap[] }>(queryOptions);
 

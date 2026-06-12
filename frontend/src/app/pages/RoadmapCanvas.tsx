@@ -114,9 +114,35 @@ export function RoadmapCanvasPage() {
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ nodeProgressId, dto }: { nodeProgressId: string; dto: UpdateNodeProgressStatusDto }) =>
-      apiClient.put(`/api/node-progress/${nodeProgressId}/status`, dto),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_NODE_PROGRESS] });
+      apiClient.put<ProgressNode>(`/api/node-progress/${nodeProgressId}/status`, dto).then((r) => r.data),
+    onSuccess: (updatedProgress) => {
+      const updateProgressNode = (node: ProgressNode) =>
+        node.id === updatedProgress.id
+          ? {
+              ...node,
+              ...updatedProgress,
+              roadmapNode: updatedProgress.roadmapNode ?? node.roadmapNode,
+              node: updatedProgress.node ?? node.node,
+            }
+          : node;
+
+      apolloClient.cache.updateQuery<{ nodeProgress?: ProgressNode[] }>(
+        { query: GET_NODE_PROGRESS, variables: { personalRoadmapId } },
+        (current) => current?.nodeProgress
+          ? { nodeProgress: current.nodeProgress.map(updateProgressNode) }
+          : current,
+      );
+      apolloClient.cache.updateQuery<{ personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } }>(
+        { query: GET_PERSONAL_ROADMAP_WITH_PROGRESS, variables: { personalRoadmapId } },
+        (current) => current?.personalRoadmapWithProgress?.nodeProgresses
+          ? {
+              personalRoadmapWithProgress: {
+                ...current.personalRoadmapWithProgress,
+                nodeProgresses: current.personalRoadmapWithProgress.nodeProgresses.map(updateProgressNode),
+              },
+            }
+          : current,
+      );
       setSelectedNodeProgress((current) =>
         current && optimisticStatus !== null
           ? {

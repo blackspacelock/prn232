@@ -28,6 +28,16 @@ interface ProfileWithSkills {
   skills: Array<{ id: string; technicalSkillId: string; skillName: string; category: string; note?: string }>;
 }
 
+interface UserInfo {
+  id?: string;
+  fullName?: string;
+  email?: string;
+  role?: number;
+  isActive?: boolean;
+  avatarUrl?: string;
+  createdAt?: string;
+}
+
 export function SettingsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -61,9 +71,11 @@ export function SettingsPage() {
   const { data: technicalSkillsData } = useQuery(GET_TECHNICAL_SKILLS);
 
   const profile: ProfileWithSkills | null = (profileData as { profileWithSkills?: ProfileWithSkills })?.profileWithSkills ?? null;
-  const userInfo = (userData as { userById?: { fullName?: string; avatarUrl?: string } })?.userById ?? null;
+  const userInfo = (userData as { userById?: UserInfo })?.userById ?? null;
   const fullName: string = userInfo?.fullName ?? '';
   const avatarUrl: string = userInfo?.avatarUrl ?? '';
+  const userQueryOptions = { query: GET_USER_BY_ID, variables: { userId } };
+  const profileQueryOptions = { query: GET_PROFILE_WITH_SKILLS, variables: { userId } };
 
   const skills = profile?.skills ?? [];
   const technicalSkills: TechnicalSkillDto[] = (technicalSkillsData as { technicalSkills?: TechnicalSkillDto[] })?.technicalSkills ?? [];
@@ -102,9 +114,12 @@ export function SettingsPage() {
   })();
 
   const updateUserMutation = useMutation({
-    mutationFn: (dto: UpdateUserDto) => apiClient.put(`/api/users/${userId}`, dto),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_USER_BY_ID] });
+    mutationFn: (dto: UpdateUserDto) => apiClient.put<UserInfo>(`/api/users/${userId}`, dto).then((r) => r.data),
+    onSuccess: (updatedUser) => {
+      apolloClient.cache.writeQuery({
+        ...userQueryOptions,
+        data: { userById: updatedUser },
+      });
       setIsEditingAccount(false);
       setSnackbar({ open: true, message: 'Account updated successfully.', variant: 'success' });
     },
@@ -115,9 +130,18 @@ export function SettingsPage() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: (dto: UpdateProfileDto) => apiClient.put(`/api/profiles/${userId}`, dto),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_PROFILE_WITH_SKILLS] });
+    mutationFn: (dto: UpdateProfileDto) => apiClient.put<Omit<ProfileWithSkills, 'skills'>>(`/api/profiles/${userId}`, dto).then((r) => r.data),
+    onSuccess: (updatedProfile) => {
+      apolloClient.cache.updateQuery<{ profileWithSkills?: ProfileWithSkills }>(profileQueryOptions, (current) => {
+        if (!current?.profileWithSkills) return current;
+        return {
+          profileWithSkills: {
+            ...current.profileWithSkills,
+            ...updatedProfile,
+            skills: current.profileWithSkills.skills,
+          },
+        };
+      });
       setIsEditingProfile(false);
       setSnackbar({ open: true, message: 'Profile updated successfully.', variant: 'success' });
     },
@@ -128,9 +152,18 @@ export function SettingsPage() {
   });
 
   const addSkillMutation = useMutation({
-    mutationFn: (dto: AddSkillDto) => apiClient.post('/api/skills', dto),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_PROFILE_WITH_SKILLS] });
+    mutationFn: (dto: AddSkillDto) =>
+      apiClient.post<ProfileWithSkills['skills'][number]>('/api/skills', dto).then((r) => r.data),
+    onSuccess: (skill) => {
+      apolloClient.cache.updateQuery<{ profileWithSkills?: ProfileWithSkills }>(profileQueryOptions, (current) => {
+        if (!current?.profileWithSkills) return current;
+        return {
+          profileWithSkills: {
+            ...current.profileWithSkills,
+            skills: [...current.profileWithSkills.skills, skill],
+          },
+        };
+      });
       setNewSkill('');
     },
     onError: (error: unknown) => {
@@ -141,8 +174,16 @@ export function SettingsPage() {
 
   const deleteSkillMutation = useMutation({
     mutationFn: (skillId: string) => deleteWithCascadeMode(`/api/skills/${skillId}`),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_PROFILE_WITH_SKILLS] });
+    onSuccess: (_data, skillId) => {
+      apolloClient.cache.updateQuery<{ profileWithSkills?: ProfileWithSkills }>(profileQueryOptions, (current) => {
+        if (!current?.profileWithSkills) return current;
+        return {
+          profileWithSkills: {
+            ...current.profileWithSkills,
+            skills: current.profileWithSkills.skills.filter((skill) => skill.id !== skillId),
+          },
+        };
+      });
       setDeleteSkillId(null);
     },
     onError: (error: unknown) => {

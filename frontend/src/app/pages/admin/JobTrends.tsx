@@ -8,8 +8,8 @@ import { EmptyState } from '../../components/EmptyState';
 import { Plus, Pencil, Trash2, TrendingUp } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
-import { apolloClient } from '@/lib/apollo';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
+import { appendCachedListItem, removeCachedListItem, replaceCachedListItem } from '@/lib/apolloCache';
 import { GET_JOB_TRENDS_BY_REGION } from '@/graphql/queries';
 
 interface JobTrend { id: string; techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
@@ -26,24 +26,24 @@ export function AdminJobTrendsPage() {
   const { data, loading, error, refetch } = useQuery(GET_JOB_TRENDS_BY_REGION, { variables: { region } });
   const trends: JobTrend[] = (data as { jobTrendsByRegion?: JobTrend[] })?.jobTrendsByRegion ?? [];
 
-  const invalidate = () => apolloClient.refetchQueries({ include: [GET_JOB_TRENDS_BY_REGION] });
+  const trendsQueryOptions = { query: GET_JOB_TRENDS_BY_REGION, variables: { region } };
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
 
   const createMutation = useMutation({
-    mutationFn: (dto: JobTrendDto) => apiClient.post('/api/job-trends', dto),
-    onSuccess: async () => { await invalidate(); setShowForm(false); },
+    mutationFn: (dto: JobTrendDto) => apiClient.post<JobTrend>('/api/job-trends', dto).then((r) => r.data),
+    onSuccess: (trend) => { appendCachedListItem<JobTrend>(trendsQueryOptions, 'jobTrendsByRegion', trend); setShowForm(false); },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create.'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: JobTrendDto }) => apiClient.put(`/api/job-trends/${id}`, dto),
-    onSuccess: async () => { await invalidate(); setEditingTrend(null); setShowForm(false); },
+    mutationFn: ({ id, dto }: { id: string; dto: JobTrendDto }) => apiClient.put<JobTrend>(`/api/job-trends/${id}`, dto).then((r) => r.data),
+    onSuccess: (trend) => { replaceCachedListItem<JobTrend>(trendsQueryOptions, 'jobTrendsByRegion', trend); setEditingTrend(null); setShowForm(false); },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update.'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWithCascadeMode(`/api/job-trends/${id}`),
-    onSuccess: async () => { await invalidate(); setDeleteId(null); },
+    onSuccess: (_data, id) => { removeCachedListItem<JobTrend>(trendsQueryOptions, 'jobTrendsByRegion', id); setDeleteId(null); },
     onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
   });
 
