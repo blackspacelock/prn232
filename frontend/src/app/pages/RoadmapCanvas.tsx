@@ -73,7 +73,7 @@ export function RoadmapCanvasPage() {
     (progressData as { nodeProgress?: ProgressNode[] })?.nodeProgress ?? [];
   const progressNodes: ProgressNode[] =
     refreshedProgressNodes.length > 0 ? refreshedProgressNodes : personalRoadmapProgressNodes;
-  const personalRoadmap = (data as { personalRoadmapWithProgress?: { careerRoadmapId?: string } })
+  const personalRoadmap = (data as { personalRoadmapWithProgress?: { careerRoadmapId?: string; isActive?: boolean } })
     ?.personalRoadmapWithProgress;
   const careerRoadmapId = personalRoadmap?.careerRoadmapId ?? '';
 
@@ -198,6 +198,7 @@ export function RoadmapCanvasPage() {
           <RoadmapCanvasHeader
             title={roadmapTitle}
             nodeCount={graphNodes.length}
+            isActive={personalRoadmap?.isActive}
             progress={{ completed: completedCount, total: totalCount }}
           />
           <RoadmapGraphCanvas

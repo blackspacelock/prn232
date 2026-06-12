@@ -33,4 +33,14 @@ public class PersonalRoadmapsController : ControllerBase
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }
+
+    [HttpPut("{id:guid}/activate")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activate(Guid id)
+    {
+        var result = await _service.SetActiveAsync(id);
+        if (!result.Success) return NotFound(result.Error);
+        return Ok();
+    }
 }

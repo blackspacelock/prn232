@@ -53,7 +53,17 @@ public class ChatService : IChatService
         await _uow.SaveChangesAsync();
 
         var profile = (await _uow.Profiles.FindAsync(p => p.UserId == session.ProfileId)).FirstOrDefault();
-        var skills = (await _uow.Skills.FindAsync(s => s.ProfileId == session.ProfileId)).ToList();
+        var skills = (await _uow.ProfileTechnicalSkills.FindAsync(s => s.ProfileId == session.ProfileId)).ToList();
+        if (skills.Count > 0)
+        {
+            var technicalSkillIds = skills.Select(s => s.TechnicalSkillId).Distinct().ToList();
+            var technicalSkills = (await _uow.TechnicalSkills.FindAsync(t => technicalSkillIds.Contains(t.Id)))
+                .ToDictionary(t => t.Id);
+            foreach (var skill in skills)
+            {
+                skill.TechnicalSkill = technicalSkills[skill.TechnicalSkillId];
+            }
+        }
 
         var conversation = BuildConversation(profile, skills, session.ChatMessages, userMessage);
         var replyContent = await _aiMentorService.GetMentorReplyAsync(conversation, cancellationToken);
@@ -75,7 +85,7 @@ public class ChatService : IChatService
         });
     }
 
-    private static List<AiChatMessageDto> BuildConversation(DataAccess.Entities.Profile? profile, List<Skill> skills, IEnumerable<ChatMessage> priorMessages, ChatMessage newUserMessage)
+    private static List<AiChatMessageDto> BuildConversation(DataAccess.Entities.Profile? profile, List<ProfileTechnicalSkill> skills, IEnumerable<ChatMessage> priorMessages, ChatMessage newUserMessage)
     {
         var conversation = new List<AiChatMessageDto>
         {
@@ -96,7 +106,7 @@ public class ChatService : IChatService
         return conversation;
     }
 
-    private static string BuildSystemPrompt(DataAccess.Entities.Profile? profile, List<Skill> skills)
+    private static string BuildSystemPrompt(DataAccess.Entities.Profile? profile, List<ProfileTechnicalSkill> skills)
     {
         var sb = new StringBuilder();
         sb.AppendLine("You are the SECompass AI Virtual Mentor, a friendly and knowledgeable career advisor for Software Engineering students.");
@@ -111,7 +121,7 @@ public class ChatService : IChatService
             if (profile.StudiedYear.HasValue) sb.AppendLine($"- Year of study: {profile.StudiedYear}");
             if (!string.IsNullOrWhiteSpace(profile.BioDescription)) sb.AppendLine($"- About: {profile.BioDescription}");
             sb.AppendLine(skills.Count > 0
-                ? $"- Current skills: {string.Join(", ", skills.Select(s => s.SkillName))}"
+                ? $"- Current skills: {string.Join(", ", skills.Select(s => s.TechnicalSkill.Name))}"
                 : "- Current skills: none recorded yet");
         }
 

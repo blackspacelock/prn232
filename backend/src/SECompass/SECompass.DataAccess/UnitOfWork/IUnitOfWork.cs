@@ -8,7 +8,9 @@ public interface IUnitOfWork : IDisposable
     IRepository<User> Users { get; }
     IRepository<UserRefreshToken> UserRefreshTokens { get; }
     IRepository<Profile> Profiles { get; }
-    IRepository<Skill> Skills { get; }
+    IRepository<TechnicalSkill> TechnicalSkills { get; }
+    IRepository<NodeTechnicalSkill> NodeTechnicalSkills { get; }
+    IRepository<ProfileTechnicalSkill> ProfileTechnicalSkills { get; }
     IRepository<CareerRole> CareerRoles { get; }
     IRepository<CareerRoadmap> CareerRoadmaps { get; }
     IRepository<RoadmapNode> RoadmapNodes { get; }

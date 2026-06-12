@@ -55,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<ISkillService, SkillService>();
+        services.AddScoped<ITechnicalSkillService, TechnicalSkillService>();
         services.AddScoped<ICareerRoleService, CareerRoleService>();
         services.AddScoped<ICareerRoadmapService, CareerRoadmapService>();
         services.AddScoped<IPersonalRoadmapService, PersonalRoadmapService>();
@@ -64,6 +65,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGitHubRepositoryService, GitHubRepositoryService>();
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<IAIRecommendationService, AIRecommendationService>();
+        services.AddScoped<ISkillGapService, SkillGapService>();
         services.AddScoped<IJobTrendService, JobTrendService>();
 
         // AI Virtual Mentor (OpenAI gpt-4o-mini)

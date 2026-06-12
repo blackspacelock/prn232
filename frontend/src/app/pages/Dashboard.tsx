@@ -63,18 +63,12 @@ export function DashboardPage() {
   const recentSessions: Array<{ id: string; title: string; createdAt: string }> =
     ((sessionsData as { chatSessionsByProfile?: Array<{ id: string; title: string; createdAt: string }> })?.chatSessionsByProfile ?? []).slice(0, 2);
 
-  const firstCareerRoadmapId: string = roadmaps[0]?.careerRoadmapId ?? '';
   const { data: dashSkillGapData } = useQuery(GET_SKILL_GAP_ANALYSIS, {
-    variables: { profileId, careerRoadmapId: firstCareerRoadmapId },
-    skip: !profileId || !firstCareerRoadmapId,
+    variables: { profileId },
+    skip: !profileId,
   });
-  const dashSkillGap = (dashSkillGapData as { skillGapAnalysis?: { existingSkills?: string[]; missingSkills?: string[] } })?.skillGapAnalysis ?? null;
-  const skillGapData = dashSkillGap
-    ? [
-        ...((dashSkillGap.existingSkills ?? []) as string[]).slice(0, 3).map((s) => ({ skill: s, current: 100, required: 100 })),
-        ...((dashSkillGap.missingSkills ?? []) as string[]).slice(0, 3).map((s) => ({ skill: s, current: 0, required: 100 })),
-      ]
-    : [];
+  const dashSkillGap = (dashSkillGapData as { skillGapAnalysis?: { categoryBreakdown?: Array<{ category: string; yourLevel: number; requiredLevel: number }> } })?.skillGapAnalysis ?? null;
+  const skillGapData = dashSkillGap?.categoryBreakdown ?? [];
 
   const isLoading = userLoading || roadmapsLoading;
   const hasError = userError || roadmapsError;
@@ -106,9 +100,9 @@ export function DashboardPage() {
                 <>
                   <StatCard
                     icon={<Compass className="w-5 h-5 text-[var(--md3-primary)]" />}
-                    title="Active Roadmaps"
+                    title="My Roadmaps"
                     value={String(activeCount)}
-                    subtitle="Active roadmaps"
+                    subtitle="Total roadmaps"
                     trend={activeCount > 0 ? `${activeCount} total` : undefined}
                     trendUp
                     iconBg="var(--md3-primary-container)"
@@ -172,14 +166,18 @@ export function DashboardPage() {
                   <ActionLink icon={BarChart2} label="Analyze" to="/skill-gap" variant="text" />
                 </div>
                 <div className="h-[180px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={skillGapData}>
-                      <PolarGrid stroke="#E8EAED" />
-                      <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11, fill: '#5F6368' }} />
-                      <Radar name="Current" dataKey="current" stroke="#1A73E8" fill="#1A73E8" fillOpacity={0.2} strokeWidth={2} />
-                      <Radar name="Required" dataKey="required" stroke="#FBBC04" fill="#FBBC04" fillOpacity={0.15} strokeWidth={2} strokeDasharray="5 5" />
-                    </RadarChart>
-                  </ResponsiveContainer>
+                  {skillGapData.length === 0 ? (
+                    <p className="text-sm text-[var(--md3-on-surface-variant)]">Set a roadmap as active to see your skill gap.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={skillGapData}>
+                        <PolarGrid stroke="#E8EAED" />
+                        <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#5F6368' }} />
+                        <Radar name="Your Skills" dataKey="yourLevel" stroke="#1A73E8" fill="#1A73E8" fillOpacity={0.2} strokeWidth={2} />
+                        <Radar name="Required" dataKey="requiredLevel" stroke="#FBBC04" fill="#FBBC04" fillOpacity={0.15} strokeWidth={2} strokeDasharray="5 5" />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
                 <ActionLink icon={ArrowRight} label="View full analysis" to="/skill-gap" className="mt-3 w-full" />
               </div>

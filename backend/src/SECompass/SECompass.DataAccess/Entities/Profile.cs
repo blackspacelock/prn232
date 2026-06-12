@@ -10,7 +10,7 @@ public class Profile : BaseAuditableEntity
     public int? StudiedYear { get; set; }
 
     public User User { get; set; } = null!;
-    public ICollection<Skill> Skills { get; set; } = new List<Skill>();
+    public ICollection<ProfileTechnicalSkill> ProfileTechnicalSkills { get; set; } = new List<ProfileTechnicalSkill>();
     public ICollection<GitHubRepository> GitHubRepositories { get; set; } = new List<GitHubRepository>();
     public ICollection<ChatSession> ChatSessions { get; set; } = new List<ChatSession>();
     public ICollection<PersonalRoadmap> PersonalRoadmaps { get; set; } = new List<PersonalRoadmap>();

@@ -11,7 +11,9 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<User>? _users;
     private IRepository<UserRefreshToken>? _userRefreshTokens;
     private IRepository<Profile>? _profiles;
-    private IRepository<Skill>? _skills;
+    private IRepository<TechnicalSkill>? _technicalSkills;
+    private IRepository<NodeTechnicalSkill>? _nodeTechnicalSkills;
+    private IRepository<ProfileTechnicalSkill>? _profileTechnicalSkills;
     private IRepository<CareerRole>? _careerRoles;
     private IRepository<CareerRoadmap>? _careerRoadmaps;
     private IRepository<RoadmapNode>? _roadmapNodes;
@@ -31,7 +33,9 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<User> Users => _users ??= new GenericRepository<User>(_context);
     public IRepository<UserRefreshToken> UserRefreshTokens => _userRefreshTokens ??= new GenericRepository<UserRefreshToken>(_context);
     public IRepository<Profile> Profiles => _profiles ??= new GenericRepository<Profile>(_context);
-    public IRepository<Skill> Skills => _skills ??= new GenericRepository<Skill>(_context);
+    public IRepository<TechnicalSkill> TechnicalSkills => _technicalSkills ??= new GenericRepository<TechnicalSkill>(_context);
+    public IRepository<NodeTechnicalSkill> NodeTechnicalSkills => _nodeTechnicalSkills ??= new GenericRepository<NodeTechnicalSkill>(_context);
+    public IRepository<ProfileTechnicalSkill> ProfileTechnicalSkills => _profileTechnicalSkills ??= new GenericRepository<ProfileTechnicalSkill>(_context);
     public IRepository<CareerRole> CareerRoles => _careerRoles ??= new GenericRepository<CareerRole>(_context);
     public IRepository<CareerRoadmap> CareerRoadmaps => _careerRoadmaps ??= new GenericRepository<CareerRoadmap>(_context);
     public IRepository<RoadmapNode> RoadmapNodes => _roadmapNodes ??= new GenericRepository<RoadmapNode>(_context);

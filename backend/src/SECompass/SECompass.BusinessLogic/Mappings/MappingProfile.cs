@@ -35,14 +35,15 @@ public class MappingProfile : AutoMapper.Profile
             .ForMember(d => d.UserId, o => o.MapFrom(s => s.UserId));
         CreateMap<DataAccess.Entities.Profile, ProfileWithSkillsDto>()
             .ForMember(d => d.UserId, o => o.MapFrom(s => s.UserId))
-            .ForMember(d => d.Skills, o => o.MapFrom(s => s.Skills));
+            .ForMember(d => d.Skills, o => o.MapFrom(s => s.ProfileTechnicalSkills));
         CreateMap<UpdateProfileDto, DataAccess.Entities.Profile>()
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
 
         // Skill
-        CreateMap<Skill, SkillDto>();
-        CreateMap<AddSkillDto, Skill>()
-            .ForMember(d => d.ProfileId, o => o.MapFrom(s => s.ProfileId));
+        CreateMap<TechnicalSkill, TechnicalSkillDto>();
+        CreateMap<ProfileTechnicalSkill, SkillDto>()
+            .ForMember(d => d.SkillName, o => o.MapFrom(s => s.TechnicalSkill.Name))
+            .ForMember(d => d.Category, o => o.MapFrom(s => s.TechnicalSkill.Category));
 
         // CareerRole
         CreateMap<CareerRole, CareerRoleDto>();

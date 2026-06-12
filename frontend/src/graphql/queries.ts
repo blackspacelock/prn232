@@ -26,10 +26,22 @@ export const GET_PROFILE_WITH_SKILLS = gql`
       skills {
         id
         profileId
+        technicalSkillId
         skillName
+        category
         note
         createdAt
       }
+    }
+  }
+`;
+
+export const GET_TECHNICAL_SKILLS = gql`
+  query GetTechnicalSkills {
+    technicalSkills {
+      id
+      name
+      category
     }
   }
 `;
@@ -145,6 +157,7 @@ export const GET_PERSONAL_ROADMAPS_BY_PROFILE = gql`
       careerRoadmapId
       note
       progressPercentage
+      isActive
       createdAt
     }
   }
@@ -158,6 +171,7 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
       careerRoadmapId
       note
       progressPercentage
+      isActive
       createdAt
       nodeProgresses {
         id
@@ -351,13 +365,30 @@ export const GET_TOP_TRENDING_SKILLS = gql`
 `;
 
 export const GET_SKILL_GAP_ANALYSIS = gql`
-  query GetSkillGapAnalysis($profileId: UUID!, $careerRoadmapId: UUID!) {
-    skillGapAnalysis(profileId: $profileId, careerRoadmapId: $careerRoadmapId) {
+  query GetSkillGapAnalysis($profileId: UUID!) {
+    skillGapAnalysis(profileId: $profileId) {
       profileId
       careerRoadmapId
-      existingSkills
-      requiredSkills
-      missingSkills
+      requiredSkills {
+        id
+        name
+        category
+      }
+      matchedSkills {
+        id
+        name
+        category
+      }
+      missingSkills {
+        id
+        name
+        category
+      }
+      categoryBreakdown {
+        category
+        yourLevel
+        requiredLevel
+      }
       coveragePercentage
       summary
     }

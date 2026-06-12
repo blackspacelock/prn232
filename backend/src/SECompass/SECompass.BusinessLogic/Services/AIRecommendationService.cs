@@ -18,32 +18,6 @@ public class AIRecommendationService : IAIRecommendationService
         _mapper = mapper;
     }
 
-    public async Task<ServiceResult<SkillGapAnalysisDto>> AnalyzeSkillGapAsync(Guid profileId, Guid careerRoadmapId)
-    {
-        var skills = await _uow.Skills.FindAsync(s => s.ProfileId == profileId);
-        var roadmapNodes = await _uow.RoadmapNodes.FindAsync(rn => rn.CareerRoadmapId == careerRoadmapId);
-        var nodeIds = roadmapNodes.Select(rn => rn.NodeId).ToList();
-        var nodes = await _uow.Nodes.FindAsync(n => nodeIds.Contains(n.Id));
-
-        var existingSkills = skills.Select(s => s.SkillName).ToList();
-        var requiredSkills = nodes.Select(n => n.Name).ToList();
-        var missingSkills = requiredSkills.Except(existingSkills, StringComparer.OrdinalIgnoreCase).ToList();
-        var coverage = requiredSkills.Count == 0 ? 100.0 : (requiredSkills.Count - missingSkills.Count) * 100.0 / requiredSkills.Count;
-
-        var dto = new SkillGapAnalysisDto
-        {
-            ProfileId = profileId,
-            CareerRoadmapId = careerRoadmapId,
-            ExistingSkills = existingSkills,
-            RequiredSkills = requiredSkills,
-            MissingSkills = missingSkills,
-            CoveragePercentage = Math.Round(coverage, 2),
-            Summary = $"You have {existingSkills.Count} skills. {missingSkills.Count} skills are still needed for this roadmap."
-        };
-
-        return ServiceResult<SkillGapAnalysisDto>.Ok(dto);
-    }
-
     public async Task<ServiceResult<PortfolioAnalysisDto>> AnalyzeGitHubPortfolioAsync(Guid profileId)
     {
         var repos = await _uow.GitHubRepositories.FindAsync(r => r.ProfileId == profileId);
@@ -70,8 +44,10 @@ public class AIRecommendationService : IAIRecommendationService
 
     public async Task<ServiceResult<List<string>>> GetTrendingSkillRecommendationsAsync(Guid profileId)
     {
-        var skills = await _uow.Skills.FindAsync(s => s.ProfileId == profileId);
-        var skillNames = skills.Select(s => s.SkillName.ToLower()).ToHashSet();
+        var profileSkillLinks = await _uow.ProfileTechnicalSkills.FindAsync(s => s.ProfileId == profileId);
+        var profileSkillIds = profileSkillLinks.Select(s => s.TechnicalSkillId).ToList();
+        var technicalSkills = await _uow.TechnicalSkills.FindAsync(t => profileSkillIds.Contains(t.Id));
+        var skillNames = technicalSkills.Select(t => t.Name.ToLower()).ToHashSet();
 
         var trends = await _uow.JobTrends.GetAllAsync();
         var recommendations = trends

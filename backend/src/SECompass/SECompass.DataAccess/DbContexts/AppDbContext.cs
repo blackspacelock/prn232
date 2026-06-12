@@ -10,7 +10,9 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
     public DbSet<Profile> Profiles { get; set; }
-    public DbSet<Skill> Skills { get; set; }
+    public DbSet<TechnicalSkill> TechnicalSkills { get; set; }
+    public DbSet<NodeTechnicalSkill> NodeTechnicalSkills { get; set; }
+    public DbSet<ProfileTechnicalSkill> ProfileTechnicalSkills { get; set; }
     public DbSet<GitHubRepository> GitHubRepositories { get; set; }
     public DbSet<ChatSession> ChatSessions { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
@@ -98,7 +100,7 @@ public class AppDbContext : DbContext
 
             case Profile profile:
                 await CascadeRangeAsync(
-                    Skills.Where(s => s.ProfileId == profile.UserId),
+                    ProfileTechnicalSkills.Where(s => s.ProfileId == profile.UserId),
                     queue,
                     queued,
                     cancellationToken);
@@ -174,6 +176,24 @@ public class AppDbContext : DbContext
                     cancellationToken);
                 await CascadeRangeAsync(
                     RoadmapNodes.Where(r => r.NodeId == node.Id),
+                    queue,
+                    queued,
+                    cancellationToken);
+                await CascadeRangeAsync(
+                    NodeTechnicalSkills.Where(nts => nts.NodeId == node.Id),
+                    queue,
+                    queued,
+                    cancellationToken);
+                break;
+
+            case TechnicalSkill technicalSkill:
+                await CascadeRangeAsync(
+                    NodeTechnicalSkills.Where(nts => nts.TechnicalSkillId == technicalSkill.Id),
+                    queue,
+                    queued,
+                    cancellationToken);
+                await CascadeRangeAsync(
+                    ProfileTechnicalSkills.Where(pts => pts.TechnicalSkillId == technicalSkill.Id),
                     queue,
                     queued,
                     cancellationToken);

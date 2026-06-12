@@ -11,7 +11,7 @@ const SKILL_COLORS = [
   { bg: 'bg-rose-50',    text: 'text-rose-700',    border: 'border-rose-200'    },
 ];
 
-function hashLabel(label: string): number {
+export function hashLabel(label: string): number {
   let h = 0;
   for (let i = 0; i < label.length; i++) {
     h = (h * 31 + label.charCodeAt(i)) & 0xffffffff;

@@ -1,73 +1,36 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Download, SlidersHorizontal } from 'lucide-react';
 import { ActionButton } from '../components/ActionButton';
-import { SkillChip } from '../components/SkillChip';
-import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts';
-import { useQuery, useLazyQuery } from '@apollo/client/react';
+import { SkillChip, hashLabel } from '../components/SkillChip';
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, ResponsiveContainer } from 'recharts';
+import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
 import {
   GET_SKILL_GAP_ANALYSIS,
   GET_TRENDING_SKILL_RECOMMENDATIONS,
-  GET_PERSONAL_ROADMAPS_BY_PROFILE,
 } from '@/graphql/queries';
-
-interface SkillGapResult {
-  profileId: string;
-  careerRoadmapId: string;
-  existingSkills: string[];
-  requiredSkills: string[];
-  missingSkills: string[];
-  coveragePercentage: number;
-  summary: string;
-}
+import type { SkillGapAnalysisDto } from '@/types/api';
 
 export function SkillGapPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const profileId = user?.profileId ?? '';
-  const [selectedRoadmapId, setSelectedRoadmapId] = useState<string | null>(null);
 
-  const { data: roadmapsData } = useQuery(GET_PERSONAL_ROADMAPS_BY_PROFILE, {
+  const { data: skillGapData, loading: skillGapLoading, error: skillGapError, refetch } = useQuery(GET_SKILL_GAP_ANALYSIS, {
     variables: { profileId },
     skip: !profileId,
   });
-
-  // Derive roadmaps and the effective ID before the skill-gap query so it
-  // auto-loads the first roadmap without needing a setState-in-effect.
-  const roadmaps: Array<{ id: string; careerRoadmapId: string; createdAt: string }> =
-    (roadmapsData as { personalRoadmapsByProfile?: Array<{ id: string; careerRoadmapId: string; createdAt: string }> })?.personalRoadmapsByProfile ?? [];
-  const effectiveRoadmapId = selectedRoadmapId ?? roadmaps[0]?.careerRoadmapId ?? null;
-
-  const { data: skillGapData, loading: skillGapLoading, error: skillGapError, refetch } = useQuery(GET_SKILL_GAP_ANALYSIS, {
-    variables: { profileId, careerRoadmapId: effectiveRoadmapId },
-    skip: !profileId || !effectiveRoadmapId,
-  });
-
-  const [loadSkillGap] = useLazyQuery(GET_SKILL_GAP_ANALYSIS);
 
   const { data: trendingData, loading: trendingLoading } = useQuery(GET_TRENDING_SKILL_RECOMMENDATIONS, {
     variables: { profileId },
     skip: !profileId,
   });
 
-  const skillGap: SkillGapResult | null = (skillGapData as { skillGapAnalysis?: SkillGapResult })?.skillGapAnalysis ?? null;
+  const skillGap: SkillGapAnalysisDto | null = (skillGapData as { skillGapAnalysis?: SkillGapAnalysisDto })?.skillGapAnalysis ?? null;
   const trendingSkills: string[] = (trendingData as { trendingSkillRecommendations?: string[] })?.trendingSkillRecommendations ?? [];
-
-  const radarData = skillGap
-    ? [
-        ...skillGap.existingSkills.slice(0, 3).map((skill) => ({ skill, current: 100, required: 100 })),
-        ...skillGap.missingSkills.slice(0, 3).map((skill) => ({ skill, current: 0, required: 100 })),
-      ]
-    : [];
-
-  const handleRoadmapChange = (careerRoadmapId: string) => {
-    setSelectedRoadmapId(careerRoadmapId);
-    loadSkillGap({ variables: { profileId, careerRoadmapId } });
-  };
 
   return (
     <AppShell breadcrumb="Skill Gap Analysis">
@@ -78,26 +41,6 @@ export function SkillGapPage() {
           actions={<ActionButton icon={Download} label="Export PDF" variant="neutral" size="md" onClick={() => window.print()} />}
         />
 
-        {roadmaps.length > 0 && (
-          <div className="md3-card p-4">
-            <div className="flex flex-wrap gap-2">
-              {roadmaps.map((rm) => (
-                <button
-                  key={rm.id}
-                  onClick={() => handleRoadmapChange(rm.careerRoadmapId)}
-                  className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                    effectiveRoadmapId === rm.careerRoadmapId
-                      ? 'bg-[var(--md3-primary-container)] border-[var(--md3-primary)] text-[var(--md3-primary)]'
-                      : 'border-[var(--md3-outline)] hover:border-[var(--md3-on-surface-variant)]'
-                  }`}
-                >
-                  {new Date(rm.createdAt).toLocaleDateString()}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {skillGapLoading ? (
           <div className="desktop-grid-2">
             <Skeleton className="h-96 rounded-xl" />
@@ -106,20 +49,28 @@ export function SkillGapPage() {
         ) : skillGapError ? (
           <EmptyState icon={SlidersHorizontal} title="Failed to load analysis" description="Please try again." actionLabel="Retry" onAction={refetch} />
         ) : !skillGap ? (
-          <EmptyState icon={SlidersHorizontal} title="No roadmap selected" description="Generate a personal roadmap first to see your skill gap analysis." actionLabel="Go to Roadmaps" onAction={() => navigate('/roadmaps')} />
+          <EmptyState
+            icon={SlidersHorizontal}
+            title="No active roadmap"
+            description="Set a roadmap as active to see your skill gap analysis."
+            actionLabel="Go to Roadmaps"
+            onAction={() => navigate('/roadmaps')}
+          />
         ) : (
           <div className="desktop-grid-2">
             <div className="md3-card p-6">
               <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)] mb-2">Skill Coverage</h2>
-              <p className="text-sm text-[var(--md3-on-surface-variant)] mb-6">Your skills vs. role requirements</p>
+              <p className="text-sm text-[var(--md3-on-surface-variant)] mb-6">Your skills vs. role requirements, by category</p>
 
-              <div className="h-[280px] flex items-center justify-center mb-4">
+              <div className="h-[320px] flex items-center justify-center mb-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData}>
+                  <RadarChart data={skillGap.categoryBreakdown}>
                     <PolarGrid stroke="#E8EAED" />
-                    <PolarAngleAxis dataKey="skill" tick={{ fontSize: 12, fill: '#5F6368' }} />
-                    <Radar name="Your Skills" dataKey="current" stroke="#1A73E8" fill="#1A73E8" fillOpacity={0.2} strokeWidth={2} />
-                    <Radar name="Required" dataKey="required" stroke="#FBBC04" fill="#FBBC04" fillOpacity={0.15} strokeWidth={2} strokeDasharray="5 5" />
+                    <PolarAngleAxis dataKey="category" tick={{ fontSize: 12, fill: '#5F6368' }} />
+                    <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar name="Your Skills" dataKey="yourLevel" stroke="#1A73E8" fill="rgba(26,115,232,0.2)" strokeWidth={2} />
+                    <Radar name="Required" dataKey="requiredLevel" stroke="#FBBC04" fill="rgba(251,188,4,0.15)" strokeWidth={2} strokeDasharray="5 5" />
+                    <Legend />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
@@ -134,13 +85,31 @@ export function SkillGapPage() {
             </div>
 
             <div className="md3-card p-6">
+              <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)] mb-2">Skills You Have</h2>
+              <p className="text-sm text-[var(--md3-on-surface-variant)] mb-4">
+                {skillGap.matchedSkills.length} of {skillGap.requiredSkills.length} required skills covered
+              </p>
+              <div className="flex flex-wrap gap-2 mb-6">
+                {skillGap.matchedSkills.length > 0 ? (
+                  skillGap.matchedSkills.map((skill) => (
+                    <SkillChip key={skill.id} label={skill.name} colorIndex={hashLabel(skill.category)} size="sm" />
+                  ))
+                ) : (
+                  <p className="text-sm text-[var(--md3-on-surface-variant)]">No required skills matched yet.</p>
+                )}
+              </div>
+
               <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)] mb-2">Missing Skills</h2>
               <p className="text-sm text-[var(--md3-on-surface-variant)] mb-4">{skillGap.missingSkills.length} skills to develop</p>
 
               <div className="flex flex-wrap gap-2 mb-6">
-                {skillGap.missingSkills.map((skill) => (
-                  <SkillChip key={skill} label={skill} size="sm" />
-                ))}
+                {skillGap.missingSkills.length > 0 ? (
+                  skillGap.missingSkills.map((skill) => (
+                    <SkillChip key={skill.id} label={skill.name} colorIndex={hashLabel(skill.category)} size="sm" />
+                  ))
+                ) : (
+                  <p className="text-sm text-[var(--md3-on-surface-variant)]">You're covering every required skill.</p>
+                )}
               </div>
 
               {!trendingLoading && trendingSkills.length > 0 && (
@@ -160,4 +129,3 @@ export function SkillGapPage() {
     </AppShell>
   );
 }
-

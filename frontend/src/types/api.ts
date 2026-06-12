@@ -51,6 +51,43 @@ export interface AddSkillDto {
   note?: string;
 }
 
+// Matches backend TechnicalSkillDto
+export interface TechnicalSkillDto {
+  id: string;
+  name: string;
+  category: string;
+}
+
+// Matches backend SkillDto (a user's ProfileTechnicalSkill entry)
+export interface SkillDto {
+  id: string;
+  profileId: string;
+  technicalSkillId: string;
+  skillName: string;
+  category: string;
+  note?: string;
+  createdAt: string;
+}
+
+// Matches backend SkillGapCategoryDto
+export interface SkillGapCategoryDto {
+  category: string;
+  yourLevel: number;
+  requiredLevel: number;
+}
+
+// Matches backend SkillGapAnalysisDto
+export interface SkillGapAnalysisDto {
+  profileId: string;
+  careerRoadmapId: string;
+  requiredSkills: TechnicalSkillDto[];
+  matchedSkills: TechnicalSkillDto[];
+  missingSkills: TechnicalSkillDto[];
+  categoryBreakdown: SkillGapCategoryDto[];
+  coveragePercentage: number;
+  summary: string;
+}
+
 // Must match backend AddGitHubRepoDto exactly
 export interface AddGitHubRepoDto {
   profileId: string;
@@ -141,12 +178,24 @@ export interface NodeProgressDto {
   node: NodeDto;
 }
 
+// Matches backend PersonalRoadmapDto
+export interface PersonalRoadmapDto {
+  id: string;
+  profileId: string;
+  careerRoadmapId: string;
+  note?: string;
+  progressPercentage: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface PersonalRoadmapDetailDto {
   id: string;
   profileId: string;
   careerRoadmapId: string;
   note?: string;
   progressPercentage: number;
+  isActive: boolean;
   nodeProgresses: NodeProgressDto[];
 }
 

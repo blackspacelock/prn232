@@ -10,6 +10,7 @@ using SECompass.BusinessLogic.DTOs.Node;
 using SECompass.BusinessLogic.DTOs.NodeProgress;
 using SECompass.BusinessLogic.DTOs.PersonalRoadmap;
 using SECompass.BusinessLogic.DTOs.Profile;
+using SECompass.BusinessLogic.DTOs.Skill;
 using SECompass.BusinessLogic.DTOs.User;
 using SECompass.BusinessLogic.Interfaces;
 
@@ -40,6 +41,12 @@ public class Query
     public async Task<List<SECompass.BusinessLogic.DTOs.Skill.SkillDto>> GetSkillsByProfile([Service] ISkillService skillService, Guid profileId)
     {
         var result = await skillService.GetSkillsByProfileAsync(profileId);
+        return result.Success ? result.Data! : new();
+    }
+
+    public async Task<List<SECompass.BusinessLogic.DTOs.Skill.TechnicalSkillDto>> GetTechnicalSkills([Service] ITechnicalSkillService technicalSkillService)
+    {
+        var result = await technicalSkillService.GetAllAsync();
         return result.Success ? result.Data! : new();
     }
 
@@ -166,13 +173,14 @@ public class Query
         return result.Success ? result.Data! : new();
     }
 
-    // AI
-    public async Task<SkillGapAnalysisDto?> GetSkillGapAnalysis([Service] IAIRecommendationService service, Guid profileId, Guid careerRoadmapId)
+    // Skill Gap
+    public async Task<SkillGapAnalysisDto?> GetSkillGapAnalysis([Service] ISkillGapService service, Guid profileId)
     {
-        var result = await service.AnalyzeSkillGapAsync(profileId, careerRoadmapId);
+        var result = await service.AnalyzeSkillGapAsync(profileId);
         return result.Success ? result.Data : null;
     }
 
+    // AI
     public async Task<PortfolioAnalysisDto?> GetPortfolioAnalysis([Service] IAIRecommendationService service, Guid profileId)
     {
         var result = await service.AnalyzeGitHubPortfolioAsync(profileId);

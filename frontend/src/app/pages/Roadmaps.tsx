@@ -5,10 +5,11 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { LinearProgress } from '../components/LinearProgress';
 import { StatusChip } from '../components/StatusChip';
+import { ActiveBadge } from '../components/ActiveBadge';
 import { ActionButton, ActionLink } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
-import { FolderOpen, MoreVertical, Rocket, Search, Trash2 } from 'lucide-react';
+import { FolderOpen, MoreVertical, Rocket, Search, Star, Trash2 } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -19,18 +20,11 @@ import {
   GET_CAREER_ROLES,
   GET_CAREER_ROADMAPS_BY_ROLE,
 } from '@/graphql/queries';
-import type { GeneratePersonalRoadmapRequestDto } from '@/types/api';
+import type { GeneratePersonalRoadmapRequestDto, PersonalRoadmapDto } from '@/types/api';
 
 interface CareerRole { id: string; name: string; description?: string }
 interface CareerRoadmap { id: string; name: string; description?: string }
-interface PersonalRoadmap {
-  id: string;
-  profileId: string;
-  careerRoadmapId: string;
-  note?: string;
-  progressPercentage: number;
-  createdAt: string;
-}
+type PersonalRoadmap = PersonalRoadmapDto;
 
 export function RoadmapsPage() {
   const navigate = useNavigate();
@@ -89,6 +83,17 @@ export function RoadmapsPage() {
     },
   });
 
+  const activateMutation = useMutation({
+    mutationFn: (id: string) => apiClient.put(`/api/personal-roadmaps/${id}/activate`),
+    onSuccess: async () => {
+      await apolloClient.refetchQueries({ include: [GET_PERSONAL_ROADMAPS_BY_PROFILE] });
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to set active roadmap.';
+      showError(msg);
+    },
+  });
+
   if (roadmapsLoading) {
     return (
       <AppShell breadcrumb="Roadmaps">
@@ -138,7 +143,13 @@ export function RoadmapsPage() {
         {roadmaps.length > 0 ? (
           <div className="desktop-grid-3">
             {roadmaps.map((roadmap) => (
-              <RoadmapCard key={roadmap.id} roadmap={roadmap} onDelete={() => setDeleteId(roadmap.id)} />
+              <RoadmapCard
+                key={roadmap.id}
+                roadmap={roadmap}
+                onDelete={() => setDeleteId(roadmap.id)}
+                onActivate={() => activateMutation.mutate(roadmap.id)}
+                activating={activateMutation.isPending}
+              />
             ))}
           </div>
         ) : (
@@ -193,7 +204,7 @@ export function RoadmapsPage() {
   );
 }
 
-function RoadmapCard({ roadmap, onDelete }: { roadmap: PersonalRoadmap; onDelete: () => void }) {
+function RoadmapCard({ roadmap, onDelete, onActivate, activating }: { roadmap: PersonalRoadmap; onDelete: () => void; onActivate: () => void; activating: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const progress = Math.round(roadmap.progressPercentage);
   const getProgressColor = () => {
@@ -211,6 +222,16 @@ function RoadmapCard({ roadmap, onDelete }: { roadmap: PersonalRoadmap; onDelete
         </button>
         {menuOpen && (
           <div className="absolute right-4 top-14 z-10 min-w-36 rounded-xl border border-[var(--md3-outline-variant)] bg-white p-1 shadow-lg">
+            {!roadmap.isActive && (
+              <ActionButton
+                icon={Star}
+                label="Set Active"
+                variant="text"
+                disabled={activating}
+                onClick={() => { setMenuOpen(false); onActivate(); }}
+                className="w-full justify-start rounded-lg"
+              />
+            )}
             <ActionButton icon={Trash2} label="Delete" variant="danger" onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full justify-start rounded-lg" />
           </div>
         )}
@@ -226,6 +247,7 @@ function RoadmapCard({ roadmap, onDelete }: { roadmap: PersonalRoadmap; onDelete
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
+        {roadmap.isActive && <ActiveBadge />}
         {progress === 100 ? (
           <StatusChip status="completed" count={0} label="Completed" />
         ) : progress > 0 ? (
