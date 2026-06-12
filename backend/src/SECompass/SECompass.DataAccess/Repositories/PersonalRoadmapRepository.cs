@@ -16,6 +16,17 @@ public class PersonalRoadmapRepository : GenericRepository<PersonalRoadmap>, IPe
             .ThenByDescending(pr => pr.CreatedAt)
             .ToListAsync();
 
+    public async Task<IEnumerable<PersonalRoadmap>> GetByProfileWithProgressAsync(Guid profileId)
+        => await _dbSet
+            .Include(pr => pr.CareerRoadmap)
+            .Include(pr => pr.NodeProgresses)
+                .ThenInclude(np => np.RoadmapNode)
+                    .ThenInclude(rn => rn.Node)
+            .Where(pr => pr.ProfileId == profileId)
+            .OrderByDescending(pr => pr.IsActive)
+            .ThenByDescending(pr => pr.CreatedAt)
+            .ToListAsync();
+
     public async Task<PersonalRoadmap?> GetWithNodesAndProgressAsync(Guid personalRoadmapId)
         => await _dbSet
             .Include(pr => pr.NodeProgresses)

@@ -34,7 +34,9 @@ export function MentorPage() {
     skip: !profileId,
   });
 
-  const [loadMessages, { data: messagesData, loading: messagesLoading }] = useLazyQuery(GET_CHAT_SESSION_WITH_MESSAGES);
+  const [loadMessages, { data: messagesData, loading: messagesLoading }] = useLazyQuery(GET_CHAT_SESSION_WITH_MESSAGES, {
+    fetchPolicy: 'network-only',
+  });
 
   const sessions: ChatSession[] = (sessionsData as { chatSessionsByProfile?: ChatSession[] })?.chatSessionsByProfile ?? [];
   const activeSession = (messagesData as { chatSessionWithMessages?: { title?: string; messages?: ChatMessage[] } })?.chatSessionWithMessages;
