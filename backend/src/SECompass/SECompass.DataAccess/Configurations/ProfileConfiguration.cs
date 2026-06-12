@@ -6,6 +6,9 @@ namespace SECompass.DataAccess.Configurations;
 
 public class ProfileConfiguration : IEntityTypeConfiguration<Profile>
 {
+    private static readonly Guid AdminUserId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly DateTime SeedCreatedAt = new(2026, 6, 12, 0, 0, 0, DateTimeKind.Unspecified);
+
     public void Configure(EntityTypeBuilder<Profile> builder)
     {
         builder.ToTable("Profiles");
@@ -23,5 +26,11 @@ public class ProfileConfiguration : IEntityTypeConfiguration<Profile>
             .WithOne(u => u.Profile)
             .HasForeignKey<Profile>(p => p.UserId)
             .OnDelete(DeleteBehavior.ClientCascade);
+
+        builder.HasData(new Profile
+        {
+            UserId = AdminUserId,
+            CreatedAt = SeedCreatedAt
+        });
     }
 }

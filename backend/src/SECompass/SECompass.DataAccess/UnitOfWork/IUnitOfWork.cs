@@ -21,6 +21,8 @@ public interface IUnitOfWork : IDisposable
     IRepository<ChatSession> ChatSessions { get; }
     IRepository<ChatMessage> ChatMessages { get; }
     IRepository<JobTrend> JobTrends { get; }
+    IRepository<JobScrapingSetting> JobScrapingSettings { get; }
+    IRepository<JobScrapingSource> JobScrapingSources { get; }
     IPersonalRoadmapRepository PersonalRoadmaps { get; }
     INodeProgressRepository NodeProgresses { get; }
     IChatRepository Chat { get; }

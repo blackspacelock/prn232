@@ -24,6 +24,8 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<ChatSession>? _chatSessions;
     private IRepository<ChatMessage>? _chatMessages;
     private IRepository<JobTrend>? _jobTrends;
+    private IRepository<JobScrapingSetting>? _jobScrapingSettings;
+    private IRepository<JobScrapingSource>? _jobScrapingSources;
     private IPersonalRoadmapRepository? _personalRoadmaps;
     private INodeProgressRepository? _nodeProgresses;
     private IChatRepository? _chat;
@@ -46,6 +48,8 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<ChatSession> ChatSessions => _chatSessions ??= new GenericRepository<ChatSession>(_context);
     public IRepository<ChatMessage> ChatMessages => _chatMessages ??= new GenericRepository<ChatMessage>(_context);
     public IRepository<JobTrend> JobTrends => _jobTrends ??= new GenericRepository<JobTrend>(_context);
+    public IRepository<JobScrapingSetting> JobScrapingSettings => _jobScrapingSettings ??= new GenericRepository<JobScrapingSetting>(_context);
+    public IRepository<JobScrapingSource> JobScrapingSources => _jobScrapingSources ??= new GenericRepository<JobScrapingSource>(_context);
     public IPersonalRoadmapRepository PersonalRoadmaps => _personalRoadmaps ??= new PersonalRoadmapRepository(_context);
     public INodeProgressRepository NodeProgresses => _nodeProgresses ??= new NodeProgressRepository(_context);
     public IChatRepository Chat => _chat ??= new ChatRepository(_context);

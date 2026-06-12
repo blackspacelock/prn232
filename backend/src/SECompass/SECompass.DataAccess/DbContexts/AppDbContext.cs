@@ -25,6 +25,8 @@ public class AppDbContext : DbContext
     public DbSet<NodeProgress> NodeProgresses { get; set; }
     public DbSet<LearningResource> LearningResources { get; set; }
     public DbSet<JobTrend> JobTrends { get; set; }
+    public DbSet<JobScrapingSetting> JobScrapingSettings { get; set; }
+    public DbSet<JobScrapingSource> JobScrapingSources { get; set; }
 
     public void Delete(BaseAuditableEntity entity)
     {

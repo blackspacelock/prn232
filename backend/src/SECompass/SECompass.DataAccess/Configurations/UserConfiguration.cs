@@ -1,11 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SECompass.DataAccess.Entities;
+using SECompass.DataAccess.Enums;
 
 namespace SECompass.DataAccess.Configurations;
 
 public class UserConfiguration : IEntityTypeConfiguration<User>
 {
+    private static readonly Guid AdminUserId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly DateTime SeedCreatedAt = new(2026, 6, 12, 0, 0, 0, DateTimeKind.Unspecified);
+
     public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.ToTable("Users");
@@ -23,5 +27,16 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasIndex(u => u.Email).IsUnique();
         builder.HasIndex(u => u.GoogleId).IsUnique().HasFilter("[GoogleId] IS NOT NULL");
+
+        builder.HasData(new User
+        {
+            Id = AdminUserId,
+            FullName = "Admin Administrator",
+            Email = "admin@secompass.com",
+            PasswordHashed = "$2b$12$x60evDbGMbtCfCLsHPITg.F90EITs5NYkcp/zoKMuwzsZ3TRcqBHK",
+            Role = UserRole.Admin,
+            IsActive = true,
+            CreatedAt = SeedCreatedAt
+        });
     }
 }

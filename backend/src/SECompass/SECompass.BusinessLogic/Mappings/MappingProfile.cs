@@ -119,5 +119,22 @@ public class MappingProfile : AutoMapper.Profile
         CreateMap<CreateJobTrendDto, JobTrend>();
         CreateMap<UpdateJobTrendDto, JobTrend>()
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
+
+        // JobScrapingSetting
+        CreateMap<JobScrapingSetting, JobScrapingSettingDto>();
+        CreateMap<UpdateJobScrapingSettingDto, JobScrapingSetting>();
+
+        // JobScrapingSource
+        CreateMap<JobScrapingSource, JobScrapingSourceDto>();
+        CreateMap<CreateJobScrapingSourceDto, JobScrapingSource>();
+        CreateMap<UpdateJobScrapingSourceDto, JobScrapingSource>()
+            .ForMember(d => d.Name, o => o.MapFrom((src, dest) => src.Name ?? dest.Name))
+            .ForMember(d => d.Region, o => o.MapFrom((src, dest) => src.Region ?? dest.Region))
+            .ForMember(d => d.Enabled, o => o.MapFrom((src, dest) => src.Enabled ?? dest.Enabled))
+            .ForMember(d => d.Url, o => o.MapFrom((src, dest) => src.Url ?? dest.Url))
+            .ForMember(d => d.JobCardXPath, o => o.MapFrom((src, dest) => src.JobCardXPath ?? dest.JobCardXPath))
+            .ForMember(d => d.TitleXPath, o => o.MapFrom((src, dest) => src.TitleXPath ?? dest.TitleXPath))
+            .ForMember(d => d.TagsXPath, o => o.MapFrom((src, dest) => src.TagsXPath ?? dest.TagsXPath))
+            .ForMember(d => d.MaxPostings, o => o.MapFrom((src, dest) => src.MaxPostings ?? dest.MaxPostings));
     }
 }

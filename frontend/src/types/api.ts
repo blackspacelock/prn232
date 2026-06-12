@@ -246,3 +246,76 @@ export interface LearningResourceDto {
   isFree: boolean;
   createdAt: string;
 }
+
+// Matches backend JobTrendScrapeSourceResultDto
+export interface JobTrendScrapeSourceResultDto {
+  sourceName: string;
+  region: string;
+  postingsScraped: number;
+  success: boolean;
+  error?: string;
+}
+
+// Matches backend JobTrendScrapeResultDto
+export interface JobTrendScrapeResultDto {
+  snapshotDate: string;
+  totalPostingsScraped: number;
+  trendsCreated: number;
+  trendsUpdated: number;
+  sources: JobTrendScrapeSourceResultDto[];
+}
+
+// Matches backend JobScrapingSettingDto
+export interface JobScrapingSettingDto {
+  id: string;
+  enabled: boolean;
+  frequency: 'Daily' | 'Weekly';
+  timeOfDay: string;
+  dayOfWeek: string;
+  lastRunAt?: string;
+}
+
+// Matches backend UpdateJobScrapingSettingDto
+export interface UpdateJobScrapingSettingDto {
+  enabled: boolean;
+  frequency: 'Daily' | 'Weekly';
+  timeOfDay: string;
+  dayOfWeek: string;
+}
+
+// Matches backend JobScrapingSourceDto
+export interface JobScrapingSourceDto {
+  id: string;
+  name: string;
+  region: string;
+  enabled: boolean;
+  url: string;
+  jobCardXPath: string;
+  titleXPath: string;
+  tagsXPath: string;
+  maxPostings: number;
+}
+
+// Matches backend CreateJobScrapingSourceDto
+export interface CreateJobScrapingSourceDto {
+  name: string;
+  region: string;
+  enabled: boolean;
+  url: string;
+  jobCardXPath: string;
+  titleXPath: string;
+  tagsXPath: string;
+  maxPostings: number;
+}
+
+// Matches backend UpdateJobScrapingSourceDto
+export interface UpdateJobScrapingSourceDto {
+  name?: string;
+  region?: string;
+  enabled?: boolean;
+  url?: string;
+  jobCardXPath?: string;
+  titleXPath?: string;
+  tagsXPath?: string;
+  maxPostings?: number;
+}

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SECompass.API.BackgroundServices;
 using SECompass.API.GraphQL.Queries;
 using SECompass.BusinessLogic.Interfaces;
 using SECompass.BusinessLogic.Mappings;
@@ -67,6 +68,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAIRecommendationService, AIRecommendationService>();
         services.AddScoped<ISkillGapService, SkillGapService>();
         services.AddScoped<IJobTrendService, JobTrendService>();
+        services.AddScoped<IJobScrapingSettingsService, JobScrapingSettingsService>();
+        services.AddScoped<IJobScrapingSourceService, JobScrapingSourceService>();
 
         // AI Virtual Mentor (OpenAI gpt-4o-mini)
         services.AddHttpClient<IAiMentorService, OpenAiMentorService>(client =>
@@ -75,6 +78,15 @@ public static class ServiceCollectionExtensions
             client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(baseUrl) ? "https://api.openai.com/v1/" : baseUrl);
             client.Timeout = TimeSpan.FromSeconds(60);
         });
+
+        // Job Trend scraping (Market Pulse weekly job board scrape)
+        services.AddHttpClient<IJobTrendScrapingService, JobTrendScrapingService>(client =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddHostedService<JobTrendScrapingBackgroundService>();
 
         // AutoMapper
         services.AddAutoMapper(typeof(MappingProfile).Assembly);
