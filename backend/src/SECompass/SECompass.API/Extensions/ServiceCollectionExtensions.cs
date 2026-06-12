@@ -64,8 +64,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INodeProgressService, NodeProgressService>();
         services.AddScoped<ILearningResourceService, LearningResourceService>();
         services.AddScoped<IGitHubRepositoryService, GitHubRepositoryService>();
+        services.AddScoped<IPublicPortfolioService, PublicPortfolioService>();
         services.AddScoped<IChatService, ChatService>();
-        services.AddScoped<IAIRecommendationService, AIRecommendationService>();
         services.AddScoped<ISkillGapService, SkillGapService>();
         services.AddScoped<IJobTrendService, JobTrendService>();
         services.AddScoped<IJobScrapingSettingsService, JobScrapingSettingsService>();
@@ -77,6 +77,13 @@ public static class ServiceCollectionExtensions
             var baseUrl = configuration["OpenAI:BaseUrl"];
             client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(baseUrl) ? "https://api.openai.com/v1/" : baseUrl);
             client.Timeout = TimeSpan.FromSeconds(60);
+        });
+
+        services.AddHttpClient<IAIRecommendationService, AIRecommendationService>(client =>
+        {
+            var baseUrl = configuration["OpenAI:BaseUrl"];
+            client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(baseUrl) ? "https://api.openai.com/v1/" : baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(90);
         });
 
         // Job Trend scraping (Market Pulse weekly job board scrape)

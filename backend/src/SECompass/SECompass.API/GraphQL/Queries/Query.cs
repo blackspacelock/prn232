@@ -10,6 +10,7 @@ using SECompass.BusinessLogic.DTOs.Node;
 using SECompass.BusinessLogic.DTOs.NodeProgress;
 using SECompass.BusinessLogic.DTOs.PersonalRoadmap;
 using SECompass.BusinessLogic.DTOs.Profile;
+using SECompass.BusinessLogic.DTOs.PublicPortfolio;
 using SECompass.BusinessLogic.DTOs.Skill;
 using SECompass.BusinessLogic.DTOs.User;
 using SECompass.BusinessLogic.Interfaces;
@@ -147,6 +148,12 @@ public class Query
         return result.Success ? result.Data! : new();
     }
 
+    public async Task<PublicPortfolioDto?> GetPublicPortfolioByProfile([Service] IPublicPortfolioService service, Guid profileId)
+    {
+        var result = await service.GetByProfileAsync(profileId);
+        return result.Success ? result.Data : null;
+    }
+
     // Chat
     public async Task<List<ChatSessionDto>> GetChatSessionsByProfile([Service] IChatService service, Guid profileId)
     {
@@ -183,7 +190,7 @@ public class Query
     // AI
     public async Task<PortfolioAnalysisDto?> GetPortfolioAnalysis([Service] IAIRecommendationService service, Guid profileId)
     {
-        var result = await service.AnalyzeGitHubPortfolioAsync(profileId);
+        var result = await service.GetCachedPortfolioAnalysisAsync(profileId);
         return result.Success ? result.Data : null;
     }
 

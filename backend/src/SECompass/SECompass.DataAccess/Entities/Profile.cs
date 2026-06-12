@@ -14,4 +14,5 @@ public class Profile : BaseAuditableEntity
     public ICollection<GitHubRepository> GitHubRepositories { get; set; } = new List<GitHubRepository>();
     public ICollection<ChatSession> ChatSessions { get; set; } = new List<ChatSession>();
     public ICollection<PersonalRoadmap> PersonalRoadmaps { get; set; } = new List<PersonalRoadmap>();
+    public PublicPortfolio? PublicPortfolio { get; set; }
 }

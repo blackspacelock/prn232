@@ -49,6 +49,10 @@ public class ProfileService : IProfileService
         var profile = profiles.FirstOrDefault();
         if (profile == null) return ServiceResult<ProfileWithSkillsDto>.Fail("Profile not found.");
 
+        var user = await _uow.Users.GetByIdAsync(userId);
+        if (user == null) return ServiceResult<ProfileWithSkillsDto>.Fail("User not found.");
+        profile.User = user;
+
         var profileSkills = (await _uow.ProfileTechnicalSkills.FindAsync(s => s.ProfileId == userId)).ToList();
         if (profileSkills.Count > 0)
         {

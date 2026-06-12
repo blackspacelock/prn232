@@ -7,6 +7,7 @@ namespace SECompass.BusinessLogic.Interfaces;
 public interface IAIRecommendationService
 {
     Task<ServiceResult<PortfolioAnalysisDto>> AnalyzeGitHubPortfolioAsync(Guid profileId);
+    Task<ServiceResult<PortfolioAnalysisDto?>> GetCachedPortfolioAnalysisAsync(Guid profileId);
     Task<ServiceResult<List<LearningResourceDto>>> RecommendLearningResourcesAsync(Guid profileId, Guid nodeId);
     Task<ServiceResult<List<string>>> GetTrendingSkillRecommendationsAsync(Guid profileId);
 }

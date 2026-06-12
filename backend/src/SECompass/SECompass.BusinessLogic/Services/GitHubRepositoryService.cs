@@ -40,6 +40,23 @@ public class GitHubRepositoryService : IGitHubRepositoryService
         return ServiceResult<List<GitHubRepositoryDto>>.Ok(_mapper.Map<List<GitHubRepositoryDto>>(repos));
     }
 
+    public async Task<ServiceResult<GitHubRepositoryDto>> UpdateAsync(Guid repoId, UpdateGitHubRepoDto dto)
+    {
+        var repo = await _uow.GitHubRepositories.GetByIdAsync(repoId);
+        if (repo == null) return ServiceResult<GitHubRepositoryDto>.Fail("Repository not found.");
+
+        if (dto.RepositoryName != null) repo.RepositoryName = dto.RepositoryName;
+        if (dto.RepoUrl != null) repo.RepoUrl = dto.RepoUrl;
+        if (dto.Description != null) repo.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description;
+        if (dto.IsPrivate.HasValue) repo.IsPrivate = dto.IsPrivate.Value;
+
+        _uow.GitHubRepositories.Update(repo);
+        await _uow.SaveChangesAsync();
+
+        repo = await _uow.GitHubRepositories.GetByIdAsync(repoId) ?? repo;
+        return ServiceResult<GitHubRepositoryDto>.Ok(_mapper.Map<GitHubRepositoryDto>(repo));
+    }
+
     public async Task<ServiceResult<bool>> RemoveAsync(Guid repoId)
     {
         var repo = await _uow.GitHubRepositories.GetByIdAsync(repoId);

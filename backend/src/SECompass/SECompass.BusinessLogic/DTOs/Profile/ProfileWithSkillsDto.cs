@@ -5,6 +5,8 @@ namespace SECompass.BusinessLogic.DTOs.Profile;
 public class ProfileWithSkillsDto
 {
     public Guid UserId { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
     public string? BioDescription { get; set; }
     public string? PhoneNumber { get; set; }
     public string? University { get; set; }

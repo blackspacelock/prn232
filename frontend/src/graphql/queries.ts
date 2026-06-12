@@ -18,6 +18,8 @@ export const GET_PROFILE_WITH_SKILLS = gql`
   query GetProfileWithSkills($userId: UUID!) {
     profileWithSkills(userId: $userId) {
       userId
+      fullName
+      avatarUrl
       bioDescription
       phoneNumber
       university
@@ -305,6 +307,37 @@ export const GET_PORTFOLIO_ANALYSIS = gql`
       overallSummary
       strengths
       recommendations
+    }
+  }
+`;
+
+export const GET_PUBLIC_PORTFOLIO_BY_PROFILE = gql`
+  query GetPublicPortfolioByProfile($profileId: UUID!) {
+    publicPortfolioByProfile(profileId: $profileId) {
+      id
+      profileId
+      headline
+      publicBio
+      location
+      websiteUrl
+      linkedInUrl
+      contactEmail
+      isPublic
+      lastAnalyzedAt
+      cachedPortfolioAnalysis {
+        profileId
+        repositoryNames
+        overallSummary
+        strengths
+        recommendations
+        repositoryAnalyses {
+          repositoryId
+          repositoryName
+          objective
+          techStacks
+          summary
+        }
+      }
     }
   }
 `;

@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<NodeTechnicalSkill> NodeTechnicalSkills { get; set; }
     public DbSet<ProfileTechnicalSkill> ProfileTechnicalSkills { get; set; }
     public DbSet<GitHubRepository> GitHubRepositories { get; set; }
+    public DbSet<PublicPortfolio> PublicPortfolios { get; set; }
     public DbSet<ChatSession> ChatSessions { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<CareerRole> CareerRoles { get; set; }
@@ -103,6 +104,11 @@ public class AppDbContext : DbContext
                     cancellationToken);
                 await CascadeRangeAsync(
                     GitHubRepositories.Where(r => r.ProfileId == profile.UserId),
+                    queue,
+                    queued,
+                    cancellationToken);
+                await CascadeRangeAsync(
+                    PublicPortfolios.Where(p => p.ProfileId == profile.UserId),
                     queue,
                     queued,
                     cancellationToken);

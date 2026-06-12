@@ -21,6 +21,7 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<Node>? _nodes;
     private IRepository<LearningResource>? _learningResources;
     private IRepository<GitHubRepository>? _gitHubRepositories;
+    private IRepository<PublicPortfolio>? _publicPortfolios;
     private IRepository<ChatSession>? _chatSessions;
     private IRepository<ChatMessage>? _chatMessages;
     private IRepository<JobTrend>? _jobTrends;
@@ -45,6 +46,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<Node> Nodes => _nodes ??= new GenericRepository<Node>(_context);
     public IRepository<LearningResource> LearningResources => _learningResources ??= new GenericRepository<LearningResource>(_context);
     public IRepository<GitHubRepository> GitHubRepositories => _gitHubRepositories ??= new GenericRepository<GitHubRepository>(_context);
+    public IRepository<PublicPortfolio> PublicPortfolios => _publicPortfolios ??= new GenericRepository<PublicPortfolio>(_context);
     public IRepository<ChatSession> ChatSessions => _chatSessions ??= new GenericRepository<ChatSession>(_context);
     public IRepository<ChatMessage> ChatMessages => _chatMessages ??= new GenericRepository<ChatMessage>(_context);
     public IRepository<JobTrend> JobTrends => _jobTrends ??= new GenericRepository<JobTrend>(_context);

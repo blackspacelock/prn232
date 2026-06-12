@@ -11,6 +11,7 @@ using SECompass.BusinessLogic.DTOs.Node;
 using SECompass.BusinessLogic.DTOs.NodeProgress;
 using SECompass.BusinessLogic.DTOs.PersonalRoadmap;
 using SECompass.BusinessLogic.DTOs.Profile;
+using SECompass.BusinessLogic.DTOs.PublicPortfolio;
 using SECompass.BusinessLogic.DTOs.RoadmapNode;
 using SECompass.BusinessLogic.DTOs.RoadmapNodeEdge;
 using SECompass.BusinessLogic.DTOs.Skill;
@@ -35,6 +36,8 @@ public class MappingProfile : AutoMapper.Profile
             .ForMember(d => d.UserId, o => o.MapFrom(s => s.UserId));
         CreateMap<DataAccess.Entities.Profile, ProfileWithSkillsDto>()
             .ForMember(d => d.UserId, o => o.MapFrom(s => s.UserId))
+            .ForMember(d => d.FullName, o => o.MapFrom(s => s.User.FullName))
+            .ForMember(d => d.AvatarUrl, o => o.MapFrom(s => s.User.AvatarUrl))
             .ForMember(d => d.Skills, o => o.MapFrom(s => s.ProfileTechnicalSkills));
         CreateMap<UpdateProfileDto, DataAccess.Entities.Profile>()
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
@@ -103,6 +106,15 @@ public class MappingProfile : AutoMapper.Profile
         // GitHubRepository
         CreateMap<GitHubRepository, GitHubRepositoryDto>();
         CreateMap<AddGitHubRepoDto, GitHubRepository>();
+        CreateMap<UpdateGitHubRepoDto, GitHubRepository>()
+            .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
+
+        // PublicPortfolio
+        CreateMap<PublicPortfolio, PublicPortfolioDto>()
+            .ForMember(d => d.CachedPortfolioAnalysis, o => o.Ignore());
+        CreateMap<UpdatePublicPortfolioDto, PublicPortfolio>()
+            .ForMember(d => d.IsPublic, o => o.MapFrom((src, dest) => src.IsPublic ?? dest.IsPublic))
+            .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
 
         // ChatSession
         CreateMap<ChatSession, ChatSessionDto>();

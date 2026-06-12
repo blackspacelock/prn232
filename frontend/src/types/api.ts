@@ -69,6 +69,19 @@ export interface SkillDto {
   createdAt: string;
 }
 
+// Matches backend ProfileWithSkillsDto
+export interface ProfileWithSkillsDto {
+  userId: string;
+  fullName: string;
+  avatarUrl?: string;
+  bioDescription?: string;
+  phoneNumber?: string;
+  university?: string;
+  major?: string;
+  studiedYear?: number;
+  skills: SkillDto[];
+}
+
 // Matches backend SkillGapCategoryDto
 export interface SkillGapCategoryDto {
   category: string;
@@ -95,6 +108,57 @@ export interface AddGitHubRepoDto {
   repoUrl: string;
   description?: string;
   isPrivate: boolean;
+}
+
+export interface UpdateGitHubRepoDto {
+  repositoryName?: string;
+  repoUrl?: string;
+  description?: string;
+  isPrivate?: boolean;
+}
+
+// Matches backend GitHubRepositoryDto
+export interface GitHubRepositoryDto {
+  id: string;
+  profileId: string;
+  repositoryName: string;
+  repoUrl: string;
+  description?: string;
+  isPrivate: boolean;
+  createdAt: string;
+}
+
+// Matches backend RepositoryAnalysisDto
+export interface RepositoryAnalysisDto {
+  repositoryId: string;
+  repositoryName: string;
+  objective: string;
+  techStacks: string[];
+  summary: string;
+}
+
+// Matches backend PortfolioAnalysisDto
+export interface PortfolioAnalysisDto {
+  profileId: string;
+  repositoryNames: string[];
+  overallSummary: string;
+  strengths: string[];
+  recommendations: string[];
+  repositoryAnalyses: RepositoryAnalysisDto[];
+}
+
+export interface PublicPortfolioDto {
+  id: string;
+  profileId: string;
+  headline?: string;
+  publicBio?: string;
+  location?: string;
+  websiteUrl?: string;
+  linkedInUrl?: string;
+  contactEmail?: string;
+  isPublic: boolean;
+  lastAnalyzedAt?: string;
+  cachedPortfolioAnalysis?: PortfolioAnalysisDto;
 }
 
 // Must match backend SendMessageDto exactly

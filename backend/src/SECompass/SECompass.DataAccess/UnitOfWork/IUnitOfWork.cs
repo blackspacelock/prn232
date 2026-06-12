@@ -18,6 +18,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<Node> Nodes { get; }
     IRepository<LearningResource> LearningResources { get; }
     IRepository<GitHubRepository> GitHubRepositories { get; }
+    IRepository<PublicPortfolio> PublicPortfolios { get; }
     IRepository<ChatSession> ChatSessions { get; }
     IRepository<ChatMessage> ChatMessages { get; }
     IRepository<JobTrend> JobTrends { get; }
