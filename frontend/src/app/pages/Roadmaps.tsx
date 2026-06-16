@@ -10,7 +10,9 @@ import { ActionButton, ActionLink } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import { ToggleSwitch } from '../components/ToggleSwitch';
-import { FolderOpen, MoreVertical, Rocket, Search, Trash2 } from 'lucide-react';
+import { AdminListToolbar, AdminPagination, useAdminList, type AdminSortOption } from '../components/admin/AdminListControls';
+import { AdminFilterSelect } from '../components/admin/AdminListControls';
+import { FolderOpen, MoreVertical, Rocket, Trash2 } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -28,6 +30,22 @@ interface CareerRole { id: string; name: string; description?: string }
 interface CareerRoadmap { id: string; name: string; description?: string }
 type PersonalRoadmap = PersonalRoadmapDto;
 
+type RoadmapSort = 'name' | 'progress' | 'createdAt';
+
+const SORT_OPTIONS: AdminSortOption<RoadmapSort>[] = [
+  { value: 'name', label: 'Name' },
+  { value: 'progress', label: 'Progress' },
+  { value: 'createdAt', label: 'Date Added' },
+];
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Statuses' },
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'in-progress', label: 'In Progress' },
+  { value: 'not-started', label: 'Not Started' },
+];
+
 export function RoadmapsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -36,7 +54,11 @@ export function RoadmapsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
-  const [searchQuery, setSearchQuery] = useState('');
+
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<RoadmapSort>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [statusFilter, setStatusFilter] = useState('');
 
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
 
@@ -49,16 +71,37 @@ export function RoadmapsPage() {
   const [loadRoadmapsByRole, { data: roadmapsByRoleData, loading: roadmapsByRoleLoading }] = useLazyQuery(GET_CAREER_ROADMAPS_BY_ROLE);
 
   const allRoadmaps: PersonalRoadmap[] = (roadmapsData as { personalRoadmapsByProfile?: PersonalRoadmap[] })?.personalRoadmapsByProfile ?? [];
-  const roadmaps = searchQuery
-    ? allRoadmaps.filter((r) =>
-        new Date(r.createdAt).toLocaleDateString().includes(searchQuery) ||
-        (r.careerRoadmapName ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (r.note ?? '').toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : allRoadmaps;
   const careerRoles: CareerRole[] = (rolesData as { careerRoles?: CareerRole[] })?.careerRoles ?? [];
   const careerRoadmaps: CareerRoadmap[] = (roadmapsByRoleData as { careerRoadmapsByRole?: CareerRoadmap[] })?.careerRoadmapsByRole ?? [];
   const personalRoadmapsQueryOptions = { query: GET_PERSONAL_ROADMAPS_BY_PROFILE, variables: { profileId } };
+
+  const statusFilteredRoadmaps = statusFilter
+    ? allRoadmaps.filter((r) => {
+        const progress = Math.round(r.progressPercentage);
+        if (statusFilter === 'active') return r.isActive;
+        if (statusFilter === 'completed') return progress === 100;
+        if (statusFilter === 'in-progress') return progress > 0 && progress < 100;
+        if (statusFilter === 'not-started') return progress === 0;
+        return true;
+      })
+    : allRoadmaps;
+
+  const roadmapList = useAdminList<PersonalRoadmap, RoadmapSort>({
+    items: statusFilteredRoadmaps,
+    searchText: search,
+    sortKey,
+    sortDirection,
+    pageSize: 20,
+    searchPredicate: (r, term) =>
+      (r.careerRoadmapName ?? '').toLowerCase().includes(term) ||
+      (r.note ?? '').toLowerCase().includes(term) ||
+      new Date(r.createdAt).toLocaleDateString().includes(term),
+    getSortValue: (r, key) => {
+      if (key === 'name') return r.careerRoadmapName ?? '';
+      if (key === 'progress') return r.progressPercentage;
+      return r.createdAt;
+    },
+  });
 
   const generateMutation = useMutation({
     mutationFn: (dto: GeneratePersonalRoadmapRequestDto) =>
@@ -89,9 +132,7 @@ export function RoadmapsPage() {
   const activateMutation = useMutation({
     mutationFn: (id: string) => apiClient.put(`/api/personal-roadmaps/${id}/toggle-active`),
     onMutate: async (id: string) => {
-      const queryOptions = {
-        ...personalRoadmapsQueryOptions,
-      };
+      const queryOptions = { ...personalRoadmapsQueryOptions };
       const previousRoadmaps = apolloClient.cache.readQuery<{ personalRoadmapsByProfile?: PersonalRoadmap[] }>(queryOptions);
 
       apolloClient.cache.updateQuery<{ personalRoadmapsByProfile?: PersonalRoadmap[] }>(queryOptions, (current) => {
@@ -152,36 +193,45 @@ export function RoadmapsPage() {
           }
         />
 
-        <div className="md3-panel flex flex-wrap items-center gap-3 p-4">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search roadmaps..."
-              className="md3-field w-full pl-12 pr-4"
-            />
-          </div>
-        </div>
+        <AdminListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search roadmaps..."
+          sortKey={sortKey}
+          onSortKeyChange={setSortKey}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
+          sortOptions={SORT_OPTIONS}
+        >
+          <AdminFilterSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={STATUS_OPTIONS}
+            ariaLabel="Filter by status"
+            label="Status"
+          />
+        </AdminListToolbar>
 
-        {roadmaps.length > 0 ? (
-          <div className="desktop-grid-3">
-            {roadmaps.map((roadmap) => (
-              <RoadmapCard
-                key={roadmap.id}
-                roadmap={roadmap}
-                onDelete={() => setDeleteId(roadmap.id)}
-                onActivate={() => activateMutation.mutate(roadmap.id)}
-                activating={activateMutation.isPending && activateMutation.variables === roadmap.id}
-              />
-            ))}
-          </div>
+        {roadmapList.pagedItems.length > 0 ? (
+          <>
+            <div className="desktop-grid-3">
+              {roadmapList.pagedItems.map((roadmap) => (
+                <RoadmapCard
+                  key={roadmap.id}
+                  roadmap={roadmap}
+                  onDelete={() => setDeleteId(roadmap.id)}
+                  onActivate={() => activateMutation.mutate(roadmap.id)}
+                  activating={activateMutation.isPending && activateMutation.variables === roadmap.id}
+                />
+              ))}
+            </div>
+            <AdminPagination {...roadmapList} onPageChange={roadmapList.setPage} />
+          </>
         ) : (
           <EmptyState
             icon={Rocket}
-            title="No roadmaps yet"
-            description="Generate a personalized roadmap from an available career role to begin tracking your progress."
+            title={search || statusFilter ? 'No roadmaps match your filters' : 'No roadmaps yet'}
+            description={search || statusFilter ? 'Try adjusting your search or filter.' : 'Generate a personalized roadmap from an available career role to begin tracking your progress.'}
             actionLabel="Generate Roadmap"
             onAction={() => setIsModalOpen(true)}
           />
@@ -346,7 +396,8 @@ function GenerateRoadmapModalWired({ isOpen, onClose, careerRoles, rolesLoading,
           </div>
         ) : (
           <>
-            <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)] mb-4">Generate Roadmap</h2>
+            <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)] mb-1">Generate Roadmap</h2>
+            <p className="text-sm text-[var(--md3-on-surface-variant)] mb-4">Select a career role and roadmap template to get a personalized learning path.</p>
             {rolesLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
