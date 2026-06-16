@@ -8,7 +8,7 @@ namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/nodes")]
-[Authorize(Roles = "Admin,0")]
+[Authorize(Roles = "0")]
 public class NodesController : ControllerBase
 {
     private readonly INodeService _nodeService;

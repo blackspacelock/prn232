@@ -16,7 +16,7 @@ public class UsersController : ControllerBase
     public UsersController(IUserService userService) => _userService = userService;
 
     [HttpGet]
-    [Authorize(Roles = "Admin,0")]
+    [Authorize(Roles = "0")]
     [ProducesResponseType(typeof(List<UserDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {
@@ -25,7 +25,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("admin-overview")]
-    [Authorize(Roles = "Admin,0")]
+    [Authorize(Roles = "0")]
     [ProducesResponseType(typeof(AdminOverviewDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAdminOverview()
     {
@@ -44,7 +44,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id:guid}/admin")]
-    [Authorize(Roles = "Admin,0")]
+    [Authorize(Roles = "0")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AdminUpdate(Guid id, [FromBody] AdminUpdateUserDto dto)
@@ -55,6 +55,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "0")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deactivate(Guid id)
