@@ -6,8 +6,9 @@ import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
-import { Plus, Pencil, Trash2, TrendingUp, RefreshCw, Save, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, TrendingUp, RefreshCw, Save } from 'lucide-react';
 import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
+import { AdminFormDialog } from '../../components/admin/AdminFormDialog';
 import { useQuery } from '@apollo/client/react';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
@@ -377,54 +378,49 @@ export function AdminJobTrendsPage() {
             </div>
           )}
 
-          {showSourceForm && (
-            <div className="mt-4 border-t border-[var(--md3-outline-variant)] pt-4">
-              <h4 className="text-sm font-medium text-[var(--md3-on-surface)] mb-3">{editingSource ? 'Edit Source' : 'Add Source'}</h4>
-              <div className="admin-form-grid">
-                <input type="text" value={sourceForm.name} onChange={(e) => setSourceForm({ ...sourceForm, name: e.target.value })} placeholder="Name (e.g. ITviec)" className="md3-field w-full px-4" />
-                <input type="text" value={sourceForm.region} onChange={(e) => setSourceForm({ ...sourceForm, region: e.target.value })} placeholder="Region (e.g. Vietnam)" className="md3-field w-full px-4" />
-                <input type="text" value={sourceForm.url} onChange={(e) => setSourceForm({ ...sourceForm, url: e.target.value })} placeholder="Listing URL" className="md3-field w-full px-4 col-span-2" />
-                <input type="number" value={sourceForm.maxPostings} onChange={(e) => setSourceForm({ ...sourceForm, maxPostings: Number(e.target.value) })} placeholder="Max Postings" className="md3-field w-full px-4" min={1} />
-                <ToggleSwitch
-                  checked={sourceForm.enabled}
-                  label={sourceForm.enabled ? 'Enabled' : 'Disabled'}
-                  activeTone="success"
-                  onChange={() => setSourceForm({ ...sourceForm, enabled: !sourceForm.enabled })}
-                />
-                <input type="text" value={sourceForm.jobCardXPath} onChange={(e) => setSourceForm({ ...sourceForm, jobCardXPath: e.target.value })} placeholder="Job Card XPath" className="md3-field w-full px-4 col-span-2" />
-                <input type="text" value={sourceForm.titleXPath} onChange={(e) => setSourceForm({ ...sourceForm, titleXPath: e.target.value })} placeholder="Title XPath" className="md3-field w-full px-4 col-span-2" />
-                <input type="text" value={sourceForm.tagsXPath} onChange={(e) => setSourceForm({ ...sourceForm, tagsXPath: e.target.value })} placeholder="Tags XPath" className="md3-field w-full px-4 col-span-2" />
-              </div>
-              <div className="flex gap-3 mt-4">
-                <AdminActionButton
-                  icon={Save}
-                  label={createSourceMutation.isPending || updateSourceMutation.isPending ? 'Saving...' : 'Save'}
-                  onClick={handleSaveSource}
-                  disabled={!sourceForm.name || !sourceForm.url || createSourceMutation.isPending || updateSourceMutation.isPending}
-                />
-                <AdminActionButton icon={X} label="Cancel" onClick={() => { setShowSourceForm(false); setEditingSource(null); }} />
-              </div>
-            </div>
-          )}
         </div>
 
-        {showForm && (
-          <div className="admin-panel admin-section">
-            <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">{editingTrend ? 'Edit Trend' : 'Add Trend'}</h3>
-            <div className="admin-form-grid">
-              <input type="text" value={form.techSkill} onChange={(e) => setForm({ ...form, techSkill: e.target.value })} placeholder="Tech Skill (e.g. React)" className="md3-field w-full px-4" />
-              <input type="number" value={form.trendScore} onChange={(e) => setForm({ ...form, trendScore: Number(e.target.value) })} placeholder="Score (0-100)" className="md3-field w-full px-4" min={0} max={100} />
-              <input type="text" value={form.region ?? ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Region" className="md3-field w-full px-4" />
-              <input type="text" value={form.source ?? ''} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="Source" className="md3-field w-full px-4" />
-              <input type="date" value={form.snapshotDate} onChange={(e) => setForm({ ...form, snapshotDate: e.target.value })} className="md3-field w-full px-4" />
-              <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description" className="md3-field w-full px-4" />
-            </div>
-            <div className="flex gap-3 mt-4">
-              <AdminActionButton icon={Plus} label={createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save'} onClick={handleSave} disabled={!form.techSkill || createMutation.isPending || updateMutation.isPending} />
-              <AdminActionButton icon={Trash2} label="Cancel" onClick={() => setShowForm(false)} />
-            </div>
+        <AdminFormDialog
+          isOpen={showSourceForm}
+          title={editingSource ? 'Edit Source' : 'Add Source'}
+          description="Configure the job board and selectors used by scraping."
+          submitLabel="Save Source"
+          isSubmitting={createSourceMutation.isPending || updateSourceMutation.isPending}
+          submitDisabled={!sourceForm.name.trim() || !sourceForm.url.trim()}
+          onSubmit={handleSaveSource}
+          onCancel={() => { setShowSourceForm(false); setEditingSource(null); }}
+        >
+          <div className="admin-form-grid">
+            <input type="text" value={sourceForm.name} onChange={(e) => setSourceForm({ ...sourceForm, name: e.target.value })} placeholder="Name (e.g. ITviec)" className="md3-field w-full px-4" />
+            <input type="text" value={sourceForm.region} onChange={(e) => setSourceForm({ ...sourceForm, region: e.target.value })} placeholder="Region (e.g. Vietnam)" className="md3-field w-full px-4" />
+            <input type="text" value={sourceForm.url} onChange={(e) => setSourceForm({ ...sourceForm, url: e.target.value })} placeholder="Listing URL" className="md3-field w-full px-4 col-span-2" />
+            <input type="number" value={sourceForm.maxPostings} onChange={(e) => setSourceForm({ ...sourceForm, maxPostings: Number(e.target.value) })} placeholder="Max Postings" className="md3-field w-full px-4" min={1} />
+            <ToggleSwitch checked={sourceForm.enabled} label={sourceForm.enabled ? 'Enabled' : 'Disabled'} activeTone="success" onChange={() => setSourceForm({ ...sourceForm, enabled: !sourceForm.enabled })} />
+            <input type="text" value={sourceForm.jobCardXPath} onChange={(e) => setSourceForm({ ...sourceForm, jobCardXPath: e.target.value })} placeholder="Job Card XPath" className="md3-field w-full px-4 col-span-2" />
+            <input type="text" value={sourceForm.titleXPath} onChange={(e) => setSourceForm({ ...sourceForm, titleXPath: e.target.value })} placeholder="Title XPath" className="md3-field w-full px-4 col-span-2" />
+            <input type="text" value={sourceForm.tagsXPath} onChange={(e) => setSourceForm({ ...sourceForm, tagsXPath: e.target.value })} placeholder="Tags XPath" className="md3-field w-full px-4 col-span-2" />
           </div>
-        )}
+        </AdminFormDialog>
+
+        <AdminFormDialog
+          isOpen={showForm}
+          title={editingTrend ? 'Edit Trend' : 'Add Trend'}
+          description="Trend scores power market pulse and roadmap recommendations."
+          submitLabel="Save Trend"
+          isSubmitting={createMutation.isPending || updateMutation.isPending}
+          submitDisabled={!form.techSkill.trim()}
+          onSubmit={handleSave}
+          onCancel={() => { setShowForm(false); setEditingTrend(null); }}
+        >
+          <div className="admin-form-grid">
+            <input type="text" value={form.techSkill} onChange={(e) => setForm({ ...form, techSkill: e.target.value })} placeholder="Tech Skill (e.g. React)" className="md3-field w-full px-4" />
+            <input type="number" value={form.trendScore} onChange={(e) => setForm({ ...form, trendScore: Number(e.target.value) })} placeholder="Score (0-100)" className="md3-field w-full px-4" min={0} max={100} />
+            <input type="text" value={form.region ?? ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Region" className="md3-field w-full px-4" />
+            <input type="text" value={form.source ?? ''} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="Source" className="md3-field w-full px-4" />
+            <input type="date" value={form.snapshotDate} onChange={(e) => setForm({ ...form, snapshotDate: e.target.value })} className="md3-field w-full px-4" />
+            <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description" className="md3-field w-full px-4" />
+          </div>
+        </AdminFormDialog>
 
         {loading ? (
           <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>

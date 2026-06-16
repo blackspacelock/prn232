@@ -7,6 +7,7 @@ import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
+import { AdminFormDialog } from '../../components/admin/AdminFormDialog';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
@@ -78,19 +79,21 @@ export function AdminCareerRolesPage() {
           actions={<AdminActionButton icon={Plus} label="Create Role" onClick={() => { setEditingRole(null); setForm({ name: '', description: '' }); setShowForm(true); }} />}
         />
 
-        {showForm && (
-          <div className="admin-panel admin-section">
-            <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">{editingRole ? 'Edit Role' : 'Create Role'}</h3>
-            <div className="space-y-3">
-              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Role name" className="md3-field w-full px-4" />
-              <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (optional)" className="md3-field w-full px-4" />
-              <div className="flex gap-3">
-                <AdminActionButton icon={Plus} label={createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save'} onClick={handleSave} disabled={!form.name || createMutation.isPending || updateMutation.isPending} />
-                <AdminActionButton icon={Trash2} label="Cancel" onClick={() => setShowForm(false)} />
-              </div>
-            </div>
+        <AdminFormDialog
+          isOpen={showForm}
+          title={editingRole ? 'Edit Role' : 'Create Role'}
+          description="Career roles are used for catalog browsing and roadmap generation."
+          submitLabel="Save Role"
+          isSubmitting={createMutation.isPending || updateMutation.isPending}
+          submitDisabled={!form.name.trim()}
+          onSubmit={handleSave}
+          onCancel={() => { setShowForm(false); setEditingRole(null); }}
+        >
+          <div className="space-y-3">
+            <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Role name" className="md3-field w-full px-4" />
+            <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (optional)" className="md3-field w-full px-4" />
           </div>
-        )}
+        </AdminFormDialog>
 
         <AdminListToolbar
           search={searchQuery}

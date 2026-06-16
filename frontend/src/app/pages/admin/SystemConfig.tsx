@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Save, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { Plus, Save, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -9,6 +9,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
 import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
+import { AdminFormDialog } from '../../components/admin/AdminFormDialog';
 import { apiClient } from '@/lib/axios';
 import type {
   CreateJobScrapingSourceDto,
@@ -201,25 +202,27 @@ export function AdminSystemConfigPage() {
           )}
         </section>
 
-        {showSourceForm && (
-          <section className="admin-panel admin-section">
-            <h2 className="mb-4 text-base font-semibold text-[var(--md3-on-surface)]">{editingSource ? 'Edit Source' : 'Add Source'}</h2>
-            <div className="admin-form-grid">
-              <input type="text" value={sourceForm.name} onChange={(event) => setSourceForm({ ...sourceForm, name: event.target.value })} placeholder="Name" className="md3-field w-full px-4" />
-              <input type="text" value={sourceForm.region} onChange={(event) => setSourceForm({ ...sourceForm, region: event.target.value })} placeholder="Region" className="md3-field w-full px-4" />
-              <input type="text" value={sourceForm.url} onChange={(event) => setSourceForm({ ...sourceForm, url: event.target.value })} placeholder="Listing URL" className="md3-field w-full px-4 lg:col-span-2" />
-              <input type="number" value={sourceForm.maxPostings} onChange={(event) => setSourceForm({ ...sourceForm, maxPostings: Number(event.target.value) })} placeholder="Max postings" className="md3-field w-full px-4" min={1} />
-              <ToggleSwitch checked={sourceForm.enabled} label={sourceForm.enabled ? 'Enabled' : 'Disabled'} activeTone="success" onChange={() => setSourceForm({ ...sourceForm, enabled: !sourceForm.enabled })} />
-              <input type="text" value={sourceForm.jobCardXPath} onChange={(event) => setSourceForm({ ...sourceForm, jobCardXPath: event.target.value })} placeholder="Job card XPath" className="md3-field w-full px-4 lg:col-span-2" />
-              <input type="text" value={sourceForm.titleXPath} onChange={(event) => setSourceForm({ ...sourceForm, titleXPath: event.target.value })} placeholder="Title XPath" className="md3-field w-full px-4 lg:col-span-2" />
-              <input type="text" value={sourceForm.tagsXPath} onChange={(event) => setSourceForm({ ...sourceForm, tagsXPath: event.target.value })} placeholder="Tags XPath" className="md3-field w-full px-4 lg:col-span-2" />
-            </div>
-            <div className="mt-4 flex gap-3">
-              <AdminActionButton icon={Save} label={createSourceMutation.isPending || updateSourceMutation.isPending ? 'Saving...' : 'Save Source'} onClick={saveSource} disabled={!sourceForm.name || !sourceForm.url || createSourceMutation.isPending || updateSourceMutation.isPending} />
-              <AdminActionButton icon={X} label="Cancel" onClick={() => { setShowSourceForm(false); setEditingSource(null); }} />
-            </div>
-          </section>
-        )}
+        <AdminFormDialog
+          isOpen={showSourceForm}
+          title={editingSource ? 'Edit Source' : 'Add Source'}
+          description="Configure the scraping source used by Market Pulse data refreshes."
+          submitLabel="Save Source"
+          isSubmitting={createSourceMutation.isPending || updateSourceMutation.isPending}
+          submitDisabled={!sourceForm.name.trim() || !sourceForm.url.trim()}
+          onSubmit={saveSource}
+          onCancel={() => { setShowSourceForm(false); setEditingSource(null); }}
+        >
+          <div className="admin-form-grid">
+            <input type="text" value={sourceForm.name} onChange={(event) => setSourceForm({ ...sourceForm, name: event.target.value })} placeholder="Name" className="md3-field w-full px-4" />
+            <input type="text" value={sourceForm.region} onChange={(event) => setSourceForm({ ...sourceForm, region: event.target.value })} placeholder="Region" className="md3-field w-full px-4" />
+            <input type="text" value={sourceForm.url} onChange={(event) => setSourceForm({ ...sourceForm, url: event.target.value })} placeholder="Listing URL" className="md3-field w-full px-4 lg:col-span-2" />
+            <input type="number" value={sourceForm.maxPostings} onChange={(event) => setSourceForm({ ...sourceForm, maxPostings: Number(event.target.value) })} placeholder="Max postings" className="md3-field w-full px-4" min={1} />
+            <ToggleSwitch checked={sourceForm.enabled} label={sourceForm.enabled ? 'Enabled' : 'Disabled'} activeTone="success" onChange={() => setSourceForm({ ...sourceForm, enabled: !sourceForm.enabled })} />
+            <input type="text" value={sourceForm.jobCardXPath} onChange={(event) => setSourceForm({ ...sourceForm, jobCardXPath: event.target.value })} placeholder="Job card XPath" className="md3-field w-full px-4 lg:col-span-2" />
+            <input type="text" value={sourceForm.titleXPath} onChange={(event) => setSourceForm({ ...sourceForm, titleXPath: event.target.value })} placeholder="Title XPath" className="md3-field w-full px-4 lg:col-span-2" />
+            <input type="text" value={sourceForm.tagsXPath} onChange={(event) => setSourceForm({ ...sourceForm, tagsXPath: event.target.value })} placeholder="Tags XPath" className="md3-field w-full px-4 lg:col-span-2" />
+          </div>
+        </AdminFormDialog>
 
         <section className="admin-panel admin-table-card">
           {sourcesLoading ? (

@@ -6,6 +6,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
 import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
+import { AdminFormDialog } from '../../components/admin/AdminFormDialog';
 import { Plus, Pencil, Trash2, Network, ChevronRight, Hash } from 'lucide-react';
 import { useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
@@ -122,20 +123,22 @@ export function AdminNodeLibraryPage() {
           </div>
         </div>
 
-        {showForm && (
-          <div className="admin-panel admin-section">
-            <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">{editingNode ? 'Edit Node' : 'Create Node'}</h3>
-            <div className="space-y-3">
-              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Node name" className="md3-field w-full px-4" />
-              <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description" className="md3-field w-full px-4" />
-              <input type="number" value={form.order} onChange={(e) => setForm({ ...form, order: Number(e.target.value) })} placeholder="Order" className="md3-field w-full px-4" min={1} />
-              <div className="flex gap-3">
-                <AdminActionButton icon={Plus} label={createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save'} onClick={handleSave} disabled={!form.name || createMutation.isPending || updateMutation.isPending} />
-                <AdminActionButton icon={Trash2} label="Cancel" onClick={() => setShowForm(false)} />
-              </div>
-            </div>
+        <AdminFormDialog
+          isOpen={showForm}
+          title={editingNode ? 'Edit Node' : 'Create Node'}
+          description={parentId ? 'This node will be saved under the currently loaded parent.' : 'Load a parent node before creating child nodes.'}
+          submitLabel="Save Node"
+          isSubmitting={createMutation.isPending || updateMutation.isPending}
+          submitDisabled={!form.name.trim()}
+          onSubmit={handleSave}
+          onCancel={() => { setShowForm(false); setEditingNode(null); }}
+        >
+          <div className="space-y-3">
+            <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Node name" className="md3-field w-full px-4" />
+            <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description" className="md3-field w-full px-4" />
+            <input type="number" value={form.order} onChange={(e) => setForm({ ...form, order: Number(e.target.value) })} placeholder="Order" className="md3-field w-full px-4" min={1} />
           </div>
-        )}
+        </AdminFormDialog>
 
         {hierarchyRootName && (
           <div className="admin-panel p-4 text-sm text-[var(--md3-on-surface-variant)]">
