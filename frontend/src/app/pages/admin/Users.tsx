@@ -70,6 +70,7 @@ export function AdminUsersPage() {
   });
 
   const users = data ?? [];
+  const normalUsers = useMemo(() => users.filter((u) => u.role !== 0), [users]);
   const filteredByFacets = useMemo(() => {
     return users.filter((user) => {
       const matchesRole = roleFilter === 'All' || roleLabel(user.role) === roleFilter;
@@ -91,8 +92,8 @@ export function AdminUsersPage() {
     },
   });
 
-  const activeCount = users.filter((user) => user.isActive).length;
-  const inactiveCount = users.length - activeCount;
+  const activeCount = normalUsers.filter((u) => u.isActive).length;
+  const inactiveCount = normalUsers.filter((u) => !u.isActive).length;
 
   return (
     <AppShell breadcrumb="Admin / Users">
@@ -103,7 +104,7 @@ export function AdminUsersPage() {
         />
 
         <div className="desktop-grid-3">
-          <SummaryCard icon={Users} label="Total users" value={users.length} />
+          <SummaryCard icon={Users} label="Total users" value={normalUsers.length} />
           <SummaryCard icon={UserCheck} label="Active" value={activeCount} />
           <SummaryCard icon={UserX} label="Inactive" value={inactiveCount} />
         </div>

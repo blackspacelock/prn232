@@ -36,14 +36,25 @@ public class UserService : IUserService
 
     public async Task<ServiceResult<AdminOverviewDto>> GetAdminOverviewAsync()
     {
-        var users = (await _uow.Users.GetAllAsync()).ToList();
+        var allUsers = (await _uow.Users.GetAllAsync()).ToList();
+        var normalUsers = allUsers.Where(u => u.Role != UserRole.Admin).ToList();
+
+        // Determine which profiles belong to admin accounts so we can exclude them
+        var adminUserIds = allUsers.Where(u => u.Role == UserRole.Admin).Select(u => u.Id).ToHashSet();
+        var allProfiles = (await _uow.Profiles.GetAllAsync()).ToList();
+        var adminProfileIds = allProfiles.Where(p => adminUserIds.Contains(p.UserId)).Select(p => p.Id).ToHashSet();
+
         var roles = (await _uow.CareerRoles.GetAllAsync()).ToList();
         var templates = (await _uow.CareerRoadmaps.GetAllAsync()).ToList();
         var nodes = (await _uow.Nodes.GetAllAsync()).ToList();
-        var personalRoadmaps = (await _uow.PersonalRoadmaps.GetAllAsync()).ToList();
-        var repositories = (await _uow.GitHubRepositories.GetAllAsync()).ToList();
-        var portfolios = (await _uow.PublicPortfolios.GetAllAsync()).ToList();
-        var chats = (await _uow.ChatSessions.GetAllAsync()).ToList();
+        var personalRoadmaps = (await _uow.PersonalRoadmaps.GetAllAsync())
+            .Where(r => !adminProfileIds.Contains(r.ProfileId)).ToList();
+        var repositories = (await _uow.GitHubRepositories.GetAllAsync())
+            .Where(r => !adminProfileIds.Contains(r.ProfileId)).ToList();
+        var portfolios = (await _uow.PublicPortfolios.GetAllAsync())
+            .Where(p => !adminProfileIds.Contains(p.ProfileId)).ToList();
+        var chats = (await _uow.ChatSessions.GetAllAsync())
+            .Where(c => !adminProfileIds.Contains(c.ProfileId)).ToList();
         var trends = (await _uow.JobTrends.GetAllAsync()).ToList();
         var scrapingSources = (await _uow.JobScrapingSources.GetAllAsync()).ToList();
         var scrapingSettings = (await _uow.JobScrapingSettings.GetAllAsync()).FirstOrDefault();
@@ -54,18 +65,18 @@ public class UserService : IUserService
             .Select(month => new AdminMetricPointDto
             {
                 Label = month.ToString("MMM yy"),
-                Value = users.Count(u => u.CreatedAt.Year == month.Year && u.CreatedAt.Month == month.Month)
+                Value = normalUsers.Count(u => u.CreatedAt.Year == month.Year && u.CreatedAt.Month == month.Month)
             })
             .ToList();
 
         var overview = new AdminOverviewDto
         {
-            TotalUsers = users.Count,
-            ActiveUsers = users.Count(u => u.IsActive),
-            InactiveUsers = users.Count(u => !u.IsActive),
-            AdminUsers = users.Count(u => u.Role == UserRole.Admin),
-            MentorUsers = users.Count(u => u.Role == UserRole.Manager),
-            StudentUsers = users.Count(u => u.Role == UserRole.RoadmapUser),
+            TotalUsers = normalUsers.Count,
+            ActiveUsers = normalUsers.Count(u => u.IsActive),
+            InactiveUsers = normalUsers.Count(u => !u.IsActive),
+            AdminUsers = allUsers.Count(u => u.Role == UserRole.Admin),
+            MentorUsers = normalUsers.Count(u => u.Role == UserRole.Manager),
+            StudentUsers = normalUsers.Count(u => u.Role == UserRole.RoadmapUser),
             CareerRoles = roles.Count,
             RoadmapTemplates = templates.Count,
             ContentNodes = nodes.Count,
@@ -82,9 +93,8 @@ public class UserService : IUserService
             MonthlyRegistrations = monthlyRegistrations,
             RoleBreakdown = new List<AdminMetricPointDto>
             {
-                new() { Label = "Admins", Value = users.Count(u => u.Role == UserRole.Admin) },
-                new() { Label = "Mentors", Value = users.Count(u => u.Role == UserRole.Manager) },
-                new() { Label = "Students", Value = users.Count(u => u.Role == UserRole.RoadmapUser) },
+                new() { Label = "Mentors", Value = normalUsers.Count(u => u.Role == UserRole.Manager) },
+                new() { Label = "Students", Value = normalUsers.Count(u => u.Role == UserRole.RoadmapUser) },
             },
             ContentInventory = new List<AdminMetricPointDto>
             {
@@ -94,7 +104,7 @@ public class UserService : IUserService
                 new() { Label = "Resources", Value = (await _uow.LearningResources.GetAllAsync()).Count() },
             },
             TopJobTrends = _mapper.Map<List<JobTrendDto>>(trends.OrderByDescending(t => t.TrendScore).Take(8).ToList()),
-            RecentUsers = _mapper.Map<List<UserDto>>(users.OrderByDescending(u => u.CreatedAt).Take(6).ToList()),
+            RecentUsers = _mapper.Map<List<UserDto>>(normalUsers.OrderByDescending(u => u.CreatedAt).Take(6).ToList()),
         };
 
         return ServiceResult<AdminOverviewDto>.Ok(overview);

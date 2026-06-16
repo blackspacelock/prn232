@@ -13,14 +13,20 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Activity, BookOpen, Bot, Database, Users } from 'lucide-react';
+import { Activity, Bot, BookOpen, Database, GitBranch, Globe, Users, UserCheck } from 'lucide-react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
 import { apiClient } from '@/lib/axios';
 import type { AdminOverviewDto } from '@/types/api';
-
-const COLORS = ['#2563EB', '#0F766E', '#D97706', '#7C3AED'];
+import {
+  AdminStatCard,
+  CHART_COLORS,
+  SectionHeader,
+  StatusBadgeRow,
+  TrendListRow,
+  UserListRow,
+} from '../../components/admin/AdminDataWidgets';
 
 export function AdminDashboardPage() {
   const { data, isLoading, error, refetch } = useRestQuery({
@@ -32,9 +38,12 @@ export function AdminDashboardPage() {
     return (
       <AppShell breadcrumb="Admin / Overview">
         <div className="app-page admin-page">
-          <PageHeader title="Admin Overview" description="Monitor adoption, content health, and operational signals." />
+          <PageHeader title="Overview" description="Monitor adoption, content health, and operational signals." />
           <div className="desktop-grid-4">
-            {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-xl" />)}
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
+          </div>
+          <div className="desktop-grid-4">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
           </div>
           <Skeleton className="h-80 rounded-xl" />
         </div>
@@ -46,60 +55,81 @@ export function AdminDashboardPage() {
     return (
       <AppShell breadcrumb="Admin / Overview">
         <div className="app-page admin-page">
-          <EmptyState icon={Activity} title="Failed to load admin overview" description="Please refresh the dashboard." actionLabel="Retry" onAction={refetch} />
+          <EmptyState icon={Activity} title="Failed to load overview" description="Please refresh the page." actionLabel="Retry" onAction={refetch} />
         </div>
       </AppShell>
     );
   }
 
+  const activeRate = data.totalUsers === 0 ? 0 : Math.round((data.activeUsers / data.totalUsers) * 100);
+
   return (
     <AppShell breadcrumb="Admin / Overview">
       <div className="app-page admin-page">
         <PageHeader
-          title="Admin Overview"
-          description="Monitor adoption, content health, and operational signals that guide the next phase of SECompass."
+          title="Overview"
+          description="Monitor user adoption, content health, and operational signals."
         />
 
+        {/* Primary user metrics */}
         <div className="desktop-grid-4">
-          <MetricCard icon={Users} label="Total users" value={data.totalUsers} detail={`${data.activeUsers} active accounts`} />
-          <MetricCard icon={BookOpen} label="Roadmaps" value={data.personalRoadmaps} detail={`${data.averageRoadmapProgress}% avg progress`} />
-          <MetricCard icon={Database} label="Content nodes" value={data.contentNodes} detail={`${data.roadmapTemplates} templates`} />
-          <MetricCard icon={Bot} label="AI engagement" value={data.chatSessions} detail={`${data.gitHubRepositories} repositories linked`} />
+          <AdminStatCard icon={Users} label="Total users" value={data.totalUsers} detail={`${data.activeUsers} active · ${data.inactiveUsers} inactive`} />
+          <AdminStatCard icon={UserCheck} label="Active rate" value={`${activeRate}%`} detail={`${data.activeUsers} of ${data.totalUsers} accounts`} />
+          <AdminStatCard icon={Users} label="Mentors" value={data.mentorUsers} detail={`${data.totalUsers > 0 ? Math.round((data.mentorUsers / data.totalUsers) * 100) : 0}% of user base`} />
+          <AdminStatCard icon={Users} label="Students" value={data.studentUsers} detail={`${data.totalUsers > 0 ? Math.round((data.studentUsers / data.totalUsers) * 100) : 0}% of user base`} />
         </div>
 
+        {/* Platform engagement metrics */}
+        <div className="desktop-grid-4">
+          <AdminStatCard icon={BookOpen} label="Personal roadmaps" value={data.personalRoadmaps} detail={`${data.averageRoadmapProgress}% avg progress`} />
+          <AdminStatCard icon={Bot} label="AI chat sessions" value={data.chatSessions} detail={data.totalUsers > 0 ? `${(data.chatSessions / data.totalUsers).toFixed(1)} per user` : 'No users yet'} />
+          <AdminStatCard icon={GitBranch} label="GitHub repositories" value={data.gitHubRepositories} detail={data.totalUsers > 0 ? `${(data.gitHubRepositories / data.totalUsers).toFixed(1)} per user` : 'No users yet'} />
+          <AdminStatCard icon={Globe} label="Public portfolios" value={data.publicPortfolios} detail={data.totalUsers > 0 ? `${Math.round((data.publicPortfolios / data.totalUsers) * 100)}% published` : 'No users yet'} />
+        </div>
+
+        {/* User growth + Role mix */}
         <div className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
           <section className="admin-panel admin-section">
-            <SectionTitle title="User Growth" subtitle="New registrations over the last six months." />
+            <SectionHeader title="User Growth" subtitle="New normal-user registrations over the last six months." />
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data.monthlyRegistrations}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--md3-outline-variant)" />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Area type="monotone" dataKey="value" stroke="#2563EB" fill="#DBEAFE" strokeWidth={2} name="Users" />
+                  <Area type="monotone" dataKey="value" stroke="#2563EB" fill="#DBEAFE" strokeWidth={2} name="New users" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </section>
 
           <section className="admin-panel admin-section">
-            <SectionTitle title="Role Mix" subtitle="Account distribution by role." />
-            <div className="h-72">
+            <SectionHeader title="Role Distribution" subtitle="Mentor vs Student breakdown." />
+            <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={data.roleBreakdown} dataKey="value" nameKey="label" innerRadius={58} outerRadius={92} paddingAngle={3}>
-                    {data.roleBreakdown.map((entry, index) => <Cell key={entry.label} fill={COLORS[index % COLORS.length]} />)}
+                  <Pie
+                    data={data.roleBreakdown}
+                    dataKey="value"
+                    nameKey="label"
+                    innerRadius={52}
+                    outerRadius={84}
+                    paddingAngle={3}
+                  >
+                    {data.roleBreakdown.map((entry, i) => (
+                      <Cell key={entry.label} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="grid gap-2">
-              {data.roleBreakdown.map((item, index) => (
+            <div className="mt-2 grid gap-2">
+              {data.roleBreakdown.map((item, i) => (
                 <div key={item.label} className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2 text-[var(--md3-on-surface-variant)]">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[index % COLORS.length] }} />
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
                     {item.label}
                   </span>
                   <span className="font-semibold text-[var(--md3-on-surface)]">{item.value}</span>
@@ -109,15 +139,16 @@ export function AdminDashboardPage() {
           </section>
         </div>
 
+        {/* Content inventory + Market signals */}
         <div className="grid gap-5 xl:grid-cols-2">
           <section className="admin-panel admin-section">
-            <SectionTitle title="Content Inventory" subtitle="Core learning assets available to students." />
+            <SectionHeader title="Content Inventory" subtitle="Core learning assets available on the platform." />
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.contentInventory}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--md3-outline-variant)" />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Bar dataKey="value" fill="#0F766E" radius={[6, 6, 0, 0]} name="Items" />
                 </BarChart>
@@ -126,84 +157,42 @@ export function AdminDashboardPage() {
           </section>
 
           <section className="admin-panel admin-section">
-            <SectionTitle title="Market Signals" subtitle="Highest scoring job trends currently shaping recommendations." />
-            <div className="space-y-3">
+            <SectionHeader title="Market Signals" subtitle="Highest-scoring job trends shaping recommendations." />
+            <div className="space-y-2">
               {data.topJobTrends.slice(0, 6).map((trend) => (
-                <div key={trend.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--md3-outline-variant)] px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[var(--md3-on-surface)]">{trend.techSkill}</p>
-                    <p className="text-xs text-[var(--md3-on-surface-variant)]">{trend.region ?? 'Global'} - {trend.source ?? 'Market data'}</p>
-                  </div>
-                  <span className="rounded-md bg-[var(--md3-primary-container)] px-2 py-1 text-sm font-semibold text-[var(--md3-primary)]">{trend.trendScore}</span>
-                </div>
+                <TrendListRow key={trend.id} trend={trend} />
               ))}
             </div>
           </section>
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+        {/* Operations + Recent users */}
+        <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
           <section className="admin-panel admin-section">
-            <SectionTitle title="Operations" subtitle="Current automation and publishing state." />
+            <SectionHeader title="Operations" subtitle="Automation and publishing status." />
             <div className="grid gap-3">
-              <StatusRow label="Scraping schedule" value={data.scrapingEnabled ? 'Enabled' : 'Disabled'} tone={data.scrapingEnabled ? 'success' : 'warning'} />
-              <StatusRow label="Active sources" value={String(data.activeScrapingSources)} />
-              <StatusRow label="Public portfolios" value={String(data.publicPortfolios)} />
-              <StatusRow label="Last scrape" value={data.lastScrapingRunAt ? new Date(data.lastScrapingRunAt).toLocaleString() : 'Never'} />
+              <StatusBadgeRow label="Scraping schedule" value={data.scrapingEnabled ? 'Enabled' : 'Disabled'} tone={data.scrapingEnabled ? 'success' : 'warning'} />
+              <StatusBadgeRow label="Active sources" value={String(data.activeScrapingSources)} />
+              <StatusBadgeRow label="Public portfolios" value={String(data.publicPortfolios)} />
+              <StatusBadgeRow label="Career roles" value={String(data.careerRoles)} />
+              <StatusBadgeRow label="Roadmap templates" value={String(data.roadmapTemplates)} />
+              <StatusBadgeRow label="Content nodes" value={String(data.contentNodes)} />
+              <StatusBadgeRow label="Last scrape" value={data.lastScrapingRunAt ? new Date(data.lastScrapingRunAt).toLocaleString() : 'Never'} />
             </div>
           </section>
 
           <section className="admin-panel admin-section">
-            <SectionTitle title="Recent Users" subtitle="Newest accounts joining the platform." />
+            <SectionHeader title="Recent Users" subtitle="Newest Mentor and Student accounts." />
             <div className="space-y-2">
-              {data.recentUsers.map((user) => (
-                <div key={user.id} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--md3-surface-container)] px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[var(--md3-on-surface)]">{user.fullName || user.email}</p>
-                    <p className="truncate text-xs text-[var(--md3-on-surface-variant)]">{user.email}</p>
-                  </div>
-                  <span className="text-xs text-[var(--md3-on-surface-variant)]">{new Date(user.createdAt).toLocaleDateString()}</span>
-                </div>
-              ))}
+              {data.recentUsers.length === 0 ? (
+                <p className="text-sm text-[var(--md3-on-surface-variant)]">No users yet.</p>
+              ) : (
+                data.recentUsers.map((user) => <UserListRow key={user.id} user={user} />)
+              )}
             </div>
           </section>
         </div>
       </div>
     </AppShell>
-  );
-}
-
-function MetricCard({ icon: Icon, label, value, detail }: { icon: React.ElementType; label: string; value: number; detail: string }) {
-  return (
-    <div className="admin-panel p-5">
-      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--md3-primary-container)] text-[var(--md3-primary)]">
-        <Icon className="h-5 w-5" />
-      </div>
-      <p className="text-sm font-medium text-[var(--md3-on-surface-variant)]">{label}</p>
-      <p className="mt-1 text-3xl font-semibold text-[var(--md3-on-surface)]">{value.toLocaleString()}</p>
-      <p className="mt-2 text-xs text-[var(--md3-on-surface-variant)]">{detail}</p>
-    </div>
-  );
-}
-
-function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <div className="mb-4">
-      <h2 className="text-base font-semibold text-[var(--md3-on-surface)]">{title}</h2>
-      <p className="text-sm text-[var(--md3-on-surface-variant)]">{subtitle}</p>
-    </div>
-  );
-}
-
-function StatusRow({ label, value, tone }: { label: string; value: string; tone?: 'success' | 'warning' }) {
-  const toneClass = tone === 'success'
-    ? 'bg-[var(--md3-success-container)] text-[var(--md3-success)]'
-    : tone === 'warning'
-      ? 'bg-[var(--md3-warning-container)] text-[var(--md3-warning)]'
-      : 'bg-[var(--md3-surface-container)] text-[var(--md3-on-surface)]';
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--md3-outline-variant)] px-3 py-3">
-      <span className="text-sm text-[var(--md3-on-surface-variant)]">{label}</span>
-      <span className={`rounded-md px-2 py-1 text-sm font-semibold ${toneClass}`}>{value}</span>
-    </div>
   );
 }
