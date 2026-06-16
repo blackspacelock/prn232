@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Activity, Bot, BookOpen, Database, GitBranch, Globe, Users, UserCheck } from 'lucide-react';
+import { Activity, Bot, BookOpen, GitBranch, Globe, Users, UserCheck } from 'lucide-react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
