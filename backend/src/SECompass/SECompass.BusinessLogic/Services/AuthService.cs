@@ -177,6 +177,7 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Role, ((int)user.Role).ToString()),
+            new Claim(ClaimTypes.Role, user.Role.ToString()),
             new Claim("FullName", user.FullName)
         };
 

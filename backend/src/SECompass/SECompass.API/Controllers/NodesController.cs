@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SECompass.BusinessLogic.DTOs.Node;
 using SECompass.BusinessLogic.Interfaces;
+using SECompass.DataAccess.Enums;
 
 namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/nodes")]
-[Authorize]
+[Authorize(Roles = nameof(UserRole.Admin))]
 public class NodesController : ControllerBase
 {
     private readonly INodeService _nodeService;

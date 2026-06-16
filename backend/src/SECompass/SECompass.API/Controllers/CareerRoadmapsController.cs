@@ -4,12 +4,13 @@ using SECompass.BusinessLogic.DTOs.CareerRoadmap;
 using SECompass.BusinessLogic.DTOs.RoadmapNode;
 using SECompass.BusinessLogic.DTOs.RoadmapNodeEdge;
 using SECompass.BusinessLogic.Interfaces;
+using SECompass.DataAccess.Enums;
 
 namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/career-roadmaps")]
-[Authorize]
+[Authorize(Roles = nameof(UserRole.Admin))]
 public class CareerRoadmapsController : ControllerBase
 {
     private readonly ICareerRoadmapService _service;

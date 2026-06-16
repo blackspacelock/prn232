@@ -157,14 +157,14 @@ export function AdminRoadmapTemplatesPage() {
 
   return (
     <AppShell breadcrumb="Admin / Roadmap Templates">
-      <div className="app-page">
+      <div className="app-page admin-page">
         <PageHeader
           title="Roadmap Templates"
           description="Manage career roadmap templates and their node assignments."
           actions={<AdminActionButton icon={Plus} label="Create Template" onClick={() => { setEditingRoadmap(null); setForm({ name: '', careerRoleId: selectedRoleId ?? '' }); setShowForm(true); }} />}
         />
 
-        <div className="md3-card p-4 mb-4">
+        <div className="admin-panel p-4">
           <p className="text-sm font-medium text-[var(--md3-on-surface)] mb-2">Filter by Career Role</p>
           <div className="flex flex-wrap gap-2">
             {roles.map((role) => (
@@ -176,7 +176,7 @@ export function AdminRoadmapTemplatesPage() {
         </div>
 
         {showForm && (
-          <div className="md3-card p-6">
+          <div className="admin-panel admin-section">
             <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">{editingRoadmap ? 'Edit Template' : 'Create Template'}</h3>
             <div className="space-y-3">
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Template name" className="md3-field w-full px-4" />
@@ -200,7 +200,7 @@ export function AdminRoadmapTemplatesPage() {
         ) : error ? (
           <EmptyState icon={Map} title="Failed to load templates" description="Please try again." actionLabel="Retry" onAction={refetch} />
         ) : (
-          <div className="md3-card overflow-hidden">
+          <div className="admin-panel admin-table-card">
             <table className="w-full">
               <thead className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
                 <tr>

@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SECompass.BusinessLogic.DTOs.CareerRole;
 using SECompass.BusinessLogic.Interfaces;
+using SECompass.DataAccess.Enums;
 
 namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/career-roles")]
-[Authorize]
+[Authorize(Roles = nameof(UserRole.Admin))]
 public class CareerRolesController : ControllerBase
 {
     private readonly ICareerRoleService _careerRoleService;

@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SECompass.BusinessLogic.DTOs.JobTrend;
 using SECompass.BusinessLogic.Interfaces;
+using SECompass.DataAccess.Enums;
 
 namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/job-trends")]
-[Authorize]
+[Authorize(Roles = nameof(UserRole.Admin))]
 public class JobTrendsController : ControllerBase
 {
     private readonly IJobTrendService _service;

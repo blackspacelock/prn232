@@ -87,14 +87,14 @@ export function AdminNodeLibraryPage() {
 
   return (
     <AppShell breadcrumb="Admin / Node Library">
-      <div className="app-page">
+      <div className="app-page admin-page">
         <PageHeader
           title="Node Library"
           description="Manage learning nodes and their hierarchical structure."
           actions={<AdminActionButton icon={Plus} label="Create Node" onClick={() => { setEditingNode(null); setForm({ name: '', order: 1 }); setShowForm(true); }} />}
         />
 
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4 shadow-sm">
+        <div className="admin-panel p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[var(--md3-on-surface)]">Browse Hierarchy</p>
             {parentId && (
@@ -112,7 +112,7 @@ export function AdminNodeLibraryPage() {
         </div>
 
         {showForm && (
-          <div className="md3-card p-6">
+          <div className="admin-panel admin-section">
             <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">{editingNode ? 'Edit Node' : 'Create Node'}</h3>
             <div className="space-y-3">
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Node name" className="md3-field w-full px-4" />
@@ -127,7 +127,7 @@ export function AdminNodeLibraryPage() {
         )}
 
         {hierarchyRootName && (
-          <div className="md3-card p-4 mb-4 text-sm text-[var(--md3-on-surface-variant)]">
+          <div className="admin-panel p-4 text-sm text-[var(--md3-on-surface-variant)]">
             Hierarchy root: <strong>{hierarchyRootName}</strong> - use &quot;Load Children&quot; to browse sub-nodes.
           </div>
         )}
@@ -152,7 +152,7 @@ export function AdminNodeLibraryPage() {
             </div>
             <div className="grid gap-3">
               {filteredNodes.map((node) => (
-                <div key={node.id} className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4 shadow-sm">
+                <div key={node.id} className="admin-panel p-4">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="mb-2 flex flex-wrap items-center gap-2">

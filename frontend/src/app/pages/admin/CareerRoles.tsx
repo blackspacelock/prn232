@@ -56,7 +56,7 @@ export function AdminCareerRolesPage() {
 
   return (
     <AppShell breadcrumb="Admin / Career Roles">
-      <div className="app-page">
+      <div className="app-page admin-page">
         <PageHeader
           title="Career Roles"
           description="Manage the career roles available for roadmap generation."
@@ -64,7 +64,7 @@ export function AdminCareerRolesPage() {
         />
 
         {showForm && (
-          <div className="md3-card p-6">
+          <div className="admin-panel admin-section">
             <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-4">{editingRole ? 'Edit Role' : 'Create Role'}</h3>
             <div className="space-y-3">
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Role name" className="md3-field w-full px-4" />
@@ -77,7 +77,7 @@ export function AdminCareerRolesPage() {
           </div>
         )}
 
-        <div className="md3-panel flex items-center gap-3 p-4">
+        <div className="admin-panel flex items-center gap-3 p-4">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search roles..." className="md3-field w-full pl-12 pr-4" />
@@ -89,7 +89,7 @@ export function AdminCareerRolesPage() {
         ) : error ? (
           <EmptyState icon={Plus} title="Failed to load roles" description="Please try again." actionLabel="Retry" onAction={refetch} />
         ) : (
-          <div className="md3-card overflow-hidden">
+          <div className="admin-panel admin-table-card">
             <table className="w-full">
               <thead className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
                 <tr>
