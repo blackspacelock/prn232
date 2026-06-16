@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarClock, Check, Clock4, Power, Save, SlidersHorizontal } from 'lucide-react';
+import { CalendarClock, Check, Clock4, Save, SlidersHorizontal } from 'lucide-react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
 import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
+import { ToggleSwitch } from '../../components/ToggleSwitch';
 import { apiClient } from '@/lib/axios';
 import type {
   JobScrapingSettingDto,
@@ -120,18 +121,12 @@ export function AdminSystemConfigPage() {
 
               <div className="space-y-5 p-5">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setSettingsForm({ ...settingsForm, enabled: !settingsForm.enabled })}
-                    className={`inline-flex h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-colors ${
-                      settingsForm.enabled
-                        ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
-                        : 'border-[var(--md3-outline-variant)] bg-white text-[var(--md3-on-surface-variant)]'
-                    }`}
-                  >
-                    <Power className="h-4 w-4" />
-                    {settingsForm.enabled ? 'Enabled' : 'Disabled'}
-                  </button>
+                  <ToggleSwitch
+                    checked={settingsForm.enabled}
+                    label={settingsForm.enabled ? 'Enabled' : 'Disabled'}
+                    activeTone="success"
+                    onChange={() => setSettingsForm({ ...settingsForm, enabled: !settingsForm.enabled })}
+                  />
 
                   <AdminActionButton
                     icon={Save}
