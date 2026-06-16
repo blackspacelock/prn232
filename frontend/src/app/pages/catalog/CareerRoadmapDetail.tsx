@@ -6,7 +6,6 @@ import { AlertCircle, ChevronLeft } from 'lucide-react';
 import {
   GET_CAREER_ROADMAP_WITH_NODES,
   GET_LEARNING_RESOURCES_BY_NODE,
-  GET_PERSONAL_ROADMAPS_BY_PROFILE,
 } from '@/graphql/queries';
 import { useAuthStore } from '@/store/authStore';
 import { AppShell } from '../../components/AppShell';
@@ -19,7 +18,6 @@ import { RoadmapCanvasHeader } from '../../components/roadmap/RoadmapCanvasHeade
 import { RoadmapGraphCanvas, type RoadmapGraphNode } from '../../components/roadmap/RoadmapGraphCanvas';
 import { RoadmapTemplateInspector } from '../../components/roadmap/RoadmapTemplateInspector';
 import { apiClient } from '@/lib/axios';
-import { apolloClient } from '@/lib/apollo';
 import type {
   CareerRoadmapWithNodesDto,
   LearningResourceDto,
@@ -92,8 +90,7 @@ export function CareerRoadmapDetailPage() {
           careerRoadmapId: id,
         })
         .then((r) => r.data),
-    onSuccess: async (result) => {
-      await apolloClient.refetchQueries({ include: [GET_PERSONAL_ROADMAPS_BY_PROFILE] });
+    onSuccess: (result) => {
       navigate(`/roadmap/${result.id}`);
     },
     onError: (err: unknown) => {

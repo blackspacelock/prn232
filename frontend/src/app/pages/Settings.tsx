@@ -1,9 +1,9 @@
-import { useState, type ElementType, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ElementType, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ActionButton } from '../components/ActionButton';
-import { SkillChip } from '../components/SkillChip';
+import { SkillChip, getSkillCategoryColorIndex } from '../components/SkillChip';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import {
@@ -15,8 +15,8 @@ import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
-import { GET_PROFILE_WITH_SKILLS, GET_USER_BY_ID } from '@/graphql/queries';
-import type { UpdateProfileDto, UpdateUserDto, AddSkillDto } from '@/types/api';
+import { GET_PROFILE_WITH_SKILLS, GET_TECHNICAL_SKILLS, GET_USER_BY_ID } from '@/graphql/queries';
+import type { UpdateProfileDto, UpdateUserDto, AddSkillDto, TechnicalSkillDto } from '@/types/api';
 
 interface ProfileWithSkills {
   userId: string;
@@ -25,7 +25,17 @@ interface ProfileWithSkills {
   university?: string;
   major?: string;
   studiedYear?: number;
-  skills: Array<{ id: string; skillName: string; note?: string }>;
+  skills: Array<{ id: string; technicalSkillId: string; skillName: string; category: string; note?: string }>;
+}
+
+interface UserInfo {
+  id?: string;
+  fullName?: string;
+  email?: string;
+  role?: number;
+  isActive?: boolean;
+  avatarUrl?: string;
+  createdAt?: string;
 }
 
 export function SettingsPage() {
@@ -35,6 +45,8 @@ export function SettingsPage() {
   const userId = user?.id ?? '';
 
   const [newSkill, setNewSkill] = useState('');
+  const [skillDropdownOpen, setSkillDropdownOpen] = useState(false);
+  const skillInputRef = useRef<HTMLDivElement>(null);
   const [deleteSkillId, setDeleteSkillId] = useState<string | null>(null);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant?: 'success' | 'error' }>({ open: false, message: '' });
@@ -56,12 +68,41 @@ export function SettingsPage() {
     skip: !userId,
   });
 
+  const { data: technicalSkillsData } = useQuery(GET_TECHNICAL_SKILLS);
+
   const profile: ProfileWithSkills | null = (profileData as { profileWithSkills?: ProfileWithSkills })?.profileWithSkills ?? null;
-  const userInfo = (userData as { userById?: { fullName?: string; avatarUrl?: string } })?.userById ?? null;
+  const userInfo = (userData as { userById?: UserInfo })?.userById ?? null;
   const fullName: string = userInfo?.fullName ?? '';
   const avatarUrl: string = userInfo?.avatarUrl ?? '';
+  const userQueryOptions = { query: GET_USER_BY_ID, variables: { userId } };
+  const profileQueryOptions = { query: GET_PROFILE_WITH_SKILLS, variables: { userId } };
 
   const skills = profile?.skills ?? [];
+  const technicalSkills: TechnicalSkillDto[] = (technicalSkillsData as { technicalSkills?: TechnicalSkillDto[] })?.technicalSkills ?? [];
+
+  const skillsByCategory = skills.reduce<Record<string, ProfileWithSkills['skills']>>((acc, skill) => {
+    (acc[skill.category] ??= []).push(skill);
+    return acc;
+  }, {});
+  const skillCategories = Object.keys(skillsByCategory).sort();
+
+  const existingSkillIds = new Set(skills.map((s) => s.technicalSkillId));
+  const skillQuery = newSkill.trim().toLowerCase();
+  const skillSuggestions = skillQuery
+    ? technicalSkills
+        .filter((ts) => !existingSkillIds.has(ts.id) && ts.name.toLowerCase().includes(skillQuery))
+        .slice(0, 8)
+    : [];
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (skillInputRef.current && !skillInputRef.current.contains(e.target as Node)) {
+        setSkillDropdownOpen(false);
+      }
+    }
+    if (skillDropdownOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [skillDropdownOpen]);
 
   const initials = (() => {
     if (fullName) {
@@ -73,9 +114,12 @@ export function SettingsPage() {
   })();
 
   const updateUserMutation = useMutation({
-    mutationFn: (dto: UpdateUserDto) => apiClient.put(`/api/users/${userId}`, dto),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_USER_BY_ID] });
+    mutationFn: (dto: UpdateUserDto) => apiClient.put<UserInfo>(`/api/users/${userId}`, dto).then((r) => r.data),
+    onSuccess: (updatedUser) => {
+      apolloClient.cache.writeQuery({
+        ...userQueryOptions,
+        data: { userById: updatedUser },
+      });
       setIsEditingAccount(false);
       setSnackbar({ open: true, message: 'Account updated successfully.', variant: 'success' });
     },
@@ -86,9 +130,18 @@ export function SettingsPage() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: (dto: UpdateProfileDto) => apiClient.put(`/api/profiles/${userId}`, dto),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_PROFILE_WITH_SKILLS] });
+    mutationFn: (dto: UpdateProfileDto) => apiClient.put<Omit<ProfileWithSkills, 'skills'>>(`/api/profiles/${userId}`, dto).then((r) => r.data),
+    onSuccess: (updatedProfile) => {
+      apolloClient.cache.updateQuery<{ profileWithSkills?: ProfileWithSkills }>(profileQueryOptions, (current) => {
+        if (!current?.profileWithSkills) return current;
+        return {
+          profileWithSkills: {
+            ...current.profileWithSkills,
+            ...updatedProfile,
+            skills: current.profileWithSkills.skills,
+          },
+        };
+      });
       setIsEditingProfile(false);
       setSnackbar({ open: true, message: 'Profile updated successfully.', variant: 'success' });
     },
@@ -99,9 +152,18 @@ export function SettingsPage() {
   });
 
   const addSkillMutation = useMutation({
-    mutationFn: (dto: AddSkillDto) => apiClient.post('/api/skills', dto),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_PROFILE_WITH_SKILLS] });
+    mutationFn: (dto: AddSkillDto) =>
+      apiClient.post<ProfileWithSkills['skills'][number]>('/api/skills', dto).then((r) => r.data),
+    onSuccess: (skill) => {
+      apolloClient.cache.updateQuery<{ profileWithSkills?: ProfileWithSkills }>(profileQueryOptions, (current) => {
+        if (!current?.profileWithSkills) return current;
+        return {
+          profileWithSkills: {
+            ...current.profileWithSkills,
+            skills: [...current.profileWithSkills.skills, skill],
+          },
+        };
+      });
       setNewSkill('');
     },
     onError: (error: unknown) => {
@@ -112,8 +174,16 @@ export function SettingsPage() {
 
   const deleteSkillMutation = useMutation({
     mutationFn: (skillId: string) => deleteWithCascadeMode(`/api/skills/${skillId}`),
-    onSuccess: async () => {
-      await apolloClient.refetchQueries({ include: [GET_PROFILE_WITH_SKILLS] });
+    onSuccess: (_data, skillId) => {
+      apolloClient.cache.updateQuery<{ profileWithSkills?: ProfileWithSkills }>(profileQueryOptions, (current) => {
+        if (!current?.profileWithSkills) return current;
+        return {
+          profileWithSkills: {
+            ...current.profileWithSkills,
+            skills: current.profileWithSkills.skills.filter((skill) => skill.id !== skillId),
+          },
+        };
+      });
       setDeleteSkillId(null);
     },
     onError: (error: unknown) => {
@@ -153,9 +223,11 @@ export function SettingsPage() {
     setIsEditingAccount(true);
   };
 
-  const handleAddSkill = () => {
-    if (!newSkill.trim()) return;
-    addSkillMutation.mutate({ profileId: user?.profileId ?? '', skillName: newSkill.trim() });
+  const handleAddSkill = (skillName?: string) => {
+    const name = (skillName ?? newSkill).trim();
+    if (!name) return;
+    addSkillMutation.mutate({ profileId: user?.profileId ?? '', skillName: name });
+    setSkillDropdownOpen(false);
   };
 
   const isLoading = profileLoading || userLoading;
@@ -375,34 +447,62 @@ export function SettingsPage() {
             <section className="md3-card p-6">
               <SectionHeader title="Skills" description="Technologies connected to your career profile." />
 
-              <div className="mt-5 flex min-h-24 flex-wrap content-start gap-2">
-                {skills.map((skill) => (
-                  <SkillChip
-                    key={skill.id}
-                    label={skill.skillName}
-                    onRemove={() => setDeleteSkillId(skill.id)}
-                  />
-                ))}
-                {skills.length === 0 && (
+              <div className="mt-5 flex min-h-24 flex-col gap-3">
+                {skillCategories.length === 0 && (
                   <p className="text-sm text-[var(--md3-on-surface-variant)]">No skills added yet.</p>
                 )}
+                {skillCategories.map((category) => (
+                  <div key={category}>
+                    <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-[var(--md3-on-surface-variant)]">
+                      {category}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {skillsByCategory[category].map((skill) => (
+                        <SkillChip
+                          key={skill.id}
+                          label={skill.skillName}
+                          colorIndex={getSkillCategoryColorIndex(category)}
+                          onRemove={() => setDeleteSkillId(skill.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className="mt-5 flex items-center gap-2">
-                <input
-                  type="text"
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
-                  placeholder="Add a skill (e.g. React, TypeScript)"
-                  className="md3-field h-10 min-w-0 flex-1 px-3"
-                />
+                <div className="relative min-w-0 flex-1" ref={skillInputRef}>
+                  <input
+                    type="text"
+                    value={newSkill}
+                    onChange={(e) => { setNewSkill(e.target.value); setSkillDropdownOpen(true); }}
+                    onFocus={() => setSkillDropdownOpen(true)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
+                    placeholder="Add a skill (e.g. React, TypeScript)"
+                    className="md3-field h-10 w-full px-3"
+                  />
+                  {skillDropdownOpen && skillSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-11 z-20 max-h-60 overflow-y-auto rounded-xl border border-[var(--md3-outline-variant)] bg-white py-1 shadow-lg">
+                      {skillSuggestions.map((ts) => (
+                        <button
+                          key={ts.id}
+                          type="button"
+                          onClick={() => handleAddSkill(ts.name)}
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--md3-surface-variant)] transition-colors"
+                        >
+                          <span className="text-[var(--md3-on-surface)]">{ts.name}</span>
+                          <span className="text-xs text-[var(--md3-on-surface-variant)]">{ts.category}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <ActionButton
                   icon={Plus}
                   label={addSkillMutation.isPending ? 'Adding...' : 'Add'}
                   variant="primary"
                   size="md"
-                  onClick={handleAddSkill}
+                  onClick={() => handleAddSkill()}
                   disabled={!newSkill.trim() || addSkillMutation.isPending}
                   className="h-10 shrink-0"
                 />

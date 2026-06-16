@@ -49,8 +49,23 @@ public class ProfileService : IProfileService
         var profile = profiles.FirstOrDefault();
         if (profile == null) return ServiceResult<ProfileWithSkillsDto>.Fail("Profile not found.");
 
-        var skills = await _uow.Skills.FindAsync(s => s.ProfileId == userId);
-        profile.Skills = skills.ToList();
+        var user = await _uow.Users.GetByIdAsync(userId);
+        if (user == null) return ServiceResult<ProfileWithSkillsDto>.Fail("User not found.");
+        profile.User = user;
+
+        var profileSkills = (await _uow.ProfileTechnicalSkills.FindAsync(s => s.ProfileId == userId)).ToList();
+        if (profileSkills.Count > 0)
+        {
+            var technicalSkillIds = profileSkills.Select(s => s.TechnicalSkillId).Distinct().ToList();
+            var technicalSkills = (await _uow.TechnicalSkills.FindAsync(t => technicalSkillIds.Contains(t.Id)))
+                .ToDictionary(t => t.Id);
+
+            foreach (var profileSkill in profileSkills)
+            {
+                profileSkill.TechnicalSkill = technicalSkills[profileSkill.TechnicalSkillId];
+            }
+        }
+        profile.ProfileTechnicalSkills = profileSkills;
 
         return ServiceResult<ProfileWithSkillsDto>.Ok(_mapper.Map<ProfileWithSkillsDto>(profile));
     }

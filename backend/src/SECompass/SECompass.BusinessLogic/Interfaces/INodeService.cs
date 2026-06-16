@@ -7,6 +7,8 @@ public interface INodeService
 {
     Task<ServiceResult<NodeDto>> CreateAsync(CreateNodeDto dto);
     Task<ServiceResult<NodeDto>> GetByIdAsync(Guid id);
+    Task<ServiceResult<PaginationResponse<NodeDto>>> GetPagedAsync(NodeListRequestDto request);
+    Task<ServiceResult<List<NodeDto>>> GetRootNodesAsync();
     Task<ServiceResult<List<NodeDto>>> GetChildrenAsync(Guid parentId);
     Task<ServiceResult<NodeHierarchyDto>> GetHierarchyAsync(Guid rootId);
     Task<ServiceResult<NodeDto>> UpdateAsync(Guid id, UpdateNodeDto dto);

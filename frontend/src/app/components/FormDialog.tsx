@@ -5,6 +5,7 @@ import { ActionButton } from './ActionButton';
 export type FormDialogField = {
   name: string;
   label: string;
+  description?: string;
   type?: 'text' | 'number' | 'date' | 'url' | 'textarea' | 'select' | 'checkbox';
   options?: string[];
   placeholder?: string;
@@ -16,6 +17,7 @@ interface FormDialogProps {
   isOpen: boolean;
   title: string;
   description?: string;
+  notice?: string;
   fields: FormDialogField[];
   submitLabel?: string;
   onCancel: () => void;
@@ -26,6 +28,7 @@ export function FormDialog({
   isOpen,
   title,
   description,
+  notice,
   fields,
   submitLabel = 'Save',
   onCancel,
@@ -56,6 +59,11 @@ export function FormDialog({
             {description && (
               <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">{description}</p>
             )}
+            {notice && (
+              <p className="mt-3 rounded-lg bg-[var(--md3-primary-container)] px-3 py-2 text-sm text-[var(--md3-on-primary-container)]">
+                {notice}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -73,68 +81,71 @@ export function FormDialog({
 
             if (field.type === 'textarea') {
               return (
-                <label key={field.name} className={`block ${colSpan}`}>
-                  <span className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">
-                    {field.label}
-                  </span>
-                  <textarea
-                    name={field.name}
-                    className="md3-field min-h-24 w-full resize-none px-4 py-3"
-                    placeholder={field.placeholder}
-                    defaultValue={String(field.defaultValue ?? '')}
-                  />
-                </label>
+                <div key={field.name} className={`block ${colSpan}`}>
+                  <label className="block space-y-1.5">
+                    <span className="block text-sm font-semibold text-[var(--md3-on-surface)]">{field.label}</span>
+                    {field.description && <span className="block text-xs leading-5 text-[var(--md3-on-surface-variant)]">{field.description}</span>}
+                    <textarea
+                      name={field.name}
+                      className="md3-field min-h-24 w-full resize-none px-4 py-3"
+                      placeholder={field.placeholder}
+                      defaultValue={String(field.defaultValue ?? '')}
+                    />
+                  </label>
+                </div>
               );
             }
 
             if (field.type === 'select') {
               return (
-                <label key={field.name} className={`block ${colSpan}`}>
-                  <span className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">
-                    {field.label}
-                  </span>
-                  <select
-                    name={field.name}
-                    className="md3-field w-full px-4"
-                    defaultValue={String(field.defaultValue ?? field.options?.[0] ?? '')}
-                  >
-                    {(field.options ?? []).map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                </label>
+                <div key={field.name} className={`block ${colSpan}`}>
+                  <label className="block space-y-1.5">
+                    <span className="block text-sm font-semibold text-[var(--md3-on-surface)]">{field.label}</span>
+                    {field.description && <span className="block text-xs leading-5 text-[var(--md3-on-surface-variant)]">{field.description}</span>}
+                    <select
+                      name={field.name}
+                      className="md3-field w-full px-4"
+                      defaultValue={String(field.defaultValue ?? field.options?.[0] ?? '')}
+                    >
+                      {(field.options ?? []).map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               );
             }
 
             if (field.type === 'checkbox') {
               return (
-                <label
-                  key={field.name}
-                  className={`flex h-14 items-center gap-3 rounded border border-[var(--md3-outline)] px-4 ${colSpan}`}
-                >
-                  <input
-                    name={field.name}
-                    type="checkbox"
-                    defaultChecked={Boolean(field.defaultValue)}
-                  />
-                  <span className="text-sm font-medium text-[var(--md3-on-surface)]">{field.label}</span>
-                </label>
+                <div key={field.name} className={`block ${colSpan}`}>
+                  {field.description && <span className="mb-2 block text-xs leading-5 text-[var(--md3-on-surface-variant)]">{field.description}</span>}
+                  <label className="flex h-14 items-center gap-3 rounded border border-[var(--md3-outline)] px-4">
+                    <input
+                      name={field.name}
+                      type="checkbox"
+                      defaultChecked={Boolean(field.defaultValue)}
+                    />
+                    <span className="text-sm font-medium text-[var(--md3-on-surface)]">{field.label}</span>
+                  </label>
+                </div>
               );
             }
 
             return (
-              <label key={field.name} className={`block ${colSpan}`}>
-                <span className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">
-                  {field.label}
-                </span>
-                <input
-                  name={field.name}
-                  className="md3-field w-full px-4"
-                  type={field.type ?? 'text'}
-                  placeholder={field.placeholder}
-                  defaultValue={String(field.defaultValue ?? '')}
-                />
-              </label>
+              <div key={field.name} className={`block ${colSpan}`}>
+                <label className="block space-y-1.5">
+                  <span className="block text-sm font-semibold text-[var(--md3-on-surface)]">{field.label}</span>
+                  {field.description && <span className="block text-xs leading-5 text-[var(--md3-on-surface-variant)]">{field.description}</span>}
+                  <input
+                    name={field.name}
+                    className="md3-field w-full px-4"
+                    type={field.type ?? 'text'}
+                    placeholder={field.placeholder}
+                    defaultValue={String(field.defaultValue ?? '')}
+                  />
+                </label>
+              </div>
             );
           })}
         </div>

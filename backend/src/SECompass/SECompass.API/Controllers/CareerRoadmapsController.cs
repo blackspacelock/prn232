@@ -9,12 +9,20 @@ namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/career-roadmaps")]
-[Authorize]
+[Authorize(Roles = "Admin,0")]
 public class CareerRoadmapsController : ControllerBase
 {
     private readonly ICareerRoadmapService _service;
 
     public CareerRoadmapsController(ICareerRoadmapService service) => _service = service;
+
+    [HttpGet]
+    [ProducesResponseType(typeof(List<CareerRoadmapDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _service.GetAllAsync();
+        return Ok(result.Data);
+    }
 
     [HttpPost]
     [ProducesResponseType(typeof(CareerRoadmapDto), StatusCodes.Status201Created)]

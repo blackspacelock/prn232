@@ -187,6 +187,138 @@ namespace SECompass.DataAccess.Migrations
                     b.ToTable("GitHubRepositories", (string)null);
                 });
 
+            modelBuilder.Entity("SECompass.DataAccess.Entities.JobScrapingSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("JobScrapingSettingId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DayOfWeek")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TimeOfDay")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("JobScrapingSettings", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("99999999-9999-9999-9999-999999999999"),
+                            CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DayOfWeek = "Sunday",
+                            Enabled = true,
+                            Frequency = "Weekly",
+                            TimeOfDay = "00:00:00"
+                        });
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.JobScrapingSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("JobScrapingSourceId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("JobCardXPath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("MaxPostings")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TagsXPath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("TitleXPath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("JobScrapingSources", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
+                            CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Enabled = true,
+                            JobCardXPath = "//li[contains(@class,'jobs-search')] | //div[contains(@class,'job-search-card')]",
+                            MaxPostings = 40,
+                            Name = "LinkedIn",
+                            Region = "Global",
+                            TagsXPath = ".//*[contains(@class,'metadata')] | .//*[contains(@class,'subtitle')]",
+                            TitleXPath = ".//h3 | .//*[contains(@class,'title')]",
+                            Url = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=software%20engineer&location=Vietnam&start=0"
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444444"),
+                            CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Enabled = true,
+                            JobCardXPath = "//li[contains(@class,'job-item')]",
+                            MaxPostings = 40,
+                            Name = "CareerLink",
+                            Region = "Vietnam",
+                            TagsXPath = ".//a[contains(@class,'job-position')]",
+                            TitleXPath = ".//h5[contains(@class,'job-name')]",
+                            Url = "https://www.careerlink.vn/viec-lam/cntt-phan-mem/19"
+                        });
+                });
+
             modelBuilder.Entity("SECompass.DataAccess.Entities.JobTrend", b =>
                 {
                     b.Property<Guid>("Id")
@@ -344,6 +476,35 @@ namespace SECompass.DataAccess.Migrations
                     b.ToTable("NodeProgresses", (string)null);
                 });
 
+            modelBuilder.Entity("SECompass.DataAccess.Entities.NodeTechnicalSkill", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("NodeTechnicalSkillId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("NodeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TechnicalSkillId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TechnicalSkillId");
+
+                    b.HasIndex("NodeId", "TechnicalSkillId")
+                        .IsUnique();
+
+                    b.ToTable("NodeTechnicalSkills", (string)null);
+                });
+
             modelBuilder.Entity("SECompass.DataAccess.Entities.PersonalRoadmap", b =>
                 {
                     b.Property<Guid>("Id")
@@ -356,6 +517,11 @@ namespace SECompass.DataAccess.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
@@ -411,6 +577,101 @@ namespace SECompass.DataAccess.Migrations
                     b.HasKey("UserId");
 
                     b.ToTable("Profiles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                            CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        });
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.ProfileTechnicalSkill", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("ProfileTechnicalSkillId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TechnicalSkillId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TechnicalSkillId");
+
+                    b.HasIndex("ProfileId", "TechnicalSkillId")
+                        .IsUnique();
+
+                    b.ToTable("ProfileTechnicalSkills", (string)null);
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.PublicPortfolio", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CachedPortfolioAnalysisJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Headline")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastAnalyzedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LinkedInUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PublicBio")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("WebsiteUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfileId")
+                        .IsUnique();
+
+                    b.ToTable("PublicPortfolios", (string)null);
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.RoadmapNode", b =>
@@ -513,23 +774,22 @@ namespace SECompass.DataAccess.Migrations
                     b.ToTable("RoadmapNodeEdges", (string)null);
                 });
 
-            modelBuilder.Entity("SECompass.DataAccess.Entities.Skill", b =>
+            modelBuilder.Entity("SECompass.DataAccess.Entities.TechnicalSkill", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier")
-                        .HasColumnName("SkillId");
+                        .HasColumnName("TechnicalSkillId");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("ProfileId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("SkillName")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
@@ -539,9 +799,10 @@ namespace SECompass.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProfileId");
+                    b.HasIndex("Name")
+                        .IsUnique();
 
-                    b.ToTable("Skills", (string)null);
+                    b.ToTable("TechnicalSkills", (string)null);
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.User", b =>
@@ -595,6 +856,18 @@ namespace SECompass.DataAccess.Migrations
                         .HasFilter("[GoogleId] IS NOT NULL");
 
                     b.ToTable("Users", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                            CreatedAt = new DateTime(2026, 6, 12, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "admin@secompass.com",
+                            FullName = "Admin Administrator",
+                            IsActive = true,
+                            PasswordHashed = "$2b$12$x60evDbGMbtCfCLsHPITg.F90EITs5NYkcp/zoKMuwzsZ3TRcqBHK",
+                            Role = 0
+                        });
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.UserRefreshToken", b =>
@@ -723,6 +996,25 @@ namespace SECompass.DataAccess.Migrations
                     b.Navigation("RoadmapNode");
                 });
 
+            modelBuilder.Entity("SECompass.DataAccess.Entities.NodeTechnicalSkill", b =>
+                {
+                    b.HasOne("SECompass.DataAccess.Entities.Node", "Node")
+                        .WithMany("NodeTechnicalSkills")
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.HasOne("SECompass.DataAccess.Entities.TechnicalSkill", "TechnicalSkill")
+                        .WithMany("NodeTechnicalSkills")
+                        .HasForeignKey("TechnicalSkillId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.Navigation("Node");
+
+                    b.Navigation("TechnicalSkill");
+                });
+
             modelBuilder.Entity("SECompass.DataAccess.Entities.PersonalRoadmap", b =>
                 {
                     b.HasOne("SECompass.DataAccess.Entities.CareerRoadmap", "CareerRoadmap")
@@ -751,6 +1043,36 @@ namespace SECompass.DataAccess.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.ProfileTechnicalSkill", b =>
+                {
+                    b.HasOne("SECompass.DataAccess.Entities.Profile", "Profile")
+                        .WithMany("ProfileTechnicalSkills")
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.HasOne("SECompass.DataAccess.Entities.TechnicalSkill", "TechnicalSkill")
+                        .WithMany("ProfileTechnicalSkills")
+                        .HasForeignKey("TechnicalSkillId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.Navigation("Profile");
+
+                    b.Navigation("TechnicalSkill");
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.PublicPortfolio", b =>
+                {
+                    b.HasOne("SECompass.DataAccess.Entities.Profile", "Profile")
+                        .WithOne("PublicPortfolio")
+                        .HasForeignKey("SECompass.DataAccess.Entities.PublicPortfolio", "ProfileId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.Navigation("Profile");
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.RoadmapNode", b =>
@@ -806,17 +1128,6 @@ namespace SECompass.DataAccess.Migrations
                     b.Navigation("ToRoadmapNode");
                 });
 
-            modelBuilder.Entity("SECompass.DataAccess.Entities.Skill", b =>
-                {
-                    b.HasOne("SECompass.DataAccess.Entities.Profile", "Profile")
-                        .WithMany("Skills")
-                        .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.ClientCascade)
-                        .IsRequired();
-
-                    b.Navigation("Profile");
-                });
-
             modelBuilder.Entity("SECompass.DataAccess.Entities.UserRefreshToken", b =>
                 {
                     b.HasOne("SECompass.DataAccess.Entities.User", "User")
@@ -853,6 +1164,8 @@ namespace SECompass.DataAccess.Migrations
 
                     b.Navigation("LearningResources");
 
+                    b.Navigation("NodeTechnicalSkills");
+
                     b.Navigation("RoadmapNodes");
                 });
 
@@ -869,7 +1182,9 @@ namespace SECompass.DataAccess.Migrations
 
                     b.Navigation("PersonalRoadmaps");
 
-                    b.Navigation("Skills");
+                    b.Navigation("ProfileTechnicalSkills");
+
+                    b.Navigation("PublicPortfolio");
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.RoadmapNode", b =>
@@ -881,6 +1196,13 @@ namespace SECompass.DataAccess.Migrations
                     b.Navigation("NodeProgresses");
 
                     b.Navigation("OutgoingEdges");
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.TechnicalSkill", b =>
+                {
+                    b.Navigation("NodeTechnicalSkills");
+
+                    b.Navigation("ProfileTechnicalSkills");
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.User", b =>

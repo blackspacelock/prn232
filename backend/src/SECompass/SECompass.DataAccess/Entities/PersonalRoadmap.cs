@@ -6,6 +6,7 @@ public class PersonalRoadmap : BaseAuditableEntity
     public Guid CareerRoadmapId { get; set; }
     public string? Note { get; set; }
     public decimal ProgressPercentage { get; set; }
+    public bool IsActive { get; set; }
 
     public Profile Profile { get; set; } = null!;
     public CareerRoadmap CareerRoadmap { get; set; } = null!;

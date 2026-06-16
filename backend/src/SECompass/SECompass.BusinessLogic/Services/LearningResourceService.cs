@@ -38,6 +38,13 @@ public class LearningResourceService : ILearningResourceService
         return ServiceResult<LearningResourceDto>.Ok(_mapper.Map<LearningResourceDto>(resource));
     }
 
+    public async Task<ServiceResult<List<LearningResourceDto>>> GetAllAsync()
+    {
+        var resources = await _uow.LearningResources.GetAllAsync();
+        var ordered = resources.OrderByDescending(r => r.CreatedAt).ToList();
+        return ServiceResult<List<LearningResourceDto>>.Ok(_mapper.Map<List<LearningResourceDto>>(ordered));
+    }
+
     public async Task<ServiceResult<List<LearningResourceDto>>> GetByNodeAsync(Guid nodeId)
     {
         var resources = await _uow.LearningResources.FindAsync(r => r.NodeId == nodeId);

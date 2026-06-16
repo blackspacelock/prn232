@@ -23,6 +23,8 @@ export const breadcrumbRoutes: Record<string, string> = {
   'Admin Roles': '/admin/career-roles',
   'Admin Templates': '/admin/roadmaps',
   'Node Library': '/admin/nodes',
+  'Technical Skills': '/admin/technical-skills',
+  'Learning Resources': '/admin/learning-resources',
   'Job Trends': '/admin/job-trends',
   'Node Progress Reference': '/reference/node-progress',
   'UI Reference': '/reference/ui',

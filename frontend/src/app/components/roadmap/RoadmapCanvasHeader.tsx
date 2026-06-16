@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, GitBranch, ListTree, Trophy } from 'lucide-react';
+import { ActiveBadge } from '../ActiveBadge';
 
 interface RoadmapCanvasHeaderProps {
   title: string;
   description?: string;
   nodeCount: number;
   levelCount?: number;
+  isActive?: boolean;
   progress?: {
     completed: number;
     total: number;
@@ -17,6 +19,7 @@ export function RoadmapCanvasHeader({
   description,
   nodeCount,
   levelCount,
+  isActive,
   progress,
 }: RoadmapCanvasHeaderProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -50,6 +53,7 @@ export function RoadmapCanvasHeader({
         {!collapsed && (
           <div className="border-t border-[var(--md3-outline-variant)] px-4 py-3">
             <div className="mb-2 flex flex-wrap gap-2">
+              {isActive && <ActiveBadge />}
               <span className="inline-flex items-center gap-1 rounded-md bg-[var(--md3-primary-container)] px-2 py-1 text-xs font-medium text-[var(--md3-primary)]">
                 <GitBranch className="h-3.5 w-3.5" />
                 {nodeCount} nodes

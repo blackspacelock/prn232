@@ -22,6 +22,16 @@ public class GitHubRepositoriesController : ControllerBase
         return CreatedAtAction(nameof(Add), result.Data);
     }
 
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(GitHubRepositoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateGitHubRepoDto dto)
+    {
+        var result = await _service.UpdateAsync(id, dto);
+        if (!result.Success) return NotFound(result.Error);
+        return Ok(result.Data);
+    }
+
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -14,7 +14,13 @@ import { SettingsPage } from "./pages/Settings";
 import { AdminCareerRolesPage } from "./pages/admin/CareerRoles";
 import { AdminRoadmapTemplatesPage } from "./pages/admin/RoadmapTemplates";
 import { AdminNodeLibraryPage } from "./pages/admin/NodeLibrary";
+import { AdminTechnicalSkillsPage } from "./pages/admin/TechnicalSkills";
+import { AdminLearningResourcesPage } from "./pages/admin/LearningResources";
 import { AdminJobTrendsPage } from "./pages/admin/JobTrends";
+import { AdminDashboardPage } from "./pages/admin/Dashboard";
+import { AdminUsersPage } from "./pages/admin/Users";
+import { AdminSystemConfigPage } from "./pages/admin/SystemConfig";
+import { AdminReportsPage } from "./pages/admin/Reports";
 import { NodeProgressReferencePage } from "./pages/reference/NodeProgressReference";
 import { UIReferencePage } from "./pages/reference/UIReference";
 import { CareerRolesPage } from "./pages/catalog/CareerRoles";
@@ -68,10 +74,16 @@ export const router = createBrowserRouter([
   {
     element: <AdminRoute />,
     children: [
+      { path: "/admin", Component: AdminDashboardPage },
+      { path: "/admin/users", Component: AdminUsersPage },
       { path: "/admin/career-roles", Component: AdminCareerRolesPage },
       { path: "/admin/roadmaps", Component: AdminRoadmapTemplatesPage },
       { path: "/admin/nodes", Component: AdminNodeLibraryPage },
+      { path: "/admin/technical-skills", Component: AdminTechnicalSkillsPage },
+      { path: "/admin/learning-resources", Component: AdminLearningResourcesPage },
       { path: "/admin/job-trends", Component: AdminJobTrendsPage },
+      { path: "/admin/config", Component: AdminSystemConfigPage },
+      { path: "/admin/reports", Component: AdminReportsPage },
     ],
   },
 ]);

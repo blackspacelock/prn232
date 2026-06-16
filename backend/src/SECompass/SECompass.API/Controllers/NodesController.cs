@@ -2,17 +2,26 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SECompass.BusinessLogic.DTOs.Node;
 using SECompass.BusinessLogic.Interfaces;
+using SECompass.DataAccess.Enums;
 
 namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/nodes")]
-[Authorize]
+[Authorize(Roles = "0")]
 public class NodesController : ControllerBase
 {
     private readonly INodeService _nodeService;
 
     public NodesController(INodeService nodeService) => _nodeService = nodeService;
+
+    [HttpGet]
+    [ProducesResponseType(typeof(BusinessLogic.Common.PaginationResponse<NodeDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPaged([FromQuery] NodeListRequestDto request)
+    {
+        var result = await _nodeService.GetPagedAsync(request);
+        return Ok(result.Data);
+    }
 
     [HttpPost]
     [ProducesResponseType(typeof(NodeDto), StatusCodes.Status201Created)]

@@ -18,6 +18,8 @@ export const GET_PROFILE_WITH_SKILLS = gql`
   query GetProfileWithSkills($userId: UUID!) {
     profileWithSkills(userId: $userId) {
       userId
+      fullName
+      avatarUrl
       bioDescription
       phoneNumber
       university
@@ -26,10 +28,22 @@ export const GET_PROFILE_WITH_SKILLS = gql`
       skills {
         id
         profileId
+        technicalSkillId
         skillName
+        category
         note
         createdAt
       }
+    }
+  }
+`;
+
+export const GET_TECHNICAL_SKILLS = gql`
+  query GetTechnicalSkills {
+    technicalSkills {
+      id
+      name
+      category
     }
   }
 `;
@@ -124,6 +138,19 @@ export const GET_NODE_HIERARCHY = gql`
   }
 `;
 
+export const GET_ROOT_NODES = gql`
+  query GetRootNodes {
+    rootNodes {
+      id
+      parentNodeId
+      name
+      description
+      order
+      createdAt
+    }
+  }
+`;
+
 export const GET_NODE_CHILDREN = gql`
   query GetNodeChildren($parentId: UUID!) {
     nodeChildren(parentId: $parentId) {
@@ -143,8 +170,11 @@ export const GET_PERSONAL_ROADMAPS_BY_PROFILE = gql`
       id
       profileId
       careerRoadmapId
+      careerRoadmapName
+      careerRoadmapDescription
       note
       progressPercentage
+      isActive
       createdAt
     }
   }
@@ -156,8 +186,11 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
       id
       profileId
       careerRoadmapId
+      careerRoadmapName
+      careerRoadmapDescription
       note
       progressPercentage
+      isActive
       createdAt
       nodeProgresses {
         id
@@ -291,6 +324,37 @@ export const GET_PORTFOLIO_ANALYSIS = gql`
   }
 `;
 
+export const GET_PUBLIC_PORTFOLIO_BY_PROFILE = gql`
+  query GetPublicPortfolioByProfile($profileId: UUID!) {
+    publicPortfolioByProfile(profileId: $profileId) {
+      id
+      profileId
+      headline
+      publicBio
+      location
+      websiteUrl
+      linkedInUrl
+      contactEmail
+      isPublic
+      lastAnalyzedAt
+      cachedPortfolioAnalysis {
+        profileId
+        repositoryNames
+        overallSummary
+        strengths
+        recommendations
+        repositoryAnalyses {
+          repositoryId
+          repositoryName
+          objective
+          techStacks
+          summary
+        }
+      }
+    }
+  }
+`;
+
 export const GET_CHAT_SESSIONS_BY_PROFILE = gql`
   query GetChatSessionsByProfile($profileId: UUID!) {
     chatSessionsByProfile(profileId: $profileId) {
@@ -351,13 +415,30 @@ export const GET_TOP_TRENDING_SKILLS = gql`
 `;
 
 export const GET_SKILL_GAP_ANALYSIS = gql`
-  query GetSkillGapAnalysis($profileId: UUID!, $careerRoadmapId: UUID!) {
-    skillGapAnalysis(profileId: $profileId, careerRoadmapId: $careerRoadmapId) {
+  query GetSkillGapAnalysis($profileId: UUID!) {
+    skillGapAnalysis(profileId: $profileId) {
       profileId
       careerRoadmapId
-      existingSkills
-      requiredSkills
-      missingSkills
+      requiredSkills {
+        id
+        name
+        category
+      }
+      matchedSkills {
+        id
+        name
+        category
+      }
+      missingSkills {
+        id
+        name
+        category
+      }
+      categoryBreakdown {
+        category
+        yourLevel
+        requiredLevel
+      }
       coveragePercentage
       summary
     }
