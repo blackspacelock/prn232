@@ -47,7 +47,7 @@ const navItems: NavItem[] = [
 const adminItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Overview', path: '/admin' },
   { icon: Users, label: 'Users', path: '/admin/users' },
-  { icon: ShieldCheck, label: 'Roles', path: '/admin/career-roles' },
+  { icon: ShieldCheck, label: 'Career Roles', path: '/admin/career-roles' },
   { icon: Route, label: 'Templates', path: '/admin/roadmaps' },
   { icon: Network, label: 'Nodes', path: '/admin/nodes' },
   { icon: Database, label: 'Trends', path: '/admin/job-trends' },
