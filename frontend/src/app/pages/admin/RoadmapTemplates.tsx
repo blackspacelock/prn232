@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
+import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
 import { Plus, Pencil, Trash2, Map, Network, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
@@ -18,12 +19,20 @@ interface CareerRole { id: string; name: string }
 interface CareerRoadmap { id: string; name: string; description?: string; careerRoleId: string }
 interface RoadmapDto { name: string; description?: string; careerRoleId: string }
 type RoadmapNodeForm = CreateRoadmapNodeDto & { positionXText: string; positionYText: string };
+type RoadmapSortKey = 'name' | 'createdAt';
+const roadmapSortOptions = [
+  { value: 'name', label: 'Template name' },
+  { value: 'createdAt', label: 'Created date' },
+] satisfies Array<{ value: RoadmapSortKey; label: string }>;
 
 export function AdminRoadmapTemplatesPage() {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingRoadmap, setEditingRoadmap] = useState<CareerRoadmap | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<RoadmapSortKey>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [form, setForm] = useState<RoadmapDto>({ name: '', careerRoleId: '' });
   const [expandedRoadmapId, setExpandedRoadmapId] = useState<string | null>(null);
   const [roadmapNodeForm, setRoadmapNodeForm] = useState<RoadmapNodeForm>({
@@ -51,6 +60,15 @@ export function AdminRoadmapTemplatesPage() {
   );
 
   const roadmaps: CareerRoadmap[] = (roadmapsData as { careerRoadmapsByRole?: CareerRoadmap[] })?.careerRoadmapsByRole ?? [];
+  const roadmapList = useAdminList({
+    items: roadmaps,
+    searchText: search,
+    sortKey,
+    sortDirection,
+    pageSize: 20,
+    searchPredicate: (roadmap, term) => `${roadmap.name} ${roadmap.description ?? ''}`.toLowerCase().includes(term),
+    getSortValue: (roadmap, key) => key === 'createdAt' ? new Date((roadmap as CareerRoadmap & { createdAt?: string }).createdAt ?? '') : roadmap.name,
+  });
   const roadmapNodes: RoadmapNodeDto[] =
     (roadmapNodesData as { careerRoadmapWithNodes?: { nodes: RoadmapNodeDto[] } })
       ?.careerRoadmapWithNodes?.nodes ?? [];
@@ -201,6 +219,18 @@ export function AdminRoadmapTemplatesPage() {
           <EmptyState icon={Map} title="Failed to load templates" description="Please try again." actionLabel="Retry" onAction={refetch} />
         ) : (
           <div className="admin-panel admin-table-card">
+            <div className="p-4">
+              <AdminListToolbar
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search templates..."
+                sortKey={sortKey}
+                onSortKeyChange={setSortKey}
+                sortDirection={sortDirection}
+                onSortDirectionChange={setSortDirection}
+                sortOptions={roadmapSortOptions}
+              />
+            </div>
             <table className="w-full">
               <thead className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
                 <tr>
@@ -211,7 +241,7 @@ export function AdminRoadmapTemplatesPage() {
                 </tr>
               </thead>
               <tbody>
-                {roadmaps.map((rm) => (
+                {roadmapList.pagedItems.map((rm) => (
                   <Fragment key={rm.id}>
                     <tr key={rm.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
                       <td className="px-4 py-4">
@@ -386,6 +416,7 @@ export function AdminRoadmapTemplatesPage() {
                 ))}
               </tbody>
             </table>
+            <AdminPagination {...roadmapList} onPageChange={roadmapList.setPage} />
           </div>
         )}
 

@@ -5,7 +5,8 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
-import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
@@ -14,9 +15,16 @@ import { GET_CAREER_ROLES } from '@/graphql/queries';
 
 interface CareerRole { id: string; name: string; description?: string; createdAt: string }
 interface CareerRoleDto { name: string; description?: string }
+type RoleSortKey = 'name' | 'createdAt';
+const roleSortOptions = [
+  { value: 'name', label: 'Role name' },
+  { value: 'createdAt', label: 'Created date' },
+] satisfies Array<{ value: RoleSortKey; label: string }>;
 
 export function AdminCareerRolesPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortKey, setSortKey] = useState<RoleSortKey>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingRole, setEditingRole] = useState<CareerRole | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -24,9 +32,16 @@ export function AdminCareerRolesPage() {
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const { data, loading, error, refetch } = useQuery(GET_CAREER_ROLES);
-  const roles: CareerRole[] = ((data as { careerRoles?: CareerRole[] })?.careerRoles ?? []).filter((r) =>
-    r.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const roles: CareerRole[] = (data as { careerRoles?: CareerRole[] })?.careerRoles ?? [];
+  const roleList = useAdminList({
+    items: roles,
+    searchText: searchQuery,
+    sortKey,
+    sortDirection,
+    pageSize: 20,
+    searchPredicate: (role, term) => `${role.name} ${role.description ?? ''}`.toLowerCase().includes(term),
+    getSortValue: (role, key) => key === 'name' ? role.name : new Date(role.createdAt),
+  });
 
   const rolesQueryOptions = { query: GET_CAREER_ROLES };
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
@@ -77,12 +92,16 @@ export function AdminCareerRolesPage() {
           </div>
         )}
 
-        <div className="admin-panel flex items-center gap-3 p-4">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
-            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search roles..." className="md3-field w-full pl-12 pr-4" />
-          </div>
-        </div>
+        <AdminListToolbar
+          search={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search roles..."
+          sortKey={sortKey}
+          onSortKeyChange={setSortKey}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
+          sortOptions={roleSortOptions}
+        />
 
         {loading ? (
           <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
@@ -100,7 +119,7 @@ export function AdminCareerRolesPage() {
                 </tr>
               </thead>
               <tbody>
-                {roles.map((role) => (
+                {roleList.pagedItems.map((role) => (
                   <tr key={role.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
                     <td className="px-6 py-4 text-sm font-medium text-[var(--md3-on-surface)]">{role.name}</td>
                     <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{role.description ?? '—'}</td>
@@ -115,6 +134,7 @@ export function AdminCareerRolesPage() {
                 ))}
               </tbody>
             </table>
+            <AdminPagination {...roleList} onPageChange={roleList.setPage} />
           </div>
         )}
 

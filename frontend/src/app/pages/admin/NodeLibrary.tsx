@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
-import { Plus, Pencil, Trash2, Network, ChevronRight, Hash, Search } from 'lucide-react';
+import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
+import { Plus, Pencil, Trash2, Network, ChevronRight, Hash } from 'lucide-react';
 import { useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
@@ -14,6 +15,12 @@ import { GET_NODE_CHILDREN, GET_NODE_HIERARCHY } from '@/graphql/queries';
 
 interface NodeItem { id: string; name: string; description?: string; parentNodeId?: string; order: number }
 interface NodeDto { name: string; description?: string; parentNodeId?: string; order: number }
+type NodeSortKey = 'name' | 'order' | 'id';
+const nodeSortOptions = [
+  { value: 'name', label: 'Node name' },
+  { value: 'order', label: 'Order' },
+  { value: 'id', label: 'ID' },
+] satisfies Array<{ value: NodeSortKey; label: string }>;
 
 export function AdminNodeLibraryPage() {
   const [parentId, setParentId] = useState<string | null>(null);
@@ -24,18 +31,22 @@ export function AdminNodeLibraryPage() {
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [rootId, setRootId] = useState('');
   const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<NodeSortKey>('order');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const [loadChildren, { data: childrenData, loading, error }] = useLazyQuery(GET_NODE_CHILDREN);
   const [loadHierarchy, { data: hierarchyData, loading: hierarchyLoading, }] = useLazyQuery(GET_NODE_HIERARCHY);
 
   const nodes: NodeItem[] = (childrenData as { nodeChildren?: NodeItem[] })?.nodeChildren ?? [];
-  const filteredNodes = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return nodes;
-    return nodes.filter((node) =>
-      `${node.name} ${node.description ?? ''}`.toLowerCase().includes(term),
-    );
-  }, [nodes, search]);
+  const nodeList = useAdminList({
+    items: nodes,
+    searchText: search,
+    sortKey,
+    sortDirection,
+    pageSize: 20,
+    searchPredicate: (node, term) => `${node.name} ${node.description ?? ''} ${node.id}`.toLowerCase().includes(term),
+    getSortValue: (node, key) => node[key],
+  });
   const hierarchyRootName =
     (hierarchyData as { nodeHierarchy?: { name?: string } } | undefined)?.nodeHierarchy?.name;
 
@@ -140,18 +151,18 @@ export function AdminNodeLibraryPage() {
           <EmptyState icon={Network} title="Failed to load nodes" description="Please try again." actionLabel="Retry" onAction={() => loadChildren({ variables: { parentId } })} />
         ) : (
           <div className="space-y-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--md3-on-surface-variant)]" />
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search loaded nodes"
-                className="h-11 w-full rounded-md border border-[var(--md3-outline)] bg-white pl-10 pr-4 text-sm focus:border-[var(--md3-primary)] focus:outline-none"
-              />
-            </div>
+            <AdminListToolbar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Search loaded nodes"
+              sortKey={sortKey}
+              onSortKeyChange={setSortKey}
+              sortDirection={sortDirection}
+              onSortDirectionChange={setSortDirection}
+              sortOptions={nodeSortOptions}
+            />
             <div className="grid gap-3">
-              {filteredNodes.map((node) => (
+              {nodeList.pagedItems.map((node) => (
                 <div key={node.id} className="admin-panel p-4">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
@@ -170,6 +181,9 @@ export function AdminNodeLibraryPage() {
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="admin-panel">
+              <AdminPagination {...nodeList} onPageChange={nodeList.setPage} />
             </div>
           </div>
         )}

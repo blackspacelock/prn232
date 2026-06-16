@@ -8,7 +8,7 @@ namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/job-scraping-sources")]
-[Authorize(Roles = nameof(UserRole.Admin))]
+[Authorize(Roles = "Admin,0")]
 public class JobScrapingSourcesController : ControllerBase
 {
     private readonly IJobScrapingSourceService _service;

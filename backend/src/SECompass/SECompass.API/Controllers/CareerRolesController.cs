@@ -8,7 +8,7 @@ namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/career-roles")]
-[Authorize(Roles = nameof(UserRole.Admin))]
+[Authorize(Roles = "Admin,0")]
 public class CareerRolesController : ControllerBase
 {
     private readonly ICareerRoleService _careerRoleService;

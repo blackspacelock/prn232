@@ -13,6 +13,9 @@ import {
   Network,
   Database,
   Telescope,
+  Users,
+  ClipboardList,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
@@ -42,10 +45,14 @@ const navItems: NavItem[] = [
 ];
 
 const adminItems: NavItem[] = [
+  { icon: LayoutDashboard, label: 'Overview', path: '/admin' },
+  { icon: Users, label: 'Users', path: '/admin/users' },
   { icon: ShieldCheck, label: 'Roles', path: '/admin/career-roles' },
   { icon: Route, label: 'Templates', path: '/admin/roadmaps' },
   { icon: Network, label: 'Nodes', path: '/admin/nodes' },
   { icon: Database, label: 'Trends', path: '/admin/job-trends' },
+  { icon: SlidersHorizontal, label: 'Config', path: '/admin/config' },
+  { icon: ClipboardList, label: 'Reports', path: '/admin/reports' },
 ];
 
 function getInitials(fullName: string | null | undefined, email: string | null | undefined): string {
@@ -96,6 +103,7 @@ export function NavigationRail() {
           const Icon = item.icon;
           const isActive =
             location.pathname === item.path ||
+            (item.path === '/admin' && location.pathname === '/admin') ||
             (item.path === '/roadmaps' && location.pathname.startsWith('/roadmap/')) ||
             (item.path === '/career-roles' &&
               (location.pathname.startsWith('/career-roles') ||
@@ -127,21 +135,23 @@ export function NavigationRail() {
 
       {/* User Avatar & Settings */}
       <div className="flex flex-col gap-2 border-t border-[var(--md3-outline-variant)] pt-4">
-        <Link
-          to={isAdminSection ? '/admin/career-roles' : '/settings'}
-          className={`
-            flex min-h-11 items-center gap-3 rounded-full px-3 py-2 transition-colors
-            ${(!isAdminSection && location.pathname === '/settings') || (isAdminSection && location.pathname === '/admin/career-roles')
-              ? 'bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
-              : 'text-[var(--md3-on-surface-variant)] hover:bg-[var(--md3-surface-variant)]'
-            }
-          `}
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/70">
-            {isAdminSection ? <ShieldCheck className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
-          </span>
-          <span className="text-sm font-medium">{isAdminSection ? 'Admin Home' : 'Settings'}</span>
-        </Link>
+        {!isAdminSection && (
+          <Link
+            to="/settings"
+            className={`
+              flex min-h-11 items-center gap-3 rounded-full px-3 py-2 transition-colors
+              ${location.pathname === '/settings'
+                ? 'bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
+                : 'text-[var(--md3-on-surface-variant)] hover:bg-[var(--md3-surface-variant)]'
+              }
+            `}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/70">
+              <Settings className="w-5 h-5" />
+            </span>
+            <span className="text-sm font-medium">Settings</span>
+          </Link>
+        )}
         <div className="flex items-center gap-3 rounded-xl bg-[var(--md3-surface-container)] px-3 py-3">
           <div className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] flex shrink-0 items-center justify-center overflow-hidden">
             {avatarUrl

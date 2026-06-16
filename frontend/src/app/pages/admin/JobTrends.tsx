@@ -7,6 +7,7 @@ import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
 import { Plus, Pencil, Trash2, TrendingUp, RefreshCw, Save, X } from 'lucide-react';
+import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
 import { useQuery } from '@apollo/client/react';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
@@ -37,17 +38,47 @@ const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 
 interface JobTrend { id: string; techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
 interface JobTrendDto { techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
+type TrendSortKey = 'techSkill' | 'region' | 'trendScore' | 'source' | 'snapshotDate';
+type SourceSortKey = 'name' | 'region' | 'maxPostings' | 'enabled';
+const trendSortOptions = [
+  { value: 'techSkill', label: 'Skill' },
+  { value: 'region', label: 'Region' },
+  { value: 'trendScore', label: 'Score' },
+  { value: 'source', label: 'Source' },
+  { value: 'snapshotDate', label: 'Snapshot date' },
+] satisfies Array<{ value: TrendSortKey; label: string }>;
+const sourceSortOptions = [
+  { value: 'name', label: 'Name' },
+  { value: 'region', label: 'Region' },
+  { value: 'maxPostings', label: 'Max postings' },
+  { value: 'enabled', label: 'Status' },
+] satisfies Array<{ value: SourceSortKey; label: string }>;
 
 export function AdminJobTrendsPage() {
   const [region] = useState('Vietnam');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingTrend, setEditingTrend] = useState<JobTrend | null>(null);
+  const [trendSearch, setTrendSearch] = useState('');
+  const [trendSortKey, setTrendSortKey] = useState<TrendSortKey>('trendScore');
+  const [trendSortDirection, setTrendSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sourceSearch, setSourceSearch] = useState('');
+  const [sourceSortKey, setSourceSortKey] = useState<SourceSortKey>('name');
+  const [sourceSortDirection, setSourceSortDirection] = useState<'asc' | 'desc'>('asc');
   const [form, setForm] = useState<JobTrendDto>({ techSkill: '', trendScore: 80, snapshotDate: new Date().toISOString().split('T')[0] });
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'error' });
 
   const { data, loading, error, refetch } = useQuery(GET_JOB_TRENDS_BY_REGION, { variables: { region } });
   const trends: JobTrend[] = (data as { jobTrendsByRegion?: JobTrend[] })?.jobTrendsByRegion ?? [];
+  const trendList = useAdminList({
+    items: trends,
+    searchText: trendSearch,
+    sortKey: trendSortKey,
+    sortDirection: trendSortDirection,
+    pageSize: 20,
+    searchPredicate: (trend, term) => `${trend.techSkill} ${trend.region ?? ''} ${trend.source ?? ''} ${trend.description ?? ''}`.toLowerCase().includes(term),
+    getSortValue: (trend, key) => key === 'snapshotDate' ? new Date(trend.snapshotDate) : trend[key],
+  });
 
   const trendsQueryOptions = { query: GET_JOB_TRENDS_BY_REGION, variables: { region } };
   const showError = (msg: string) => setSnackbar({ open: true, message: msg, variant: 'error' });
@@ -117,6 +148,15 @@ export function AdminJobTrendsPage() {
   const { data: sources, isLoading: sourcesLoading } = useRestQuery({
     queryKey: ['job-scraping-sources'],
     queryFn: () => apiClient.get<JobScrapingSourceDto[]>('/api/job-scraping-sources').then((r) => r.data),
+  });
+  const sourceList = useAdminList({
+    items: sources ?? [],
+    searchText: sourceSearch,
+    sortKey: sourceSortKey,
+    sortDirection: sourceSortDirection,
+    pageSize: 20,
+    searchPredicate: (source, term) => `${source.name} ${source.region} ${source.url}`.toLowerCase().includes(term),
+    getSortValue: (source, key) => source[key],
   });
 
   const createSourceMutation = useMutation({
@@ -285,6 +325,18 @@ export function AdminJobTrendsPage() {
             <Skeleton className="h-16 rounded-lg" />
           ) : (
             <div className="overflow-hidden rounded-lg border border-[var(--md3-outline-variant)]">
+              <div className="p-3">
+                <AdminListToolbar
+                  search={sourceSearch}
+                  onSearchChange={setSourceSearch}
+                  searchPlaceholder="Search sources..."
+                  sortKey={sourceSortKey}
+                  onSortKeyChange={setSourceSortKey}
+                  sortDirection={sourceSortDirection}
+                  onSortDirectionChange={setSourceSortDirection}
+                  sortOptions={sourceSortOptions}
+                />
+              </div>
               <table className="w-full">
                 <thead className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
                   <tr>
@@ -297,7 +349,7 @@ export function AdminJobTrendsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(sources ?? []).map((source) => (
+                  {sourceList.pagedItems.map((source) => (
                     <tr key={source.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
                       <td className="px-6 py-4 text-sm font-medium text-[var(--md3-on-surface)]">{source.name}</td>
                       <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{source.region}</td>
@@ -321,6 +373,7 @@ export function AdminJobTrendsPage() {
                   ))}
                 </tbody>
               </table>
+              <AdminPagination {...sourceList} onPageChange={sourceList.setPage} />
             </div>
           )}
 
@@ -379,6 +432,18 @@ export function AdminJobTrendsPage() {
           <EmptyState icon={TrendingUp} title="Failed to load trends" description="Please try again." actionLabel="Retry" onAction={refetch} />
         ) : (
           <div className="admin-panel admin-table-card">
+            <div className="p-4">
+              <AdminListToolbar
+                search={trendSearch}
+                onSearchChange={setTrendSearch}
+                searchPlaceholder="Search trends..."
+                sortKey={trendSortKey}
+                onSortKeyChange={setTrendSortKey}
+                sortDirection={trendSortDirection}
+                onSortDirectionChange={setTrendSortDirection}
+                sortOptions={trendSortOptions}
+              />
+            </div>
             <table className="w-full">
               <thead className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
                 <tr>
@@ -390,7 +455,7 @@ export function AdminJobTrendsPage() {
                 </tr>
               </thead>
               <tbody>
-                {trends.map((trend) => (
+                {trendList.pagedItems.map((trend) => (
                   <tr key={trend.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
                     <td className="px-6 py-4">
                       <SkillChip label={trend.techSkill} size="sm" />
@@ -408,6 +473,7 @@ export function AdminJobTrendsPage() {
                 ))}
               </tbody>
             </table>
+            <AdminPagination {...trendList} onPageChange={trendList.setPage} />
           </div>
         )}
 
