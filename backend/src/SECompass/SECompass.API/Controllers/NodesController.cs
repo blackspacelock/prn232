@@ -15,6 +15,14 @@ public class NodesController : ControllerBase
 
     public NodesController(INodeService nodeService) => _nodeService = nodeService;
 
+    [HttpGet]
+    [ProducesResponseType(typeof(BusinessLogic.Common.PaginationResponse<NodeDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPaged([FromQuery] NodeListRequestDto request)
+    {
+        var result = await _nodeService.GetPagedAsync(request);
+        return Ok(result.Data);
+    }
+
     [HttpPost]
     [ProducesResponseType(typeof(NodeDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> Create([FromBody] CreateNodeDto dto)
