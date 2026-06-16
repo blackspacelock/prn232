@@ -15,9 +15,10 @@ import type { AuthResponseDto, LoginUserDto, GoogleLoginDto } from '@/types/api'
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, _initialized } = useAuthStore();
+  const { isAuthenticated, _initialized, user } = useAuthStore();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const from = (location.state as { from?: string })?.from ?? '/dashboard';
+  const from = (location.state as { from?: string })?.from;
+  const getDefaultRedirect = (role: string) => (role === 'Admin' ? '/admin' : '/dashboard');
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -30,9 +31,9 @@ export function LoginPage() {
     mutationFn: (dto: LoginUserDto) =>
       apiClient.post<AuthResponseDto>('/api/auth/login', dto).then((r) => r.data),
     onSuccess: (data) => {
-      const { user, accessToken, refreshToken } = mapAuthResponse(data);
-      setAuth(accessToken, user, refreshToken);
-      navigate(from, { replace: true });
+      const { user: mappedUser, accessToken, refreshToken } = mapAuthResponse(data);
+      setAuth(accessToken, mappedUser, refreshToken);
+      navigate(from ?? getDefaultRedirect(mappedUser.role), { replace: true });
     },
     onError: (error: unknown) => {
       const msg =
@@ -46,9 +47,9 @@ export function LoginPage() {
     mutationFn: (dto: GoogleLoginDto) =>
       apiClient.post<AuthResponseDto>('/api/auth/google', dto).then((r) => r.data),
     onSuccess: (data) => {
-      const { user, accessToken, refreshToken } = mapAuthResponse(data);
-      setAuth(accessToken, user, refreshToken);
-      navigate(from, { replace: true });
+      const { user: mappedUser, accessToken, refreshToken } = mapAuthResponse(data);
+      setAuth(accessToken, mappedUser, refreshToken);
+      navigate(from ?? getDefaultRedirect(mappedUser.role), { replace: true });
     },
     onError: (error: unknown) => {
       const msg =
@@ -64,7 +65,7 @@ export function LoginPage() {
   };
 
   if (_initialized && isAuthenticated) {
-    return <Navigate to={from} replace />;
+    return <Navigate to={from ?? getDefaultRedirect(user?.role ?? '')} replace />;
   }
 
   return (
