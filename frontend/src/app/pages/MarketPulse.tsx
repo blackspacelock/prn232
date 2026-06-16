@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
+import { AdminListToolbar, AdminPagination, AdminFilterSelect, useAdminList, type AdminSortOption } from '../components/admin/AdminListControls';
 import { Search, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { TooltipProps } from 'recharts';
@@ -26,6 +27,16 @@ const AREA_SERIES_COLORS = [
   { stroke: '#34A853', fill: '#E6F4EA' },
   { stroke: '#7B1FA2', fill: '#F3E8FD' },
 ];
+
+type TrendSort = 'score' | 'name' | 'date';
+
+const SORT_OPTIONS: AdminSortOption<TrendSort>[] = [
+  { value: 'score', label: 'Trend Score' },
+  { value: 'name', label: 'Skill Name' },
+  { value: 'date', label: 'Snapshot Date' },
+];
+
+const SOURCE_ALL = '';
 
 interface TrendHistoryPoint {
   date: string;
@@ -62,7 +73,10 @@ function buildTrendHistory(trends: JobTrend[]): { skills: string[]; data: TrendH
 
 export function MarketPulsePage() {
   const [region, setRegion] = useState('Vietnam');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<TrendSort>('score');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sourceFilter, setSourceFilter] = useState(SOURCE_ALL);
 
   const { data: trendsData, loading: trendsLoading, error: trendsError, refetch } = useQuery(GET_JOB_TRENDS_BY_REGION, {
     variables: { region },
@@ -77,12 +91,32 @@ export function MarketPulsePage() {
   const allTrends: JobTrend[] = (trendsData as { jobTrendsByRegion?: JobTrend[] })?.jobTrendsByRegion ?? [];
   const topSkills: JobTrend[] = (topSkillsData as { topTrendingSkills?: JobTrend[] })?.topTrendingSkills ?? [];
 
-  const trends = searchQuery
-    ? allTrends.filter((t) => t.techSkill.toLowerCase().includes(searchQuery.toLowerCase()))
+  const sources = [...new Set(allTrends.map((t) => t.source).filter(Boolean))] as string[];
+  const sourceOptions = [
+    { value: SOURCE_ALL, label: 'All Sources' },
+    ...sources.map((s) => ({ value: s, label: s })),
+  ];
+
+  const sourceFiltered = sourceFilter
+    ? allTrends.filter((t) => t.source === sourceFilter)
     : allTrends;
 
-  const chartData = (searchQuery
-    ? topSkills.filter((s) => s.techSkill.toLowerCase().includes(searchQuery.toLowerCase()))
+  const trendList = useAdminList<JobTrend, TrendSort>({
+    items: sourceFiltered,
+    searchText: search,
+    sortKey,
+    sortDirection,
+    pageSize: 20,
+    searchPredicate: (t, term) => t.techSkill.toLowerCase().includes(term),
+    getSortValue: (t, key) => {
+      if (key === 'score') return t.trendScore;
+      if (key === 'name') return t.techSkill;
+      return t.snapshotDate;
+    },
+  });
+
+  const chartData = (search
+    ? topSkills.filter((s) => s.techSkill.toLowerCase().includes(search.toLowerCase()))
     : topSkills
   ).map((s) => ({ name: s.techSkill, score: s.trendScore, color: getSkillColor(hashLabel(s.techSkill)).accent }));
 
@@ -112,16 +146,6 @@ export function MarketPulsePage() {
               {r}
             </button>
           ))}
-          <div className="relative flex-1 max-w-xs ml-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--md3-on-surface-variant)]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter by skill..."
-              className="md3-field w-full pl-12 pr-4"
-            />
-          </div>
         </div>
 
         {trendsLoading || topSkillsLoading ? (
@@ -192,13 +216,46 @@ export function MarketPulsePage() {
               )}
             </div>
 
-            {trends.length > 0 && (
-              <div className="desktop-grid-3">
-                {trends.slice(0, 9).map((trend) => (
-                  <SkillCard key={trend.id} trend={trend} />
-                ))}
-              </div>
-            )}
+            <div>
+              <AdminListToolbar
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search skills..."
+                sortKey={sortKey}
+                onSortKeyChange={setSortKey}
+                sortDirection={sortDirection}
+                onSortDirectionChange={setSortDirection}
+                sortOptions={SORT_OPTIONS}
+              >
+                {sources.length > 0 && (
+                  <AdminFilterSelect
+                    value={sourceFilter}
+                    onChange={setSourceFilter}
+                    options={sourceOptions}
+                    ariaLabel="Filter by source"
+                    label="Source"
+                  />
+                )}
+              </AdminListToolbar>
+
+              {trendList.pagedItems.length > 0 ? (
+                <>
+                  <div className="desktop-grid-3 mt-4">
+                    {trendList.pagedItems.map((trend) => (
+                      <SkillCard key={trend.id} trend={trend} />
+                    ))}
+                  </div>
+                  <AdminPagination {...trendList} onPageChange={trendList.setPage} />
+                </>
+              ) : (
+                <div className="mt-4 flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <Search className="w-10 h-10 text-[var(--md3-on-surface-variant)] mx-auto mb-3" />
+                    <p className="text-sm text-[var(--md3-on-surface-variant)]">No skills match your search.</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

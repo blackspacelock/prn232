@@ -6,6 +6,7 @@ namespace SECompass.BusinessLogic.Interfaces;
 public interface ILearningResourceService
 {
     Task<ServiceResult<LearningResourceDto>> CreateAsync(Guid nodeId, CreateLearningResourceDto dto);
+    Task<ServiceResult<List<LearningResourceDto>>> GetAllAsync();
     Task<ServiceResult<List<LearningResourceDto>>> GetByNodeAsync(Guid nodeId);
     Task<ServiceResult<List<LearningResourceDto>>> GetFreeByNodeAsync(Guid nodeId);
     Task<ServiceResult<List<LearningResourceDto>>> GetByTypeAsync(Guid nodeId, string resourceType);

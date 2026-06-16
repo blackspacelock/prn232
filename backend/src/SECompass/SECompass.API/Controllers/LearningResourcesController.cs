@@ -13,6 +13,14 @@ public class LearningResourcesController : ControllerBase
 
     public LearningResourcesController(ILearningResourceService service) => _service = service;
 
+    [HttpGet("api/learning-resources")]
+    [ProducesResponseType(typeof(List<LearningResourceDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _service.GetAllAsync();
+        return Ok(result.Data);
+    }
+
     [HttpPost("api/nodes/{nodeId:guid}/learning-resources")]
     [ProducesResponseType(typeof(LearningResourceDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

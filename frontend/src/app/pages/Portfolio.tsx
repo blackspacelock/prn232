@@ -8,6 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { RepoCard } from '../components/RepoCard';
 import { FormDialog, type FormDialogField } from '../components/FormDialog';
 import { LoadingDialog } from '../components/LoadingDialog';
+import { AdminListToolbar, AdminPagination, AdminFilterSelect, useAdminList, type AdminSortOption } from '../components/admin/AdminListControls';
 import { ExternalLink, Plus, Share2, Sparkles } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
@@ -17,10 +18,43 @@ import { useAuthStore } from '@/store/authStore';
 import { GET_GITHUB_REPOS_BY_PROFILE, GET_PORTFOLIO_ANALYSIS } from '@/graphql/queries';
 import type { AddGitHubRepoDto, GitHubRepositoryDto, PortfolioAnalysisDto, UpdateGitHubRepoDto } from '@/types/api';
 
+type RepoSort = 'name' | 'createdAt';
+
+const SORT_OPTIONS: AdminSortOption<RepoSort>[] = [
+  { value: 'name', label: 'Name' },
+  { value: 'createdAt', label: 'Date Added' },
+];
+
+const VISIBILITY_OPTIONS = [
+  { value: '', label: 'All Repos' },
+  { value: 'public', label: 'Public' },
+  { value: 'private', label: 'Private' },
+];
+
 const ADD_REPO_FIELDS: FormDialogField[] = [
-  { name: 'repoUrl', label: 'Repository URL', type: 'url', placeholder: 'https://github.com/username/repo', colSpan: 2 },
-  { name: 'description', label: 'Description (optional)', type: 'textarea', placeholder: 'What does this project do?', colSpan: 2 },
-  { name: 'isPrivate', label: 'Private repository', type: 'checkbox', colSpan: 2 },
+  {
+    name: 'repoUrl',
+    label: 'Repository URL',
+    description: 'Paste the full GitHub URL (e.g. https://github.com/username/repo). The repository name is derived automatically.',
+    type: 'url',
+    placeholder: 'https://github.com/username/repo',
+    colSpan: 2,
+  },
+  {
+    name: 'description',
+    label: 'Description (optional)',
+    description: 'A short summary of what this project does. AI analysis can update this automatically from the README.',
+    type: 'textarea',
+    placeholder: 'What does this project do?',
+    colSpan: 2,
+  },
+  {
+    name: 'isPrivate',
+    label: 'Private repository',
+    description: 'Mark as private if the repository is not publicly visible on GitHub.',
+    type: 'checkbox',
+    colSpan: 2,
+  },
 ];
 
 const AI_DESCRIPTION_NOTICE = 'When you run AI analysis, SECompass reads this repository README and may generate or update the repository description automatically.';
@@ -43,6 +77,11 @@ export function PortfolioPage() {
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'error' });
   const [showAddForm, setShowAddForm] = useState(false);
 
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<RepoSort>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [visibilityFilter, setVisibilityFilter] = useState('');
+
   const { data: reposData, loading: reposLoading, error: reposError, refetch } = useQuery(GET_GITHUB_REPOS_BY_PROFILE, {
     variables: { profileId },
     skip: !profileId,
@@ -53,15 +92,63 @@ export function PortfolioPage() {
     skip: !profileId,
   });
 
-  const repos: GitHubRepositoryDto[] = (reposData as { gitHubRepositoriesByProfile?: GitHubRepositoryDto[] })?.gitHubRepositoriesByProfile ?? [];
+  const allRepos: GitHubRepositoryDto[] = (reposData as { gitHubRepositoriesByProfile?: GitHubRepositoryDto[] })?.gitHubRepositoriesByProfile ?? [];
   const analysis: PortfolioAnalysisDto | null = (analysisData as { portfolioAnalysis?: PortfolioAnalysisDto })?.portfolioAnalysis ?? null;
   const reposQueryOptions = { query: GET_GITHUB_REPOS_BY_PROFILE, variables: { profileId } };
 
+  const visibilityFiltered = visibilityFilter
+    ? allRepos.filter((r) => visibilityFilter === 'private' ? r.isPrivate : !r.isPrivate)
+    : allRepos;
+
+  const repoList = useAdminList<GitHubRepositoryDto, RepoSort>({
+    items: visibilityFiltered,
+    searchText: search,
+    sortKey,
+    sortDirection,
+    pageSize: 20,
+    searchPredicate: (r, term) =>
+      r.repositoryName.toLowerCase().includes(term) ||
+      (r.description ?? '').toLowerCase().includes(term) ||
+      r.repoUrl.toLowerCase().includes(term),
+    getSortValue: (r, key) => {
+      if (key === 'name') return r.repositoryName;
+      return r.createdAt;
+    },
+  });
+
   const editRepoFields: FormDialogField[] = editRepo ? [
-    { name: 'repositoryName', label: 'Repository Name', type: 'text', defaultValue: editRepo.repositoryName, colSpan: 2 },
-    { name: 'repoUrl', label: 'Repository URL', type: 'url', defaultValue: editRepo.repoUrl, colSpan: 2 },
-    { name: 'description', label: 'Description (optional)', type: 'textarea', defaultValue: editRepo.description ?? '', colSpan: 2 },
-    { name: 'isPrivate', label: 'Private repository', type: 'checkbox', defaultValue: editRepo.isPrivate, colSpan: 2 },
+    {
+      name: 'repositoryName',
+      label: 'Repository Name',
+      description: 'The display name for this repository in your portfolio.',
+      type: 'text',
+      defaultValue: editRepo.repositoryName,
+      colSpan: 2,
+    },
+    {
+      name: 'repoUrl',
+      label: 'Repository URL',
+      description: 'The full GitHub URL to the repository.',
+      type: 'url',
+      defaultValue: editRepo.repoUrl,
+      colSpan: 2,
+    },
+    {
+      name: 'description',
+      label: 'Description (optional)',
+      description: 'A short summary of what this project does. AI analysis can update this automatically from the README.',
+      type: 'textarea',
+      defaultValue: editRepo.description ?? '',
+      colSpan: 2,
+    },
+    {
+      name: 'isPrivate',
+      label: 'Private repository',
+      description: 'Mark as private if the repository is not publicly visible on GitHub.',
+      type: 'checkbox',
+      defaultValue: editRepo.isPrivate,
+      colSpan: 2,
+    },
   ] : [];
 
   const addRepoMutation = useMutation({
@@ -173,23 +260,51 @@ export function PortfolioPage() {
           }
         />
 
+        <AdminListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search repositories..."
+          sortKey={sortKey}
+          onSortKeyChange={setSortKey}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
+          sortOptions={SORT_OPTIONS}
+        >
+          <AdminFilterSelect
+            value={visibilityFilter}
+            onChange={setVisibilityFilter}
+            options={VISIBILITY_OPTIONS}
+            ariaLabel="Filter by visibility"
+            label="Visibility"
+          />
+        </AdminListToolbar>
+
         {reposLoading ? (
-          <div className="desktop-grid-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}</div>
+          <div className="desktop-grid-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}</div>
         ) : reposError ? (
           <EmptyState icon={Plus} title="Failed to load repositories" description="Please try again." actionLabel="Retry" onAction={refetch} />
-        ) : repos.length === 0 ? (
-          <EmptyState icon={Plus} title="No repositories yet" description="Add your GitHub repositories to showcase your work." actionLabel="Add Repository" onAction={() => setShowAddForm(true)} />
+        ) : repoList.pagedItems.length === 0 ? (
+          <EmptyState
+            icon={Plus}
+            title={search || visibilityFilter ? 'No repositories match your filters' : 'No repositories yet'}
+            description={search || visibilityFilter ? 'Try adjusting your search or filter.' : 'Add your GitHub repositories to showcase your work.'}
+            actionLabel="Add Repository"
+            onAction={() => setShowAddForm(true)}
+          />
         ) : (
-          <div className="desktop-grid-2">
-            {repos.map((repo) => (
-              <RepoCard
-                key={repo.id}
-                repo={repo}
-                onEdit={() => setEditRepo(repo)}
-                onDelete={() => setDeleteId(repo.id)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="desktop-grid-2">
+              {repoList.pagedItems.map((repo) => (
+                <RepoCard
+                  key={repo.id}
+                  repo={repo}
+                  onEdit={() => setEditRepo(repo)}
+                  onDelete={() => setDeleteId(repo.id)}
+                />
+              ))}
+            </div>
+            <AdminPagination {...repoList} onPageChange={repoList.setPage} />
+          </>
         )}
 
         {!analysisLoading && analysis && (

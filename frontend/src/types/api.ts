@@ -35,6 +35,61 @@ export interface UpdateUserDto {
   avatarUrl?: string;
 }
 
+export interface UserDto {
+  id: string;
+  fullName: string;
+  email: string;
+  role: number;
+  isActive: boolean;
+  googleId?: string;
+  avatarUrl?: string;
+  createdAt: string;
+}
+
+export interface AdminUpdateUserDto extends UpdateUserDto {
+  role?: number;
+  isActive?: boolean;
+}
+
+export interface AdminMetricPointDto {
+  label: string;
+  value: number;
+}
+
+export interface AdminOverviewDto {
+  totalUsers: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  adminUsers: number;
+  mentorUsers: number;
+  studentUsers: number;
+  careerRoles: number;
+  roadmapTemplates: number;
+  contentNodes: number;
+  personalRoadmaps: number;
+  gitHubRepositories: number;
+  publicPortfolios: number;
+  chatSessions: number;
+  averageRoadmapProgress: number;
+  scrapingEnabled: boolean;
+  activeScrapingSources: number;
+  lastScrapingRunAt?: string;
+  monthlyRegistrations: AdminMetricPointDto[];
+  roleBreakdown: AdminMetricPointDto[];
+  contentInventory: AdminMetricPointDto[];
+  topJobTrends: Array<{
+    id: string;
+    techSkill: string;
+    description?: string;
+    source?: string;
+    region?: string;
+    trendScore: number;
+    snapshotDate: string;
+    createdAt: string;
+  }>;
+  recentUsers: UserDto[];
+}
+
 // Must match backend UpdateProfileDto exactly (camelCase for JSON serialization)
 export interface UpdateProfileDto {
   bioDescription?: string;

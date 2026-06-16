@@ -6,6 +6,7 @@ namespace SECompass.BusinessLogic.Interfaces;
 public interface IJobTrendService
 {
     Task<ServiceResult<JobTrendDto>> CreateAsync(CreateJobTrendDto dto);
+    Task<ServiceResult<List<JobTrendDto>>> GetAllAsync();
     Task<ServiceResult<List<JobTrendDto>>> GetByRegionAsync(string region);
     Task<ServiceResult<List<JobTrendDto>>> GetTopTrendingAsync(int count);
     Task<ServiceResult<List<JobTrendDto>>> GetBySkillAsync(string techSkill);

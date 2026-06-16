@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SECompass.BusinessLogic.DTOs.JobTrend;
 using SECompass.BusinessLogic.Interfaces;
+using SECompass.DataAccess.Enums;
 
 namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/job-trends")]
-[Authorize]
+[Authorize(Roles = "0")]
 public class JobTrendsController : ControllerBase
 {
     private readonly IJobTrendService _service;
@@ -19,6 +20,14 @@ public class JobTrendsController : ControllerBase
         _service = service;
         _scrapingService = scrapingService;
         _settingsService = settingsService;
+    }
+
+    [HttpGet]
+    [ProducesResponseType(typeof(List<JobTrendDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _service.GetAllAsync();
+        return Ok(result.Data);
     }
 
     [HttpPost("scrape")]

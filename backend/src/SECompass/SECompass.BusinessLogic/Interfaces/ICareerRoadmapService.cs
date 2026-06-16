@@ -8,6 +8,7 @@ namespace SECompass.BusinessLogic.Interfaces;
 public interface ICareerRoadmapService
 {
     Task<ServiceResult<CareerRoadmapDto>> CreateAsync(CreateCareerRoadmapDto dto);
+    Task<ServiceResult<List<CareerRoadmapDto>>> GetAllAsync();
     Task<ServiceResult<CareerRoadmapDto>> GetByIdAsync(Guid id);
     Task<ServiceResult<List<CareerRoadmapDto>>> GetByCareerRoleAsync(Guid careerRoleId);
     Task<ServiceResult<CareerRoadmapWithNodesDto>> GetRoadmapWithNodesAsync(Guid roadmapId);

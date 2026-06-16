@@ -4,7 +4,7 @@ import { ActionLink } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Compass, TrendingUp, Code, BarChart2, Rocket, Sparkles, Plus, ArrowRight } from 'lucide-react';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, PolarAngleAxis, PolarGrid, Radar, RadarChart } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, PolarAngleAxis, PolarGrid, Radar, RadarChart, Legend } from 'recharts';
 import { Cell } from 'recharts';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
@@ -75,12 +75,15 @@ export function DashboardPage() {
   const isLoading = userLoading || roadmapsLoading;
   const hasError = userError || roadmapsError;
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   return (
     <AppShell breadcrumb="Dashboard">
       <div className="app-page">
         <PageHeader
           title="Dashboard"
-          description={isLoading ? 'Loading...' : `Good morning, ${fullName.split(' ')[0]}. Here's your career overview.`}
+          description={isLoading ? 'Loading...' : `${greeting}, ${fullName.split(' ')[0]}. Here's your career overview.`}
         />
 
         {hasError ? (
@@ -105,8 +108,6 @@ export function DashboardPage() {
                     title="My Roadmaps"
                     value={String(activeCount)}
                     subtitle="Total roadmaps"
-                    trend={activeCount > 0 ? `${activeCount} total` : undefined}
-                    trendUp
                     iconBg="var(--md3-primary-container)"
                   />
                   <StatCard
@@ -123,7 +124,6 @@ export function DashboardPage() {
                     title="Top Skill"
                     value={topSkillName}
                     subtitle="Top trending skill"
-                    badge={topSkillName !== '—' ? topSkillName : undefined}
                     iconBg="var(--md3-warning-container)"
                   />
                   <StatCard
@@ -181,6 +181,7 @@ export function DashboardPage() {
                         <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#5F6368' }} />
                         <Radar name="Your Skills" dataKey="yourLevel" stroke="#1A73E8" fill="#1A73E8" fillOpacity={0.2} strokeWidth={2} />
                         <Radar name="Required" dataKey="requiredLevel" stroke="#FBBC04" fill="#FBBC04" fillOpacity={0.15} strokeWidth={2} strokeDasharray="5 5" />
+                        <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
                       </RadarChart>
                     </ResponsiveContainer>
                   )}
@@ -240,13 +241,14 @@ interface StatCardProps {
   iconBg: string;
 }
 
-function StatCard({ icon, value, subtitle, trend, trendUp, badge, showProgress, progress, iconBg }: StatCardProps) {
+function StatCard({ icon, title, value, subtitle, trend, trendUp, badge, showProgress, progress, iconBg }: StatCardProps) {
   return (
     <div className="md3-card p-5">
       <div className="flex items-start justify-between mb-3">
         <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: iconBg }}>{icon}</div>
       </div>
-      <div className="text-4xl font-bold text-[var(--md3-on-surface)] mb-1">{value}</div>
+      <div className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wide mb-1">{title}</div>
+      <div className="text-3xl font-bold text-[var(--md3-on-surface)] mb-1">{value}</div>
       <div className="text-sm text-[var(--md3-on-surface-variant)] mb-2">{subtitle}</div>
       {showProgress && progress !== undefined && (
         <div className="h-1.5 bg-[var(--md3-outline-variant)] rounded-full overflow-hidden">

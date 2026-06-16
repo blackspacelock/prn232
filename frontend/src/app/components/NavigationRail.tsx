@@ -11,8 +11,13 @@ import {
   ShieldCheck,
   Route,
   Network,
+  Code2,
+  BookOpen,
   Database,
   Telescope,
+  Users,
+  ClipboardList,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
@@ -42,10 +47,16 @@ const navItems: NavItem[] = [
 ];
 
 const adminItems: NavItem[] = [
-  { icon: ShieldCheck, label: 'Roles', path: '/admin/career-roles' },
+  { icon: LayoutDashboard, label: 'Overview', path: '/admin' },
+  { icon: Users, label: 'Users', path: '/admin/users' },
+  { icon: ShieldCheck, label: 'Career Roles', path: '/admin/career-roles' },
   { icon: Route, label: 'Templates', path: '/admin/roadmaps' },
   { icon: Network, label: 'Nodes', path: '/admin/nodes' },
+  { icon: Code2, label: 'Skills', path: '/admin/technical-skills' },
+  { icon: BookOpen, label: 'Resources', path: '/admin/learning-resources' },
   { icon: Database, label: 'Trends', path: '/admin/job-trends' },
+  { icon: SlidersHorizontal, label: 'Config', path: '/admin/config' },
+  { icon: ClipboardList, label: 'Reports', path: '/admin/reports' },
 ];
 
 function getInitials(fullName: string | null | undefined, email: string | null | undefined): string {
@@ -73,8 +84,9 @@ export function NavigationRail() {
   const initials = getInitials(fullName, user?.email);
   const role = user?.role ?? '';
   const isAdmin = role === 'Admin';
+  const isAdminSection = location.pathname.startsWith('/admin');
 
-  const visibleItems = isAdmin ? [...navItems, ...adminItems] : navItems;
+  const visibleItems = isAdmin && isAdminSection ? adminItems : navItems;
 
   return (
     <aside className="fixed left-0 top-0 z-50 hidden h-full w-56 flex-col border-r border-[var(--md3-outline-variant)] bg-white px-4 py-4 md:flex">
@@ -91,10 +103,11 @@ export function NavigationRail() {
 
       {/* Nav Items */}
       <nav className="flex-1 flex flex-col gap-1 w-full overflow-y-auto">
-        {visibleItems.map((item, index) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive =
             location.pathname === item.path ||
+            (item.path === '/admin' && location.pathname === '/admin') ||
             (item.path === '/roadmaps' && location.pathname.startsWith('/roadmap/')) ||
             (item.path === '/career-roles' &&
               (location.pathname.startsWith('/career-roles') ||
@@ -102,14 +115,11 @@ export function NavigationRail() {
                 location.pathname.startsWith('/app/roadmaps') ||
                 location.pathname.startsWith('/browse/career-roles') ||
                 location.pathname.startsWith('/browse/career-roadmap')));
-          const isFirstAdminItem = isAdmin && index === navItems.length;
-
           return (
             <Link
               key={item.path}
               to={item.path}
               className={`
-                ${isFirstAdminItem ? 'mt-3 border-t border-[var(--md3-outline-variant)] pt-3' : ''}
                 group flex min-h-11 items-center gap-3 rounded-full px-3 py-2 transition-colors
                 ${isActive
                   ? 'bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
@@ -129,21 +139,23 @@ export function NavigationRail() {
 
       {/* User Avatar & Settings */}
       <div className="flex flex-col gap-2 border-t border-[var(--md3-outline-variant)] pt-4">
-        <Link
-          to="/settings"
-          className={`
-            flex min-h-11 items-center gap-3 rounded-full px-3 py-2 transition-colors
-            ${location.pathname === '/settings'
-              ? 'bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
-              : 'text-[var(--md3-on-surface-variant)] hover:bg-[var(--md3-surface-variant)]'
-            }
-          `}
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/70">
-            <Settings className="w-5 h-5" />
-          </span>
-          <span className="text-sm font-medium">Settings</span>
-        </Link>
+        {!isAdminSection && (
+          <Link
+            to="/settings"
+            className={`
+              flex min-h-11 items-center gap-3 rounded-full px-3 py-2 transition-colors
+              ${location.pathname === '/settings'
+                ? 'bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
+                : 'text-[var(--md3-on-surface-variant)] hover:bg-[var(--md3-surface-variant)]'
+              }
+            `}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/70">
+              <Settings className="w-5 h-5" />
+            </span>
+            <span className="text-sm font-medium">Settings</span>
+          </Link>
+        )}
         <div className="flex items-center gap-3 rounded-xl bg-[var(--md3-surface-container)] px-3 py-3">
           <div className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] flex shrink-0 items-center justify-center overflow-hidden">
             {avatarUrl

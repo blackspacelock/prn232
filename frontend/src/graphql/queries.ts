@@ -138,6 +138,19 @@ export const GET_NODE_HIERARCHY = gql`
   }
 `;
 
+export const GET_ROOT_NODES = gql`
+  query GetRootNodes {
+    rootNodes {
+      id
+      parentNodeId
+      name
+      description
+      order
+      createdAt
+    }
+  }
+`;
+
 export const GET_NODE_CHILDREN = gql`
   query GetNodeChildren($parentId: UUID!) {
     nodeChildren(parentId: $parentId) {

@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SECompass.BusinessLogic.DTOs.JobTrend;
 using SECompass.BusinessLogic.Interfaces;
+using SECompass.DataAccess.Enums;
 
 namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/job-scraping-sources")]
-[Authorize]
+[Authorize(Roles = "0")]
 public class JobScrapingSourcesController : ControllerBase
 {
     private readonly IJobScrapingSourceService _service;

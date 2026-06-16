@@ -4,7 +4,7 @@ import { ActionButton } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import { LinearProgress } from '../components/LinearProgress';
-import { Plus, Send, Sparkles } from 'lucide-react';
+import { Check, Pencil, Plus, Send, Sparkles, X } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -26,7 +26,16 @@ export function MentorPage() {
   const [message, setMessage] = useState('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'error' });
+
+  // Rename state
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [isEditingHeader, setIsEditingHeader] = useState(false);
+  const [headerTitle, setHeaderTitle] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const headerInputRef = useRef<HTMLInputElement>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: sessionsData, loading: sessionsLoading, refetch: refetchSessions } = useQuery(GET_CHAT_SESSIONS_BY_PROFILE, {
@@ -42,8 +51,10 @@ export function MentorPage() {
   const activeSession = (messagesData as { chatSessionWithMessages?: { title?: string; messages?: ChatMessage[] } })?.chatSessionWithMessages;
   const messages: ChatMessage[] = useMemo(() => activeSession?.messages ?? [], [activeSession]);
 
+  // Keep header title in sync with active session
+  const activeSessionTitle = activeSession?.title ?? sessions.find((s) => s.id === activeSessionId)?.title ?? '';
+
   const createSessionMutation = useMutation({
-    // Backend: POST /api/chat/sessions?profileId=... with body { title }
     mutationFn: ({ profileId: pid, title }: { profileId: string; title: string }) =>
       apiClient
         .post<{ id: string; title: string; profileId: string; createdAt: string }>(
@@ -59,12 +70,30 @@ export function MentorPage() {
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create session.';
-      setSnackbar({ open: true, message: msg });
+      setSnackbar({ open: true, message: msg, variant: 'error' });
+    },
+  });
+
+  const renameSessionMutation = useMutation({
+    mutationFn: ({ sessionId, title }: { sessionId: string; title: string }) =>
+      apiClient.put(`/api/chat/sessions/${sessionId}`, { title }).then((r) => r.data),
+    onSuccess: async () => {
+      await refetchSessions();
+      // If renaming the active session, reload its messages to get updated title
+      if (activeSessionId) {
+        loadMessages({ variables: { sessionId: activeSessionId } });
+      }
+      setEditingSessionId(null);
+      setIsEditingHeader(false);
+      setSnackbar({ open: true, message: 'Session renamed.', variant: 'success' });
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to rename session.';
+      setSnackbar({ open: true, message: msg, variant: 'error' });
     },
   });
 
   const sendMessageMutation = useMutation({
-    // Backend SendMessageDto: { Sender, MessageContent } -> returns { userMessage, assistantMessage }
     mutationFn: ({ sessionId, dto }: { sessionId: string; dto: SendMessageDto }) =>
       apiClient.post(`/api/chat/sessions/${sessionId}/messages`, dto).then((r) => r.data),
     onSuccess: async (_data, { sessionId }) => {
@@ -75,13 +104,27 @@ export function MentorPage() {
       setPendingUserMessage(null);
       setMessage(dto.messageContent);
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to send message.';
-      setSnackbar({ open: true, message: msg });
+      setSnackbar({ open: true, message: msg, variant: 'error' });
     },
   });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, pendingUserMessage, sendMessageMutation.isPending]);
+
+  useEffect(() => {
+    if (editingSessionId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingSessionId]);
+
+  useEffect(() => {
+    if (isEditingHeader && headerInputRef.current) {
+      headerInputRef.current.focus();
+      headerInputRef.current.select();
+    }
+  }, [isEditingHeader]);
 
   const handleSend = () => {
     if (!message.trim() || !activeSessionId) return;
@@ -94,12 +137,38 @@ export function MentorPage() {
 
   const handleSelectSession = (sessionId: string) => {
     setActiveSessionId(sessionId);
+    setEditingSessionId(null);
+    setIsEditingHeader(false);
     loadMessages({ variables: { sessionId } });
   };
 
   const handleNewSession = () => {
     const title = `Session ${new Date().toLocaleDateString()}`;
     createSessionMutation.mutate({ profileId, title });
+  };
+
+  const startSidebarEdit = (session: ChatSession, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingSessionId(session.id);
+    setEditingTitle(session.title);
+  };
+
+  const commitSidebarEdit = (sessionId: string) => {
+    const trimmed = editingTitle.trim();
+    if (!trimmed) { setEditingSessionId(null); return; }
+    renameSessionMutation.mutate({ sessionId, title: trimmed });
+  };
+
+  const startHeaderEdit = () => {
+    setHeaderTitle(activeSessionTitle);
+    setIsEditingHeader(true);
+  };
+
+  const commitHeaderEdit = () => {
+    if (!activeSessionId) return;
+    const trimmed = headerTitle.trim();
+    if (!trimmed) { setIsEditingHeader(false); return; }
+    renameSessionMutation.mutate({ sessionId: activeSessionId, title: trimmed });
   };
 
   return (
@@ -117,30 +186,109 @@ export function MentorPage() {
             ) : sessions.length === 0 ? (
               <p className="text-sm text-[var(--md3-on-surface-variant)] p-4 text-center">No sessions yet</p>
             ) : (
-              sessions.map((session) => (
-                <button
-                  key={session.id}
-                  onClick={() => handleSelectSession(session.id)}
-                  className={`w-full p-3 rounded-lg text-left transition-colors ${activeSessionId === session.id ? 'bg-[var(--md3-primary-container)]' : 'hover:bg-[var(--md3-surface-variant)]'}`}
-                >
-                  <div className="flex items-start gap-2">
-                    <Sparkles className={`w-5 h-5 shrink-0 mt-0.5 ${activeSessionId === session.id ? 'text-[var(--md3-primary)]' : 'text-[var(--md3-on-surface-variant)]'}`} />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-[var(--md3-on-surface)] truncate">{session.title}</h4>
-                    </div>
+              sessions.map((session) =>
+                editingSessionId === session.id ? (
+                  /* Inline rename input */
+                  <div key={session.id} className="flex items-center gap-1 px-2 py-1.5">
+                    <input
+                      ref={editInputRef}
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') commitSidebarEdit(session.id);
+                        if (e.key === 'Escape') setEditingSessionId(null);
+                      }}
+                      className="flex-1 min-w-0 text-sm px-2 py-1.5 rounded-lg border border-[var(--md3-primary)] focus:outline-none text-[var(--md3-on-surface)]"
+                    />
+                    <button
+                      onClick={() => commitSidebarEdit(session.id)}
+                      disabled={renameSessionMutation.isPending}
+                      className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-[var(--md3-primary-container)] text-[var(--md3-primary)] disabled:opacity-40"
+                      aria-label="Confirm rename"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setEditingSessionId(null)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)]"
+                      aria-label="Cancel rename"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                </button>
-              ))
+                ) : (
+                  /* Normal session row */
+                  <div key={session.id} className="group relative flex items-center">
+                    <button
+                      onClick={() => handleSelectSession(session.id)}
+                      className={`flex-1 min-w-0 p-3 pr-9 rounded-lg text-left transition-colors ${activeSessionId === session.id ? 'bg-[var(--md3-primary-container)]' : 'hover:bg-[var(--md3-surface-variant)]'}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <Sparkles className={`w-5 h-5 shrink-0 mt-0.5 ${activeSessionId === session.id ? 'text-[var(--md3-primary)]' : 'text-[var(--md3-on-surface-variant)]'}`} />
+                        <h4 className="text-sm font-medium text-[var(--md3-on-surface)] truncate">{session.title}</h4>
+                      </div>
+                    </button>
+                    <button
+                      onClick={(e) => startSidebarEdit(session, e)}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)] transition-opacity"
+                      aria-label={`Rename "${session.title}"`}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )
+              )
             )}
           </div>
         </aside>
 
         {/* Chat main area */}
         <div className="flex-1 flex flex-col bg-[var(--md3-surface-container)]">
-          <div className="h-16 bg-white border-b border-[var(--md3-outline-variant)] px-5 flex items-center">
-            <h3 className="text-base font-medium text-[var(--md3-on-surface)]">
-              {activeSession?.title ?? 'Select or create a session'}
-            </h3>
+          <div className="h-16 bg-white border-b border-[var(--md3-outline-variant)] px-5 flex items-center gap-3">
+            {isEditingHeader && activeSessionId ? (
+              <>
+                <input
+                  ref={headerInputRef}
+                  value={headerTitle}
+                  onChange={(e) => setHeaderTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitHeaderEdit();
+                    if (e.key === 'Escape') setIsEditingHeader(false);
+                  }}
+                  className="flex-1 text-base font-medium px-3 py-1.5 rounded-lg border border-[var(--md3-primary)] focus:outline-none text-[var(--md3-on-surface)] bg-white"
+                />
+                <button
+                  onClick={commitHeaderEdit}
+                  disabled={renameSessionMutation.isPending}
+                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--md3-primary-container)] text-[var(--md3-primary)] disabled:opacity-40"
+                  aria-label="Confirm rename"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setIsEditingHeader(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)]"
+                  aria-label="Cancel rename"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-base font-medium text-[var(--md3-on-surface)] flex-1 truncate">
+                  {activeSessionTitle || 'Select or create a session'}
+                </h3>
+                {activeSessionId && (
+                  <button
+                    onClick={startHeaderEdit}
+                    className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)] transition-colors"
+                    aria-label="Rename session"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           {sendMessageMutation.isPending && <LinearProgress value={0} heightClassName="h-1" />}
@@ -225,7 +373,7 @@ export function MentorPage() {
         </div>
       </div>
 
-      <Snackbar isOpen={snackbar.open} message={snackbar.message} variant="error" onClose={() => setSnackbar({ open: false, message: '' })} />
+      <Snackbar isOpen={snackbar.open} message={snackbar.message} variant={snackbar.variant} onClose={() => setSnackbar({ open: false, message: '', variant: 'error' })} />
     </AppShell>
   );
 }
