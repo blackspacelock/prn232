@@ -16,6 +16,26 @@ interface AdminFormDialogProps {
   onCancel: () => void;
 }
 
+interface AdminFieldProps {
+  label: string;
+  description?: string;
+  required?: boolean;
+  children: ReactNode;
+}
+
+export function AdminField({ label, description, required = false, children }: AdminFieldProps) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="block text-sm font-semibold text-[var(--md3-on-surface)]">
+        {label}
+        {required && <span className="ml-1 text-[var(--md3-error)]">*</span>}
+      </span>
+      {description && <span className="block text-xs leading-5 text-[var(--md3-on-surface-variant)]">{description}</span>}
+      {children}
+    </label>
+  );
+}
+
 export function AdminFormDialog({
   isOpen,
   title,

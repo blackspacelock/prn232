@@ -7,7 +7,7 @@ import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
-import { AdminFormDialog } from '../../components/admin/AdminFormDialog';
+import { AdminField, AdminFormDialog } from '../../components/admin/AdminFormDialog';
 import { useQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
@@ -90,8 +90,12 @@ export function AdminCareerRolesPage() {
           onCancel={() => { setShowForm(false); setEditingRole(null); }}
         >
           <div className="space-y-3">
-            <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Role name" className="md3-field w-full px-4" />
-            <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (optional)" className="md3-field w-full px-4" />
+            <AdminField label="Role name" description="Use the career title learners will browse and select for roadmap generation." required>
+              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Role name" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Description" description="Optional summary that explains the role's focus and target learner outcomes.">
+              <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (optional)" className="md3-field w-full px-4" />
+            </AdminField>
           </div>
         </AdminFormDialog>
 

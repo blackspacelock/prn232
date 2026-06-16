@@ -9,7 +9,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
 import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
-import { AdminFormDialog } from '../../components/admin/AdminFormDialog';
+import { AdminField, AdminFormDialog } from '../../components/admin/AdminFormDialog';
 import { apiClient } from '@/lib/axios';
 import type {
   CreateJobScrapingSourceDto,
@@ -213,14 +213,30 @@ export function AdminSystemConfigPage() {
           onCancel={() => { setShowSourceForm(false); setEditingSource(null); }}
         >
           <div className="admin-form-grid">
-            <input type="text" value={sourceForm.name} onChange={(event) => setSourceForm({ ...sourceForm, name: event.target.value })} placeholder="Name" className="md3-field w-full px-4" />
-            <input type="text" value={sourceForm.region} onChange={(event) => setSourceForm({ ...sourceForm, region: event.target.value })} placeholder="Region" className="md3-field w-full px-4" />
-            <input type="text" value={sourceForm.url} onChange={(event) => setSourceForm({ ...sourceForm, url: event.target.value })} placeholder="Listing URL" className="md3-field w-full px-4 lg:col-span-2" />
-            <input type="number" value={sourceForm.maxPostings} onChange={(event) => setSourceForm({ ...sourceForm, maxPostings: Number(event.target.value) })} placeholder="Max postings" className="md3-field w-full px-4" min={1} />
-            <ToggleSwitch checked={sourceForm.enabled} label={sourceForm.enabled ? 'Enabled' : 'Disabled'} activeTone="success" onChange={() => setSourceForm({ ...sourceForm, enabled: !sourceForm.enabled })} />
-            <input type="text" value={sourceForm.jobCardXPath} onChange={(event) => setSourceForm({ ...sourceForm, jobCardXPath: event.target.value })} placeholder="Job card XPath" className="md3-field w-full px-4 lg:col-span-2" />
-            <input type="text" value={sourceForm.titleXPath} onChange={(event) => setSourceForm({ ...sourceForm, titleXPath: event.target.value })} placeholder="Title XPath" className="md3-field w-full px-4 lg:col-span-2" />
-            <input type="text" value={sourceForm.tagsXPath} onChange={(event) => setSourceForm({ ...sourceForm, tagsXPath: event.target.value })} placeholder="Tags XPath" className="md3-field w-full px-4 lg:col-span-2" />
+            <AdminField label="Source name" description="Internal display name for this job board or listing source." required>
+              <input type="text" value={sourceForm.name} onChange={(event) => setSourceForm({ ...sourceForm, name: event.target.value })} placeholder="Name" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Region" description="Market region represented by this source, such as Vietnam or Global.">
+              <input type="text" value={sourceForm.region} onChange={(event) => setSourceForm({ ...sourceForm, region: event.target.value })} placeholder="Region" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Listing URL" description="Page URL the scraper will visit to collect job postings." required>
+              <input type="text" value={sourceForm.url} onChange={(event) => setSourceForm({ ...sourceForm, url: event.target.value })} placeholder="Listing URL" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Max postings" description="Upper limit of job cards to read from this source per scrape run.">
+              <input type="number" value={sourceForm.maxPostings} onChange={(event) => setSourceForm({ ...sourceForm, maxPostings: Number(event.target.value) })} placeholder="Max postings" className="md3-field w-full px-4" min={1} />
+            </AdminField>
+            <AdminField label="Status" description="Disabled sources stay configured but are skipped during scraping.">
+              <ToggleSwitch checked={sourceForm.enabled} label={sourceForm.enabled ? 'Enabled' : 'Disabled'} activeTone="success" onChange={() => setSourceForm({ ...sourceForm, enabled: !sourceForm.enabled })} />
+            </AdminField>
+            <AdminField label="Job card XPath" description="XPath selector for each individual posting card on the listing page.">
+              <input type="text" value={sourceForm.jobCardXPath} onChange={(event) => setSourceForm({ ...sourceForm, jobCardXPath: event.target.value })} placeholder="Job card XPath" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Title XPath" description="XPath selector for the job title within each posting card.">
+              <input type="text" value={sourceForm.titleXPath} onChange={(event) => setSourceForm({ ...sourceForm, titleXPath: event.target.value })} placeholder="Title XPath" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Tags XPath" description="XPath selector for skill tags or technology text within each posting card.">
+              <input type="text" value={sourceForm.tagsXPath} onChange={(event) => setSourceForm({ ...sourceForm, tagsXPath: event.target.value })} placeholder="Tags XPath" className="md3-field w-full px-4" />
+            </AdminField>
           </div>
         </AdminFormDialog>
 

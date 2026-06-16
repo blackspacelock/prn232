@@ -8,7 +8,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
 import { Plus, Pencil, Trash2, TrendingUp, RefreshCw, Save } from 'lucide-react';
 import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
-import { AdminFormDialog } from '../../components/admin/AdminFormDialog';
+import { AdminField, AdminFormDialog } from '../../components/admin/AdminFormDialog';
 import { useQuery } from '@apollo/client/react';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
@@ -391,14 +391,30 @@ export function AdminJobTrendsPage() {
           onCancel={() => { setShowSourceForm(false); setEditingSource(null); }}
         >
           <div className="admin-form-grid">
-            <input type="text" value={sourceForm.name} onChange={(e) => setSourceForm({ ...sourceForm, name: e.target.value })} placeholder="Name (e.g. ITviec)" className="md3-field w-full px-4" />
-            <input type="text" value={sourceForm.region} onChange={(e) => setSourceForm({ ...sourceForm, region: e.target.value })} placeholder="Region (e.g. Vietnam)" className="md3-field w-full px-4" />
-            <input type="text" value={sourceForm.url} onChange={(e) => setSourceForm({ ...sourceForm, url: e.target.value })} placeholder="Listing URL" className="md3-field w-full px-4 col-span-2" />
-            <input type="number" value={sourceForm.maxPostings} onChange={(e) => setSourceForm({ ...sourceForm, maxPostings: Number(e.target.value) })} placeholder="Max Postings" className="md3-field w-full px-4" min={1} />
-            <ToggleSwitch checked={sourceForm.enabled} label={sourceForm.enabled ? 'Enabled' : 'Disabled'} activeTone="success" onChange={() => setSourceForm({ ...sourceForm, enabled: !sourceForm.enabled })} />
-            <input type="text" value={sourceForm.jobCardXPath} onChange={(e) => setSourceForm({ ...sourceForm, jobCardXPath: e.target.value })} placeholder="Job Card XPath" className="md3-field w-full px-4 col-span-2" />
-            <input type="text" value={sourceForm.titleXPath} onChange={(e) => setSourceForm({ ...sourceForm, titleXPath: e.target.value })} placeholder="Title XPath" className="md3-field w-full px-4 col-span-2" />
-            <input type="text" value={sourceForm.tagsXPath} onChange={(e) => setSourceForm({ ...sourceForm, tagsXPath: e.target.value })} placeholder="Tags XPath" className="md3-field w-full px-4 col-span-2" />
+            <AdminField label="Source name" description="Internal display name for this job board or listing source." required>
+              <input type="text" value={sourceForm.name} onChange={(e) => setSourceForm({ ...sourceForm, name: e.target.value })} placeholder="Name (e.g. ITviec)" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Region" description="Market region represented by this source.">
+              <input type="text" value={sourceForm.region} onChange={(e) => setSourceForm({ ...sourceForm, region: e.target.value })} placeholder="Region (e.g. Vietnam)" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Listing URL" description="Page URL the scraper will visit to collect job postings." required>
+              <input type="text" value={sourceForm.url} onChange={(e) => setSourceForm({ ...sourceForm, url: e.target.value })} placeholder="Listing URL" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Max postings" description="Upper limit of job cards to read from this source per scrape run.">
+              <input type="number" value={sourceForm.maxPostings} onChange={(e) => setSourceForm({ ...sourceForm, maxPostings: Number(e.target.value) })} placeholder="Max Postings" className="md3-field w-full px-4" min={1} />
+            </AdminField>
+            <AdminField label="Status" description="Disabled sources stay configured but are skipped during scraping.">
+              <ToggleSwitch checked={sourceForm.enabled} label={sourceForm.enabled ? 'Enabled' : 'Disabled'} activeTone="success" onChange={() => setSourceForm({ ...sourceForm, enabled: !sourceForm.enabled })} />
+            </AdminField>
+            <AdminField label="Job card XPath" description="XPath selector for each individual posting card on the listing page.">
+              <input type="text" value={sourceForm.jobCardXPath} onChange={(e) => setSourceForm({ ...sourceForm, jobCardXPath: e.target.value })} placeholder="Job Card XPath" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Title XPath" description="XPath selector for the job title within each posting card.">
+              <input type="text" value={sourceForm.titleXPath} onChange={(e) => setSourceForm({ ...sourceForm, titleXPath: e.target.value })} placeholder="Title XPath" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Tags XPath" description="XPath selector for skill tags or technology text within each posting card.">
+              <input type="text" value={sourceForm.tagsXPath} onChange={(e) => setSourceForm({ ...sourceForm, tagsXPath: e.target.value })} placeholder="Tags XPath" className="md3-field w-full px-4" />
+            </AdminField>
           </div>
         </AdminFormDialog>
 
@@ -413,12 +429,24 @@ export function AdminJobTrendsPage() {
           onCancel={() => { setShowForm(false); setEditingTrend(null); }}
         >
           <div className="admin-form-grid">
-            <input type="text" value={form.techSkill} onChange={(e) => setForm({ ...form, techSkill: e.target.value })} placeholder="Tech Skill (e.g. React)" className="md3-field w-full px-4" />
-            <input type="number" value={form.trendScore} onChange={(e) => setForm({ ...form, trendScore: Number(e.target.value) })} placeholder="Score (0-100)" className="md3-field w-full px-4" min={0} max={100} />
-            <input type="text" value={form.region ?? ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Region" className="md3-field w-full px-4" />
-            <input type="text" value={form.source ?? ''} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="Source" className="md3-field w-full px-4" />
-            <input type="date" value={form.snapshotDate} onChange={(e) => setForm({ ...form, snapshotDate: e.target.value })} className="md3-field w-full px-4" />
-            <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description" className="md3-field w-full px-4" />
+            <AdminField label="Tech skill" description="Skill or technology represented by this market signal." required>
+              <input type="text" value={form.techSkill} onChange={(e) => setForm({ ...form, techSkill: e.target.value })} placeholder="Tech Skill (e.g. React)" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Trend score" description="Demand score from 0 to 100; higher values are surfaced more strongly." required>
+              <input type="number" value={form.trendScore} onChange={(e) => setForm({ ...form, trendScore: Number(e.target.value) })} placeholder="Score (0-100)" className="md3-field w-full px-4" min={0} max={100} />
+            </AdminField>
+            <AdminField label="Region" description="Market area this trend belongs to.">
+              <input type="text" value={form.region ?? ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Region" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Source" description="Origin of the signal, such as a job board or manual analysis.">
+              <input type="text" value={form.source ?? ''} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="Source" className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Snapshot date" description="Date this trend score was observed or curated.">
+              <input type="date" value={form.snapshotDate} onChange={(e) => setForm({ ...form, snapshotDate: e.target.value })} className="md3-field w-full px-4" />
+            </AdminField>
+            <AdminField label="Description" description="Optional explanation shown to admins when reviewing the signal.">
+              <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description" className="md3-field w-full px-4" />
+            </AdminField>
           </div>
         </AdminFormDialog>
 

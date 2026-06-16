@@ -103,6 +103,12 @@ public class Query
         return result.Success ? result.Data : null;
     }
 
+    public async Task<List<NodeDto>> GetRootNodes([Service] INodeService service)
+    {
+        var result = await service.GetRootNodesAsync();
+        return result.Success ? result.Data! : new();
+    }
+
     public async Task<List<NodeDto>> GetNodeChildren([Service] INodeService service, Guid parentId)
     {
         var result = await service.GetChildrenAsync(parentId);
