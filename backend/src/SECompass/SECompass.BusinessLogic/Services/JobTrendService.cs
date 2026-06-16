@@ -35,6 +35,12 @@ public class JobTrendService : IJobTrendService
         return ServiceResult<JobTrendDto>.Ok(_mapper.Map<JobTrendDto>(trend));
     }
 
+    public async Task<ServiceResult<List<JobTrendDto>>> GetAllAsync()
+    {
+        var trends = await _uow.JobTrends.GetAllAsync();
+        return ServiceResult<List<JobTrendDto>>.Ok(_mapper.Map<List<JobTrendDto>>(trends));
+    }
+
     public async Task<ServiceResult<List<JobTrendDto>>> GetByRegionAsync(string region)
     {
         var trends = await _uow.JobTrends.FindAsync(t => t.Region == region);

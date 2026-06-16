@@ -1,54 +1,29 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Save, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { CalendarClock, Check, Clock4, Power, Save, SlidersHorizontal } from 'lucide-react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
-import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
-import { ToggleSwitch } from '../../components/ToggleSwitch';
-import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
-import { AdminField, AdminFormDialog } from '../../components/admin/AdminFormDialog';
 import { apiClient } from '@/lib/axios';
 import type {
-  CreateJobScrapingSourceDto,
   JobScrapingSettingDto,
-  JobScrapingSourceDto,
   UpdateJobScrapingSettingDto,
-  UpdateJobScrapingSourceDto,
 } from '@/types/api';
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const DEFAULT_SOURCE_FORM: CreateJobScrapingSourceDto = {
-  name: '',
-  region: '',
-  enabled: true,
-  url: '',
-  jobCardXPath: '',
-  titleXPath: '',
-  tagsXPath: '',
-  maxPostings: 40,
-};
-type SourceSortKey = 'name' | 'region' | 'maxPostings' | 'enabled';
-const sourceSortOptions = [
-  { value: 'name', label: 'Name' },
-  { value: 'region', label: 'Region' },
-  { value: 'maxPostings', label: 'Max postings' },
-  { value: 'enabled', label: 'Status' },
-] satisfies Array<{ value: SourceSortKey; label: string }>;
+function formatTime(timeOfDay: string): string {
+  const [h, m] = timeOfDay.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
+}
 
 export function AdminSystemConfigPage() {
   const queryClient = useQueryClient();
   const [settingsForm, setSettingsForm] = useState<UpdateJobScrapingSettingDto | null>(null);
-  const [showSourceForm, setShowSourceForm] = useState(false);
-  const [editingSource, setEditingSource] = useState<JobScrapingSourceDto | null>(null);
-  const [sourceForm, setSourceForm] = useState<CreateJobScrapingSourceDto>(DEFAULT_SOURCE_FORM);
-  const [sourceSearch, setSourceSearch] = useState('');
-  const [sourceSortKey, setSourceSortKey] = useState<SourceSortKey>('name');
-  const [sourceSortDirection, setSourceSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [deleteSourceId, setDeleteSourceId] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'success' });
 
   const showSuccess = (message: string) => setSnackbar({ open: true, message, variant: 'success' });
@@ -57,20 +32,6 @@ export function AdminSystemConfigPage() {
   const { data: settings, isLoading: settingsLoading, error: settingsError, refetch: refetchSettings } = useRestQuery({
     queryKey: ['job-scraping-settings'],
     queryFn: () => apiClient.get<JobScrapingSettingDto>('/api/job-trends/scraping-settings').then((r) => r.data),
-  });
-
-  const { data: sources, isLoading: sourcesLoading, error: sourcesError, refetch: refetchSources } = useRestQuery({
-    queryKey: ['job-scraping-sources'],
-    queryFn: () => apiClient.get<JobScrapingSourceDto[]>('/api/job-scraping-sources').then((r) => r.data),
-  });
-  const sourceList = useAdminList({
-    items: sources ?? [],
-    searchText: sourceSearch,
-    sortKey: sourceSortKey,
-    sortDirection: sourceSortDirection,
-    pageSize: 20,
-    searchPredicate: (source, term) => `${source.name} ${source.region} ${source.url}`.toLowerCase().includes(term),
-    getSortValue: (source, key) => source[key],
   });
 
   useEffect(() => {
@@ -95,208 +56,153 @@ export function AdminSystemConfigPage() {
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to save configuration.'),
   });
 
-  const createSourceMutation = useMutation({
-    mutationFn: (dto: CreateJobScrapingSourceDto) => apiClient.post<JobScrapingSourceDto>('/api/job-scraping-sources', dto).then((r) => r.data),
-    onSuccess: (source) => {
-      queryClient.setQueryData<JobScrapingSourceDto[]>(['job-scraping-sources'], (old) => [...(old ?? []), source]);
-      setShowSourceForm(false);
-      showSuccess('Source added.');
-    },
-    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to add source.'),
-  });
-
-  const updateSourceMutation = useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: UpdateJobScrapingSourceDto }) =>
-      apiClient.put<JobScrapingSourceDto>(`/api/job-scraping-sources/${id}`, dto).then((r) => r.data),
-    onSuccess: (source) => {
-      queryClient.setQueryData<JobScrapingSourceDto[]>(['job-scraping-sources'], (old) => (old ?? []).map((s) => (s.id === source.id ? source : s)));
-      setEditingSource(null);
-      setShowSourceForm(false);
-      showSuccess('Source updated.');
-    },
-    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update source.'),
-  });
-
-  const deleteSourceMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/api/job-scraping-sources/${id}`),
-    onSuccess: (_data, id) => {
-      queryClient.setQueryData<JobScrapingSourceDto[]>(['job-scraping-sources'], (old) => (old ?? []).filter((source) => source.id !== id));
-      setDeleteSourceId(null);
-      showSuccess('Source deleted.');
-    },
-    onError: (e: unknown) => {
-      setDeleteSourceId(null);
-      showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete source.');
-    },
-  });
-
-  const beginEditSource = (source: JobScrapingSourceDto) => {
-    setEditingSource(source);
-    setSourceForm({
-      name: source.name,
-      region: source.region,
-      enabled: source.enabled,
-      url: source.url,
-      jobCardXPath: source.jobCardXPath,
-      titleXPath: source.titleXPath,
-      tagsXPath: source.tagsXPath,
-      maxPostings: source.maxPostings,
-    });
-    setShowSourceForm(true);
-  };
-
-  const saveSource = () => {
-    if (editingSource) updateSourceMutation.mutate({ id: editingSource.id, dto: sourceForm });
-    else createSourceMutation.mutate(sourceForm);
-  };
-
   return (
     <AppShell breadcrumb="Admin / System Config">
       <div className="app-page admin-page">
         <PageHeader
           title="System Config"
           description="Control automation inputs that keep market insight, recommendations, and reports fresh."
-          actions={<AdminActionButton icon={Plus} label="Add Source" onClick={() => { setEditingSource(null); setSourceForm(DEFAULT_SOURCE_FORM); setShowSourceForm(true); }} />}
         />
 
-        <section className="admin-panel admin-section">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-[var(--md3-on-surface)]">Scraping Schedule</h2>
-              <p className="text-sm text-[var(--md3-on-surface-variant)]">Define when SECompass refreshes market demand data.</p>
+        <section className="admin-panel overflow-hidden">
+          <div className="border-b border-[var(--md3-outline-variant)] px-5 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--md3-primary-container)] text-[var(--md3-primary)]">
+                  <CalendarClock className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold text-[var(--md3-on-surface)]">Scraping Schedule</h2>
+                  <p className="truncate text-sm text-[var(--md3-on-surface-variant)]">Market Pulse refresh timing and automation state.</p>
+                </div>
+              </div>
+              <SlidersHorizontal className="h-5 w-5 shrink-0 text-[var(--md3-primary)]" />
             </div>
-            <SlidersHorizontal className="h-5 w-5 text-[var(--md3-primary)]" />
           </div>
 
           {settingsLoading || !settingsForm ? (
-            <Skeleton className="h-24 rounded-lg" />
+            <div className="p-5">
+              <Skeleton className="h-44 rounded-xl" />
+            </div>
           ) : settingsError ? (
-            <EmptyState icon={SlidersHorizontal} title="Failed to load settings" description="Please try again." actionLabel="Retry" onAction={refetchSettings} />
+            <div className="p-5">
+              <EmptyState icon={SlidersHorizontal} title="Failed to load settings" description="Please try again." actionLabel="Retry" onAction={refetchSettings} />
+            </div>
           ) : (
-            <div className="grid gap-3 lg:grid-cols-[1.3fr_180px_180px_180px_auto] lg:items-end">
-              <ToggleSwitch
-                checked={settingsForm.enabled}
-                label={settingsForm.enabled ? 'Auto-scraping enabled' : 'Auto-scraping disabled'}
-                activeTone="success"
-                onChange={() => setSettingsForm({ ...settingsForm, enabled: !settingsForm.enabled })}
-              />
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">Frequency</span>
-                <select value={settingsForm.frequency} onChange={(event) => setSettingsForm({ ...settingsForm, frequency: event.target.value as 'Daily' | 'Weekly' })} className="md3-field w-full px-4">
-                  <option value="Daily">Daily</option>
-                  <option value="Weekly">Weekly</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">Day</span>
-                <select value={settingsForm.dayOfWeek} onChange={(event) => setSettingsForm({ ...settingsForm, dayOfWeek: event.target.value })} className="md3-field w-full px-4" disabled={settingsForm.frequency !== 'Weekly'}>
-                  {DAYS_OF_WEEK.map((day) => <option key={day} value={day}>{day}</option>)}
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">Time</span>
-                <input type="time" value={settingsForm.timeOfDay.slice(0, 5)} onChange={(event) => setSettingsForm({ ...settingsForm, timeOfDay: `${event.target.value}:00` })} className="md3-field w-full px-4" />
-              </label>
-              <AdminActionButton icon={Save} label={updateSettingsMutation.isPending ? 'Saving...' : 'Save'} onClick={() => updateSettingsMutation.mutate(settingsForm)} disabled={updateSettingsMutation.isPending} />
+            <div className="grid gap-0 xl:grid-cols-[320px_1fr]">
+              <div className="border-b border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container-low)] p-5 xl:border-b-0 xl:border-r">
+                <div className={`mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  settingsForm.enabled
+                    ? 'bg-[var(--md3-secondary-container)] text-[var(--md3-on-secondary-container)]'
+                    : 'bg-white text-[var(--md3-on-surface-variant)]'
+                }`}>
+                  <span className={`h-2 w-2 rounded-full ${settingsForm.enabled ? 'bg-green-500' : 'bg-[var(--md3-outline)]'}`} />
+                  {settingsForm.enabled ? 'Active' : 'Paused'}
+                </div>
+
+                <p className="text-2xl font-semibold leading-tight text-[var(--md3-on-surface)]">
+                  {settingsForm.frequency === 'Weekly' ? settingsForm.dayOfWeek : 'Daily'}
+                </p>
+                <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">
+                  {formatTime(settingsForm.timeOfDay)}
+                </p>
+
+                <div className="mt-5 space-y-3 rounded-lg border border-[var(--md3-outline-variant)] bg-white p-3">
+                  <div className="flex items-center gap-2 text-xs text-[var(--md3-on-surface-variant)]">
+                    <Clock4 className="h-3.5 w-3.5 shrink-0" />
+                    <span>Last run</span>
+                  </div>
+                  <p className="text-sm font-semibold text-[var(--md3-on-surface)]">
+                    {settings?.lastRunAt ? new Date(settings.lastRunAt).toLocaleString() : 'Never'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-5 p-5">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setSettingsForm({ ...settingsForm, enabled: !settingsForm.enabled })}
+                    className={`inline-flex h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-colors ${
+                      settingsForm.enabled
+                        ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
+                        : 'border-[var(--md3-outline-variant)] bg-white text-[var(--md3-on-surface-variant)]'
+                    }`}
+                  >
+                    <Power className="h-4 w-4" />
+                    {settingsForm.enabled ? 'Enabled' : 'Disabled'}
+                  </button>
+
+                  <AdminActionButton
+                    icon={Save}
+                    label={updateSettingsMutation.isPending ? 'Saving...' : 'Save schedule'}
+                    onClick={() => updateSettingsMutation.mutate(settingsForm)}
+                    disabled={updateSettingsMutation.isPending}
+                  />
+                </div>
+
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase text-[var(--md3-on-surface-variant)]">Frequency</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {(['Daily', 'Weekly'] as const).map((frequency) => {
+                      const active = settingsForm.frequency === frequency;
+                      return (
+                        <button
+                          key={frequency}
+                          type="button"
+                          onClick={() => setSettingsForm({ ...settingsForm, frequency })}
+                          className={`flex min-h-14 items-center justify-between rounded-lg border px-4 text-left transition-colors ${
+                            active
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
+                              : 'border-[var(--md3-outline-variant)] bg-white text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-container)]'
+                          }`}
+                        >
+                          <span className="text-sm font-semibold">{frequency}</span>
+                          {active && <Check className="h-4 w-4" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase text-[var(--md3-on-surface-variant)]">Day</p>
+                  <div className="flex flex-wrap gap-2">
+                    {DAYS_OF_WEEK.map((day) => {
+                      const active = settingsForm.dayOfWeek === day;
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          disabled={settingsForm.frequency !== 'Weekly'}
+                          onClick={() => setSettingsForm({ ...settingsForm, dayOfWeek: day })}
+                          className={`h-9 rounded-full border px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                            active && settingsForm.frequency === 'Weekly'
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
+                              : 'border-[var(--md3-outline-variant)] bg-white text-[var(--md3-on-surface-variant)] hover:bg-[var(--md3-surface-container)]'
+                          }`}
+                        >
+                          {day.slice(0, 3)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <label className="block max-w-56">
+                  <span className="mb-2 block text-xs font-semibold uppercase text-[var(--md3-on-surface-variant)]">Time</span>
+                  <input
+                    type="time"
+                    value={settingsForm.timeOfDay.slice(0, 5)}
+                    onChange={(event) => setSettingsForm({ ...settingsForm, timeOfDay: `${event.target.value}:00` })}
+                    className="md3-field w-full px-4"
+                  />
+                </label>
+              </div>
             </div>
           )}
         </section>
 
-        <AdminFormDialog
-          isOpen={showSourceForm}
-          title={editingSource ? 'Edit Source' : 'Add Source'}
-          description="Configure the scraping source used by Market Pulse data refreshes."
-          submitLabel="Save Source"
-          isSubmitting={createSourceMutation.isPending || updateSourceMutation.isPending}
-          submitDisabled={!sourceForm.name.trim() || !sourceForm.url.trim()}
-          onSubmit={saveSource}
-          onCancel={() => { setShowSourceForm(false); setEditingSource(null); }}
-        >
-          <div className="admin-form-grid">
-            <AdminField label="Source name" description="Internal display name for this job board or listing source." required>
-              <input type="text" value={sourceForm.name} onChange={(event) => setSourceForm({ ...sourceForm, name: event.target.value })} placeholder="Name" className="md3-field w-full px-4" />
-            </AdminField>
-            <AdminField label="Region" description="Market region represented by this source, such as Vietnam or Global.">
-              <input type="text" value={sourceForm.region} onChange={(event) => setSourceForm({ ...sourceForm, region: event.target.value })} placeholder="Region" className="md3-field w-full px-4" />
-            </AdminField>
-            <AdminField label="Listing URL" description="Page URL the scraper will visit to collect job postings." required>
-              <input type="text" value={sourceForm.url} onChange={(event) => setSourceForm({ ...sourceForm, url: event.target.value })} placeholder="Listing URL" className="md3-field w-full px-4" />
-            </AdminField>
-            <AdminField label="Max postings" description="Upper limit of job cards to read from this source per scrape run.">
-              <input type="number" value={sourceForm.maxPostings} onChange={(event) => setSourceForm({ ...sourceForm, maxPostings: Number(event.target.value) })} placeholder="Max postings" className="md3-field w-full px-4" min={1} />
-            </AdminField>
-            <AdminField label="Status" description="Disabled sources stay configured but are skipped during scraping.">
-              <ToggleSwitch checked={sourceForm.enabled} label={sourceForm.enabled ? 'Enabled' : 'Disabled'} activeTone="success" onChange={() => setSourceForm({ ...sourceForm, enabled: !sourceForm.enabled })} />
-            </AdminField>
-            <AdminField label="Job card XPath" description="XPath selector for each individual posting card on the listing page.">
-              <input type="text" value={sourceForm.jobCardXPath} onChange={(event) => setSourceForm({ ...sourceForm, jobCardXPath: event.target.value })} placeholder="Job card XPath" className="md3-field w-full px-4" />
-            </AdminField>
-            <AdminField label="Title XPath" description="XPath selector for the job title within each posting card.">
-              <input type="text" value={sourceForm.titleXPath} onChange={(event) => setSourceForm({ ...sourceForm, titleXPath: event.target.value })} placeholder="Title XPath" className="md3-field w-full px-4" />
-            </AdminField>
-            <AdminField label="Tags XPath" description="XPath selector for skill tags or technology text within each posting card.">
-              <input type="text" value={sourceForm.tagsXPath} onChange={(event) => setSourceForm({ ...sourceForm, tagsXPath: event.target.value })} placeholder="Tags XPath" className="md3-field w-full px-4" />
-            </AdminField>
-          </div>
-        </AdminFormDialog>
-
-        <section className="admin-panel admin-table-card">
-          {sourcesLoading ? (
-            <div className="p-4"><Skeleton className="h-20 rounded-lg" /></div>
-          ) : sourcesError ? (
-            <EmptyState icon={SlidersHorizontal} title="Failed to load sources" description="Please try again." actionLabel="Retry" onAction={refetchSources} />
-          ) : (
-            <>
-              <div className="p-4">
-                <AdminListToolbar
-                  search={sourceSearch}
-                  onSearchChange={setSourceSearch}
-                  searchPlaceholder="Search sources..."
-                  sortKey={sourceSortKey}
-                  onSortKeyChange={setSourceSortKey}
-                  sortDirection={sourceSortDirection}
-                  onSortDirectionChange={setSourceSortDirection}
-                  sortOptions={sourceSortOptions}
-                />
-              </div>
-              <table className="w-full">
-                <thead className="bg-[var(--md3-surface-container)] border-b-2 border-[var(--md3-outline-variant)]">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Source</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Region</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Max</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Status</th>
-                    <th className="px-6 py-4 text-right text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sourceList.pagedItems.map((source) => (
-                    <tr key={source.id} className="border-b border-[var(--md3-outline-variant)] hover:bg-[var(--md3-surface-variant)]">
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-[var(--md3-on-surface)]">{source.name}</p>
-                        <p className="max-w-lg truncate text-xs text-[var(--md3-on-surface-variant)]">{source.url}</p>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{source.region}</td>
-                      <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{source.maxPostings}</td>
-                      <td className="px-6 py-4">
-                        <ToggleSwitch checked={source.enabled} label={source.enabled ? 'Enabled' : 'Disabled'} activeTone="success" onChange={() => updateSourceMutation.mutate({ id: source.id, dto: { enabled: !source.enabled } })} />
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button type="button" onClick={() => beginEditSource(source)} className="rounded-md p-2 text-[var(--md3-primary)] hover:bg-[var(--md3-primary-container)]"><Save className="h-4 w-4" /></button>
-                          <button type="button" onClick={() => setDeleteSourceId(source.id)} className="rounded-md p-2 text-[var(--md3-error)] hover:bg-[var(--md3-error-container)]"><Trash2 className="h-4 w-4" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <AdminPagination {...sourceList} onPageChange={sourceList.setPage} />
-            </>
-          )}
-        </section>
-
-        <ConfirmDialog isOpen={deleteSourceId !== null} title="Delete Scraping Source?" message="This source will no longer feed Market Pulse data." confirmLabel="Delete" variant="danger" onConfirm={() => { if (deleteSourceId) deleteSourceMutation.mutate(deleteSourceId); }} onCancel={() => setDeleteSourceId(null)} />
         <Snackbar isOpen={snackbar.open} message={snackbar.message} variant={snackbar.variant} onClose={() => setSnackbar({ open: false, message: '', variant: 'success' })} />
       </div>
     </AppShell>

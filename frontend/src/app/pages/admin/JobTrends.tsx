@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AppShell, PageHeader } from '../../components/AppShell';
 import { AdminActionButton } from '../../components/AdminActionButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -6,19 +6,14 @@ import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
-import { Plus, Pencil, Trash2, TrendingUp, RefreshCw, Save } from 'lucide-react';
+import { Plus, Pencil, Trash2, TrendingUp, RefreshCw } from 'lucide-react';
 import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
 import { AdminField, AdminFormDialog } from '../../components/admin/AdminFormDialog';
-import { useQuery } from '@apollo/client/react';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
-import { appendCachedListItem, removeCachedListItem, replaceCachedListItem } from '@/lib/apolloCache';
-import { GET_JOB_TRENDS_BY_REGION } from '@/graphql/queries';
 import { SkillChip } from '../../components/SkillChip';
 import type {
   JobTrendScrapeResultDto,
-  JobScrapingSettingDto,
-  UpdateJobScrapingSettingDto,
   JobScrapingSourceDto,
   CreateJobScrapingSourceDto,
   UpdateJobScrapingSourceDto,
@@ -34,8 +29,6 @@ const DEFAULT_SOURCE_FORM: CreateJobScrapingSourceDto = {
   tagsXPath: '',
   maxPostings: 40,
 };
-
-const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 interface JobTrend { id: string; techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
 interface JobTrendDto { techSkill: string; description?: string; source?: string; region?: string; trendScore: number; snapshotDate: string }
@@ -56,7 +49,7 @@ const sourceSortOptions = [
 ] satisfies Array<{ value: SourceSortKey; label: string }>;
 
 export function AdminJobTrendsPage() {
-  const [region] = useState('Vietnam');
+  const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingTrend, setEditingTrend] = useState<JobTrend | null>(null);
@@ -69,8 +62,14 @@ export function AdminJobTrendsPage() {
   const [form, setForm] = useState<JobTrendDto>({ techSkill: '', trendScore: 80, snapshotDate: new Date().toISOString().split('T')[0] });
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'error' });
 
-  const { data, loading, error, refetch } = useQuery(GET_JOB_TRENDS_BY_REGION, { variables: { region } });
-  const trends: JobTrend[] = (data as { jobTrendsByRegion?: JobTrend[] })?.jobTrendsByRegion ?? [];
+  const showError = (msg: string) => setSnackbar({ open: true, message: msg, variant: 'error' });
+  const showSuccess = (msg: string) => setSnackbar({ open: true, message: msg, variant: 'success' });
+
+  const { data: trendsData, isLoading: loading, error, refetch } = useRestQuery({
+    queryKey: ['admin-job-trends'],
+    queryFn: () => apiClient.get<JobTrend[]>('/api/job-trends').then((r) => r.data),
+  });
+  const trends: JobTrend[] = trendsData ?? [];
   const trendList = useAdminList({
     items: trends,
     searchText: trendSearch,
@@ -81,25 +80,31 @@ export function AdminJobTrendsPage() {
     getSortValue: (trend, key) => key === 'snapshotDate' ? new Date(trend.snapshotDate) : trend[key],
   });
 
-  const trendsQueryOptions = { query: GET_JOB_TRENDS_BY_REGION, variables: { region } };
-  const showError = (msg: string) => setSnackbar({ open: true, message: msg, variant: 'error' });
-  const showSuccess = (msg: string) => setSnackbar({ open: true, message: msg, variant: 'success' });
-
   const createMutation = useMutation({
     mutationFn: (dto: JobTrendDto) => apiClient.post<JobTrend>('/api/job-trends', dto).then((r) => r.data),
-    onSuccess: (trend) => { appendCachedListItem<JobTrend>(trendsQueryOptions, 'jobTrendsByRegion', trend); setShowForm(false); },
+    onSuccess: (trend) => {
+      queryClient.setQueryData<JobTrend[]>(['admin-job-trends'], (old) => [...(old ?? []), trend]);
+      setShowForm(false);
+    },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create.'),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: JobTrendDto }) => apiClient.put<JobTrend>(`/api/job-trends/${id}`, dto).then((r) => r.data),
-    onSuccess: (trend) => { replaceCachedListItem<JobTrend>(trendsQueryOptions, 'jobTrendsByRegion', trend); setEditingTrend(null); setShowForm(false); },
+    onSuccess: (trend) => {
+      queryClient.setQueryData<JobTrend[]>(['admin-job-trends'], (old) => (old ?? []).map((t) => (t.id === trend.id ? trend : t)));
+      setEditingTrend(null);
+      setShowForm(false);
+    },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update.'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWithCascadeMode(`/api/job-trends/${id}`),
-    onSuccess: (_data, id) => { removeCachedListItem<JobTrend>(trendsQueryOptions, 'jobTrendsByRegion', id); setDeleteId(null); },
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData<JobTrend[]>(['admin-job-trends'], (old) => (old ?? []).filter((t) => t.id !== id));
+      setDeleteId(null);
+    },
     onError: (e: unknown) => { showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to delete.'); setDeleteId(null); },
   });
 
@@ -111,34 +116,10 @@ export function AdminJobTrendsPage() {
   const scrapeMutation = useMutation({
     mutationFn: () => apiClient.post<JobTrendScrapeResultDto>('/api/job-trends/scrape').then((r) => r.data),
     onSuccess: (result) => {
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ['admin-job-trends'] });
       showSuccess(`Scraped ${result.totalPostingsScraped} postings — ${result.trendsCreated} trends created, ${result.trendsUpdated} updated.`);
     },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to scrape job trends.'),
-  });
-
-  const queryClient = useQueryClient();
-  const { data: settings, isLoading: settingsLoading } = useRestQuery({
-    queryKey: ['job-scraping-settings'],
-    queryFn: () => apiClient.get<JobScrapingSettingDto>('/api/job-trends/scraping-settings').then((r) => r.data),
-  });
-
-  const [settingsForm, setSettingsForm] = useState<UpdateJobScrapingSettingDto | null>(null);
-
-  useEffect(() => {
-    if (settings && !settingsForm) {
-      setSettingsForm({ enabled: settings.enabled, frequency: settings.frequency, timeOfDay: settings.timeOfDay, dayOfWeek: settings.dayOfWeek });
-    }
-  }, [settings, settingsForm]);
-
-  const updateSettingsMutation = useMutation({
-    mutationFn: (dto: UpdateJobScrapingSettingDto) => apiClient.put<JobScrapingSettingDto>('/api/job-trends/scraping-settings', dto).then((r) => r.data),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(['job-scraping-settings'], updated);
-      setSettingsForm({ enabled: updated.enabled, frequency: updated.frequency, timeOfDay: updated.timeOfDay, dayOfWeek: updated.dayOfWeek });
-      showSuccess('Scraping schedule updated.');
-    },
-    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update scraping schedule.'),
   });
 
   const [showSourceForm, setShowSourceForm] = useState(false);
@@ -240,75 +221,6 @@ export function AdminJobTrendsPage() {
         />
 
         <div className="admin-panel admin-section">
-          <h3 className="text-base font-medium text-[var(--md3-on-surface)] mb-1">Scraping Schedule</h3>
-          <p className="text-sm text-[var(--md3-on-surface-variant)] mb-4">
-            Configure how often job postings are automatically scraped to refresh trend data.
-          </p>
-
-          {settingsLoading || !settingsForm ? (
-            <Skeleton className="h-16 rounded-lg" />
-          ) : (
-            <>
-              <div className="flex flex-wrap items-end gap-3">
-                <ToggleSwitch
-                  checked={settingsForm.enabled}
-                  label={settingsForm.enabled ? 'Auto-scraping enabled' : 'Auto-scraping disabled'}
-                  onChange={() => setSettingsForm({ ...settingsForm, enabled: !settingsForm.enabled })}
-                />
-
-                <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">Frequency</span>
-                  <select
-                    value={settingsForm.frequency}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, frequency: e.target.value as 'Daily' | 'Weekly' })}
-                    className="md3-field px-4"
-                  >
-                    <option value="Daily">Daily</option>
-                    <option value="Weekly">Weekly</option>
-                  </select>
-                </label>
-
-                {settingsForm.frequency === 'Weekly' && (
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">Day of week</span>
-                    <select
-                      value={settingsForm.dayOfWeek}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, dayOfWeek: e.target.value })}
-                      className="md3-field px-4"
-                    >
-                      {DAYS_OF_WEEK.map((day) => (
-                        <option key={day} value={day}>{day}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-
-                <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-[var(--md3-on-surface-variant)]">Time of day</span>
-                  <input
-                    type="time"
-                    value={settingsForm.timeOfDay.slice(0, 5)}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, timeOfDay: `${e.target.value}:00` })}
-                    className="md3-field px-4"
-                  />
-                </label>
-
-                <AdminActionButton
-                  icon={Save}
-                  label={updateSettingsMutation.isPending ? 'Saving...' : 'Save Schedule'}
-                  onClick={() => updateSettingsMutation.mutate(settingsForm)}
-                  disabled={updateSettingsMutation.isPending}
-                />
-              </div>
-
-              <p className="mt-3 text-xs text-[var(--md3-on-surface-variant)]">
-                Last run: {settings?.lastRunAt ? new Date(settings.lastRunAt).toLocaleString() : 'Never'}
-              </p>
-            </>
-          )}
-        </div>
-
-        <div className="admin-panel admin-section">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-base font-medium text-[var(--md3-on-surface)]">Scraping Sources</h3>
             <AdminActionButton
@@ -377,7 +289,6 @@ export function AdminJobTrendsPage() {
               <AdminPagination {...sourceList} onPageChange={sourceList.setPage} />
             </div>
           )}
-
         </div>
 
         <AdminFormDialog
@@ -475,6 +386,7 @@ export function AdminJobTrendsPage() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Region</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Score</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Source</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Snapshot</th>
                   <th className="px-6 py-4 text-right text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase">Actions</th>
                 </tr>
               </thead>
@@ -487,6 +399,7 @@ export function AdminJobTrendsPage() {
                     <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{trend.region ?? '—'}</td>
                     <td className="px-6 py-4 text-sm font-medium text-[var(--md3-primary)]">{trend.trendScore}</td>
                     <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{trend.source ?? '—'}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--md3-on-surface-variant)]">{new Date(trend.snapshotDate).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={() => { setEditingTrend(trend); setForm({ techSkill: trend.techSkill, trendScore: trend.trendScore, snapshotDate: trend.snapshotDate.split('T')[0], region: trend.region, source: trend.source, description: trend.description }); setShowForm(true); }} className="p-2 hover:bg-[var(--md3-primary-container)] rounded-lg"><Pencil className="w-4 h-4 text-[var(--md3-primary)]" /></button>

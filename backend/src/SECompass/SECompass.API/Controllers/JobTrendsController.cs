@@ -22,6 +22,14 @@ public class JobTrendsController : ControllerBase
         _settingsService = settingsService;
     }
 
+    [HttpGet]
+    [ProducesResponseType(typeof(List<JobTrendDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _service.GetAllAsync();
+        return Ok(result.Data);
+    }
+
     [HttpPost("scrape")]
     [ProducesResponseType(typeof(JobTrendScrapeResultDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Scrape(CancellationToken cancellationToken)
