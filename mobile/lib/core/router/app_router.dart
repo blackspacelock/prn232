@@ -94,6 +94,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => SkillInputScreen(
               careerRoadmapId:
                   state.uri.queryParameters['careerRoadmapId'] ?? '',
+              careerRoleId: state.uri.queryParameters['careerRoleId'],
             ),
           ),
           GoRoute(

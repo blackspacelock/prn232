@@ -125,6 +125,42 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     }
   }
 
+  @override
+  Future<SkillGapAnalysisDto> getSkillGapAnalysis(
+    String profileId,
+    String careerRoadmapId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/api/skill-gap-analysis',
+        queryParameters: {
+          'profileId': profileId,
+          'careerRoadmapId': careerRoadmapId,
+        },
+      );
+      return SkillGapAnalysisDto.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException {
+      return mockSkillGapAnalysis;
+    }
+  }
+
+  @override
+  Future<List<String>> getTrendingSkillRecommendations(String profileId) async {
+    try {
+      final response = await _dio.get(
+        '/api/skill-gap-analysis/trending',
+        queryParameters: {'profileId': profileId},
+      );
+      final data = _asList(response.data);
+      return data
+          .map((item) => (item['skillName'] ?? item['name'] ?? item).toString())
+          .toList();
+    } on DioException {
+      return mockTrendingSkillRecommendations;
+    }
+  }
+
   List<Map<String, dynamic>> _asList(Object? data) {
     final value = data is Map<String, dynamic> && data['data'] is List
         ? data['data']

@@ -183,3 +183,61 @@ class LearningResourceDto {
         isFree: json['isFree'] as bool? ?? true,
       );
 }
+
+class SkillGapAnalysisDto {
+  const SkillGapAnalysisDto({
+    required this.coveragePercentage,
+    required this.matchedSkills,
+    required this.missingSkills,
+    required this.categoryBreakdown,
+  });
+
+  final double coveragePercentage;
+  final List<String> matchedSkills;
+  final List<String> missingSkills;
+  final List<CategoryBreakdownDto> categoryBreakdown;
+
+  factory SkillGapAnalysisDto.fromJson(Map<String, dynamic> json) =>
+      SkillGapAnalysisDto(
+        coveragePercentage:
+            (json['coveragePercentage'] as num?)?.toDouble() ?? 0,
+        matchedSkills: (json['matchedSkills'] as List?)
+                ?.map((skill) => skill.toString())
+                .toList() ??
+            const [],
+        missingSkills: (json['missingSkills'] as List?)
+                ?.map((skill) => skill.toString())
+                .toList() ??
+            const [],
+        categoryBreakdown: (json['categoryBreakdown'] as List?)
+                ?.whereType<Map<String, dynamic>>()
+                .map(CategoryBreakdownDto.fromJson)
+                .toList() ??
+            const [],
+      );
+}
+
+class CategoryBreakdownDto {
+  const CategoryBreakdownDto({
+    required this.category,
+    required this.currentScore,
+    required this.requiredScore,
+  });
+
+  final String category;
+  final double currentScore;
+  final double requiredScore;
+
+  factory CategoryBreakdownDto.fromJson(Map<String, dynamic> json) =>
+      CategoryBreakdownDto(
+        category: (json['category'] ?? json['name'] ?? 'General').toString(),
+        currentScore: (json['currentScore'] ??
+                    json['current'] ??
+                    json['yourScore'] as num?)
+                ?.toDouble() ??
+            0,
+        requiredScore:
+            (json['requiredScore'] ?? json['required'] as num?)?.toDouble() ??
+                1,
+      );
+}

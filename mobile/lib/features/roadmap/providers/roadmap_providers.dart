@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/profile_models.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/storage/token_storage.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../data/roadmap_repository.dart';
 import '../data/roadmap_repository_impl.dart';
 
@@ -52,6 +54,51 @@ final recommendedResourcesProvider =
   return ref
       .watch(roadmapRepositoryProvider)
       .getRecommendedResources(profileId, nodeId);
+});
+
+class SkillInputNotifier extends AsyncNotifier<List<SkillDto>> {
+  @override
+  Future<List<SkillDto>> build() async {
+    final profileId = await ref.watch(profileIdProvider.future);
+    return ref.watch(profileRepositoryProvider).getSkillsByProfile(profileId);
+  }
+
+  Future<void> addSkill(String skillName) async {
+    final profileId = await ref.read(profileIdProvider.future);
+    await ref.read(profileRepositoryProvider).addSkill(profileId, skillName);
+    ref.invalidateSelf();
+  }
+
+  Future<void> removeSkill(String skillId) async {
+    await ref.read(profileRepositoryProvider).deleteSkill(skillId);
+    ref.invalidateSelf();
+  }
+}
+
+final skillInputProvider =
+    AsyncNotifierProvider<SkillInputNotifier, List<SkillDto>>(
+  SkillInputNotifier.new,
+);
+
+final technicalSkillsProvider = FutureProvider<List<TechnicalSkillDto>>((ref) {
+  return ref.watch(profileRepositoryProvider).getTechnicalSkills();
+});
+
+final skillGapAnalysisProvider =
+    FutureProvider.family<SkillGapAnalysisDto, String>(
+        (ref, careerRoadmapId) async {
+  final profileId = await ref.watch(profileIdProvider.future);
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getSkillGapAnalysis(profileId, careerRoadmapId);
+});
+
+final trendingSkillRecommendationsProvider =
+    FutureProvider<List<String>>((ref) async {
+  final profileId = await ref.watch(profileIdProvider.future);
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getTrendingSkillRecommendations(profileId);
 });
 
 final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {

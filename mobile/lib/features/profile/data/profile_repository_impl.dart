@@ -34,6 +34,59 @@ class ProfileRepositoryImpl implements ProfileRepository {
     }
   }
 
+  @override
+  Future<List<SkillDto>> getSkillsByProfile(String profileId) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.skills,
+        queryParameters: {'profileId': profileId},
+      );
+      final data = _asList(response.data);
+      return data.map(SkillDto.fromJson).toList();
+    } on DioException {
+      return _mockSkills(profileId);
+    }
+  }
+
+  @override
+  Future<List<TechnicalSkillDto>> getTechnicalSkills() async {
+    try {
+      final response = await _dio.get('/api/technical-skills');
+      final data = _asList(response.data);
+      return data.map(TechnicalSkillDto.fromJson).toList();
+    } on DioException {
+      return _mockTechnicalSkills;
+    }
+  }
+
+  @override
+  Future<SkillDto> addSkill(String profileId, String skillName) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.skills,
+        data: {'profileId': profileId, 'skillName': skillName},
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) return SkillDto.fromJson(data);
+    } on DioException {
+      // Offline/mock mode falls through below.
+    }
+    return SkillDto(
+      skillId: 'skill-${skillName.toLowerCase().replaceAll(' ', '-')}',
+      profileId: profileId,
+      skillName: skillName,
+    );
+  }
+
+  @override
+  Future<void> deleteSkill(String skillId) async {
+    try {
+      await _dio.delete('${ApiConstants.skills}/$skillId');
+    } on DioException {
+      return;
+    }
+  }
+
   String _extractError(DioException e) {
     final data = e.response?.data;
     if (data is String && data.isNotEmpty) return data;
@@ -42,4 +95,52 @@ class ProfileRepositoryImpl implements ProfileRepository {
     }
     return e.message ?? 'Failed to save profile';
   }
+
+  List<Map<String, dynamic>> _asList(Object? data) {
+    final value = data is Map<String, dynamic> && data['data'] is List
+        ? data['data']
+        : data;
+    if (value is! List) return const [];
+    return value.whereType<Map<String, dynamic>>().toList();
+  }
+
+  List<SkillDto> _mockSkills(String profileId) => [
+        SkillDto(
+            skillId: 'flutter', profileId: profileId, skillName: 'Flutter'),
+        SkillDto(skillId: 'dart', profileId: profileId, skillName: 'Dart'),
+        SkillDto(skillId: 'sql', profileId: profileId, skillName: 'SQL'),
+      ];
+
+  static const _mockTechnicalSkills = [
+    TechnicalSkillDto(
+      technicalSkillId: 'flutter',
+      skillName: 'Flutter',
+      category: 'Mobile',
+    ),
+    TechnicalSkillDto(
+      technicalSkillId: 'dart',
+      skillName: 'Dart',
+      category: 'Programming',
+    ),
+    TechnicalSkillDto(
+      technicalSkillId: 'aspnet',
+      skillName: 'ASP.NET Core',
+      category: 'Backend',
+    ),
+    TechnicalSkillDto(
+      technicalSkillId: 'sql',
+      skillName: 'SQL',
+      category: 'Database',
+    ),
+    TechnicalSkillDto(
+      technicalSkillId: 'docker',
+      skillName: 'Docker',
+      category: 'DevOps',
+    ),
+    TechnicalSkillDto(
+      technicalSkillId: 'testing',
+      skillName: 'Testing',
+      category: 'Quality',
+    ),
+  ];
 }

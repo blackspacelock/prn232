@@ -166,3 +166,38 @@ List<LearningResourceDto> mockRecommendedResources(String nodeId) => [
         isFree: true,
       ),
     ];
+
+const mockSkillGapAnalysis = SkillGapAnalysisDto(
+  coveragePercentage: 68,
+  matchedSkills: ['Flutter', 'Dart', 'SQL'],
+  missingSkills: ['ASP.NET Core', 'Docker', 'Testing', 'Azure'],
+  categoryBreakdown: [
+    CategoryBreakdownDto(
+      category: 'Frontend',
+      currentScore: 0.78,
+      requiredScore: 0.9,
+    ),
+    CategoryBreakdownDto(
+      category: 'Backend',
+      currentScore: 0.42,
+      requiredScore: 0.8,
+    ),
+    CategoryBreakdownDto(
+      category: 'Database',
+      currentScore: 0.64,
+      requiredScore: 0.75,
+    ),
+    CategoryBreakdownDto(
+      category: 'DevOps',
+      currentScore: 0.28,
+      requiredScore: 0.7,
+    ),
+  ],
+);
+
+const mockTrendingSkillRecommendations = [
+  'Cloud Fundamentals',
+  'Docker',
+  'REST API Design',
+  'CI/CD',
+];

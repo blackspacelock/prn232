@@ -19,4 +19,9 @@ abstract class RoadmapRepository {
     String profileId,
     String nodeId,
   );
+  Future<SkillGapAnalysisDto> getSkillGapAnalysis(
+    String profileId,
+    String careerRoadmapId,
+  );
+  Future<List<String>> getTrendingSkillRecommendations(String profileId);
 }
