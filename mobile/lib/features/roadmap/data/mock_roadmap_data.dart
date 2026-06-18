@@ -124,3 +124,45 @@ PersonalRoadmapDto mockPersonalRoadmap({
     ],
   );
 }
+
+List<LearningResourceDto> mockLearningResources(String nodeId) => [
+      LearningResourceDto(
+        learningResourceId: '$nodeId-docs',
+        nodeId: nodeId,
+        resourceName: 'Official documentation guide',
+        resourceUrl: 'https://docs.flutter.dev/',
+        resourceType: 'Article',
+        provider: 'Flutter Docs',
+        isFree: true,
+      ),
+      LearningResourceDto(
+        learningResourceId: '$nodeId-video',
+        nodeId: nodeId,
+        resourceName: 'Practical crash course',
+        resourceUrl: 'https://www.youtube.com/',
+        resourceType: 'Video',
+        provider: 'YouTube',
+        isFree: true,
+      ),
+      LearningResourceDto(
+        learningResourceId: '$nodeId-course',
+        nodeId: nodeId,
+        resourceName: 'Project-based learning path',
+        resourceUrl: 'https://www.udemy.com/',
+        resourceType: 'Course',
+        provider: 'Udemy',
+        isFree: false,
+      ),
+    ];
+
+List<LearningResourceDto> mockRecommendedResources(String nodeId) => [
+      LearningResourceDto(
+        learningResourceId: '$nodeId-recommended',
+        nodeId: nodeId,
+        resourceName: 'Recommended hands-on project',
+        resourceUrl: 'https://github.com/',
+        resourceType: 'Project',
+        provider: 'GitHub',
+        isFree: true,
+      ),
+    ];

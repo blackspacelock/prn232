@@ -97,6 +97,34 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     }
   }
 
+  @override
+  Future<List<LearningResourceDto>> getResourcesByNode(String nodeId) async {
+    try {
+      final response = await _dio.get('/api/learning-resources/node/$nodeId');
+      final data = _asList(response.data);
+      return data.map(LearningResourceDto.fromJson).toList();
+    } on DioException {
+      return mockLearningResources(nodeId);
+    }
+  }
+
+  @override
+  Future<List<LearningResourceDto>> getRecommendedResources(
+    String profileId,
+    String nodeId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/api/learning-resources/recommended',
+        queryParameters: {'profileId': profileId, 'nodeId': nodeId},
+      );
+      final data = _asList(response.data);
+      return data.map(LearningResourceDto.fromJson).toList();
+    } on DioException {
+      return mockRecommendedResources(nodeId);
+    }
+  }
+
   List<Map<String, dynamic>> _asList(Object? data) {
     final value = data is Map<String, dynamic> && data['data'] is List
         ? data['data']

@@ -81,6 +81,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/roadmap/:id/node/:nodeId/resources',
             builder: (_, state) => LearningResourcesScreen(
+              personalRoadmapId: state.pathParameters['id']!,
               nodeId: state.pathParameters['nodeId']!,
             ),
           ),

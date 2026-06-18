@@ -14,4 +14,9 @@ abstract class RoadmapRepository {
     int status, {
     String? note,
   });
+  Future<List<LearningResourceDto>> getResourcesByNode(String nodeId);
+  Future<List<LearningResourceDto>> getRecommendedResources(
+    String profileId,
+    String nodeId,
+  );
 }

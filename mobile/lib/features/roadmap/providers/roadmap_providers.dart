@@ -40,6 +40,20 @@ final personalRoadmapDetailProvider =
       .getPersonalRoadmapWithProgress(id);
 });
 
+final learningResourcesProvider =
+    FutureProvider.family<List<LearningResourceDto>, String>((ref, nodeId) {
+  return ref.watch(roadmapRepositoryProvider).getResourcesByNode(nodeId);
+});
+
+final recommendedResourcesProvider =
+    FutureProvider.family<List<LearningResourceDto>, String>(
+        (ref, nodeId) async {
+  final profileId = await ref.watch(profileIdProvider.future);
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getRecommendedResources(profileId, nodeId);
+});
+
 final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
   final roadmaps = await ref.watch(personalRoadmapsProvider.future);
   PersonalRoadmapDto? activeRoadmap;

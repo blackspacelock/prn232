@@ -142,3 +142,44 @@ class PersonalRoadmapDto {
     );
   }
 }
+
+class LearningResourceDto {
+  const LearningResourceDto({
+    required this.learningResourceId,
+    required this.nodeId,
+    required this.resourceName,
+    required this.resourceUrl,
+    required this.resourceType,
+    required this.provider,
+    required this.isFree,
+  });
+
+  final String learningResourceId;
+  final String nodeId;
+  final String resourceName;
+  final String resourceUrl;
+  final String resourceType;
+  final String provider;
+  final bool isFree;
+
+  factory LearningResourceDto.fromJson(Map<String, dynamic> json) =>
+      LearningResourceDto(
+        learningResourceId:
+            (json['learningResourceId'] ?? json['resourceId'] ?? json['id'])
+                .toString(),
+        nodeId: (json['nodeId'] ?? '').toString(),
+        resourceName: (json['resourceName'] ??
+                json['name'] ??
+                json['title'] ??
+                'Resource')
+            .toString(),
+        resourceUrl: (json['resourceUrl'] ?? json['url'] ?? json['link'] ?? '')
+            .toString(),
+        resourceType:
+            (json['resourceType'] ?? json['type'] ?? 'Article').toString(),
+        provider:
+            (json['provider'] ?? json['source'] ?? json['platform'] ?? 'Web')
+                .toString(),
+        isFree: json['isFree'] as bool? ?? true,
+      );
+}
