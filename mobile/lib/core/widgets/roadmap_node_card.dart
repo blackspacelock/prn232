@@ -38,33 +38,53 @@ class RoadmapNodeCard extends StatelessWidget {
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            node?.name ?? 'Roadmap milestone',
-                            style: AppTextStyles.titleSmall,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        StatusChip(status: nodeProgress.status),
-                      ],
-                    ),
-                    if (node?.description != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        node!.description!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: colors.stroke,
+                        shape: BoxShape.circle,
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  node?.name ?? 'Roadmap milestone',
+                                  style: AppTextStyles.titleSmall,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              StatusChip(status: nodeProgress.status),
+                            ],
+                          ),
+                          if (node?.description != null) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              node!.description!,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ],
                 ),
               ),
