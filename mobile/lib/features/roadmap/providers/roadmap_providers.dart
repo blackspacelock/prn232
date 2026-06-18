@@ -63,12 +63,31 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
     averageProgress: avgProgress,
     skillsCount: 12,
     repositoryCount: 3,
+    skillGapCategories: const [
+      SkillGapCategory('Frontend', 0.72, 0.9),
+      SkillGapCategory('Backend', 0.45, 0.78),
+      SkillGapCategory('Database', 0.62, 0.72),
+      SkillGapCategory('DevOps', 0.36, 0.68),
+      SkillGapCategory('Testing', 0.55, 0.75),
+    ],
     trendingSkills: const [
       SkillTrend('Flutter', 0.92),
       SkillTrend('ASP.NET Core', 0.84),
       SkillTrend('SQL', 0.76),
       SkillTrend('Docker', 0.64),
       SkillTrend('Azure', 0.58),
+    ],
+    recentMentorSessions: const [
+      MentorSessionSummary(
+        title: 'Roadmap planning',
+        preview: 'How should I prioritize Flutter and backend practice?',
+        dateLabel: 'Today',
+      ),
+      MentorSessionSummary(
+        title: 'Portfolio review',
+        preview: 'Ideas for making my GitHub repos stronger.',
+        dateLabel: 'Yesterday',
+      ),
     ],
   );
 });
@@ -81,7 +100,9 @@ class DashboardData {
     required this.averageProgress,
     required this.skillsCount,
     required this.repositoryCount,
+    required this.skillGapCategories,
     required this.trendingSkills,
+    required this.recentMentorSessions,
   });
 
   final List<PersonalRoadmapDto> roadmaps;
@@ -90,7 +111,17 @@ class DashboardData {
   final double averageProgress;
   final int skillsCount;
   final int repositoryCount;
+  final List<SkillGapCategory> skillGapCategories;
   final List<SkillTrend> trendingSkills;
+  final List<MentorSessionSummary> recentMentorSessions;
+}
+
+class SkillGapCategory {
+  const SkillGapCategory(this.name, this.current, this.required);
+
+  final String name;
+  final double current;
+  final double required;
 }
 
 class SkillTrend {
@@ -98,4 +129,16 @@ class SkillTrend {
 
   final String name;
   final double score;
+}
+
+class MentorSessionSummary {
+  const MentorSessionSummary({
+    required this.title,
+    required this.preview,
+    required this.dateLabel,
+  });
+
+  final String title;
+  final String preview;
+  final String dateLabel;
 }

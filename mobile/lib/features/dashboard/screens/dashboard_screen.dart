@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/theme/app_colors.dart';
@@ -55,11 +56,14 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               _RoadmapsSection(roadmaps: data.roadmaps),
               const SizedBox(height: 24),
-              _SkillGapSnapshot(activeRoadmap: data.activeRoadmap),
+              _SkillGapSnapshot(
+                activeRoadmap: data.activeRoadmap,
+                categories: data.skillGapCategories,
+              ),
               const SizedBox(height: 24),
               _TrendingSkills(skills: data.trendingSkills),
               const SizedBox(height: 24),
-              const _RecentMentorSessions(),
+              _RecentMentorSessions(sessions: data.recentMentorSessions),
               const SizedBox(height: 24),
               const _QuickActionsGrid(),
             ],
@@ -166,7 +170,7 @@ class _RoadmapsSection extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 150,
+            height: 186,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: roadmaps.length,
@@ -215,7 +219,32 @@ class _RoadmapSummaryCard extends StatelessWidget {
                   const StatusChip(status: 1, label: 'Active'),
               ],
             ),
+            const SizedBox(height: 8),
+            Text(
+              roadmap.careerRoadmap?.careerRole?.name ?? 'Software Engineering',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
             const Spacer(),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: StatusChip(
+                status: roadmap.progressPercentage >= 100
+                    ? 4
+                    : roadmap.progressPercentage > 0
+                        ? 1
+                        : 0,
+                label: roadmap.progressPercentage >= 100
+                    ? 'Completed'
+                    : roadmap.progressPercentage > 0
+                        ? 'In Progress'
+                        : 'Not Started',
+              ),
+            ),
+            const SizedBox(height: 10),
             Text('${roadmap.progressPercentage.round()}% complete',
                 style: AppTextStyles.labelSmall),
             const SizedBox(height: 8),
@@ -228,9 +257,13 @@ class _RoadmapSummaryCard extends StatelessWidget {
 }
 
 class _SkillGapSnapshot extends StatelessWidget {
-  const _SkillGapSnapshot({required this.activeRoadmap});
+  const _SkillGapSnapshot({
+    required this.activeRoadmap,
+    required this.categories,
+  });
 
   final PersonalRoadmapDto? activeRoadmap;
+  final List<SkillGapCategory> categories;
 
   @override
   Widget build(BuildContext context) {
@@ -248,16 +281,103 @@ class _SkillGapSnapshot extends StatelessWidget {
               onTap: () => context.go('/skill-gap/select'),
               child: Column(
                 children: [
-                  const Icon(Icons.radar, size: 72, color: AppColors.primary),
+                  SizedBox(
+                    height: 220,
+                    child: RadarChart(
+                      RadarChartData(
+                        radarShape: RadarShape.polygon,
+                        tickCount: 4,
+                        ticksTextStyle: const TextStyle(
+                          color: Colors.transparent,
+                          fontSize: 0,
+                        ),
+                        getTitle: (index, angle) {
+                          final category = categories[index];
+                          return RadarChartTitle(
+                            text: category.name,
+                            angle: angle,
+                          );
+                        },
+                        titleTextStyle: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                        dataSets: [
+                          RadarDataSet(
+                            fillColor:
+                                AppColors.primary.withValues(alpha: 0.22),
+                            borderColor: AppColors.primary,
+                            entryRadius: 2,
+                            dataEntries: categories
+                                .map((category) =>
+                                    RadarEntry(value: category.current))
+                                .toList(),
+                          ),
+                          RadarDataSet(
+                            fillColor:
+                                AppColors.warning.withValues(alpha: 0.12),
+                            borderColor: AppColors.warning,
+                            entryRadius: 2,
+                            dataEntries: categories
+                                .map((category) =>
+                                    RadarEntry(value: category.required))
+                                .toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  Text('Your skills cover about 58% of this roadmap.',
-                      style: AppTextStyles.bodyMedium),
-                  const SizedBox(height: 12),
-                  const LinearProgressBar(
-                      value: 0.58, color: AppColors.primary),
+                  const _LegendRow(),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap to inspect missing skills for your active roadmap.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _LegendRow extends StatelessWidget {
+  const _LegendRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _LegendDot(color: AppColors.primary, label: 'Your Skills'),
+        SizedBox(width: 16),
+        _LegendDot(color: AppColors.warning, label: 'Required'),
+      ],
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: AppTextStyles.labelSmall),
+      ],
     );
   }
 }
@@ -273,53 +393,124 @@ class _TrendingSkills extends StatelessWidget {
       title: 'Trending Skills',
       actionLabel: 'View all',
       onAction: () => context.go('/market-pulse'),
-      child: Column(
-        children: skills
-            .map(
-              (skill) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    SizedBox(
-                        width: 100,
-                        child:
-                            Text(skill.name, style: AppTextStyles.labelMedium)),
-                    Expanded(
-                        child: LinearProgressBar(
-                            value: skill.score, color: AppColors.primary)),
-                  ],
+      child: SizedBox(
+        height: 220,
+        child: BarChart(
+          BarChartData(
+            alignment: BarChartAlignment.spaceAround,
+            maxY: 1,
+            minY: 0,
+            gridData: FlGridData(
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (_) => const FlLine(
+                color: AppColors.outlineVariant,
+                strokeWidth: 0.6,
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            titlesData: FlTitlesData(
+              leftTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 48,
+                  getTitlesWidget: (value, meta) {
+                    final index = value.toInt();
+                    if (index < 0 || index >= skills.length) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: SizedBox(
+                        width: 54,
+                        child: Text(
+                          skills[index].name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.labelSmall,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
-            )
-            .toList(),
+            ),
+            barGroups: [
+              for (var i = 0; i < skills.length; i++)
+                BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: skills[i].score,
+                      width: 18,
+                      borderRadius: BorderRadius.circular(6),
+                      color: _rankColor(i),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  Color _rankColor(int index) {
+    return switch (index) {
+      0 => AppColors.primary,
+      1 => AppColors.secondaryContainer,
+      2 => AppColors.success,
+      3 => AppColors.warning,
+      _ => AppColors.outline,
+    };
   }
 }
 
 class _RecentMentorSessions extends StatelessWidget {
-  const _RecentMentorSessions();
+  const _RecentMentorSessions({required this.sessions});
+
+  final List<MentorSessionSummary> sessions;
 
   @override
   Widget build(BuildContext context) {
-    return const _Panel(
+    return _Panel(
       title: 'Recent AI Mentor Sessions',
       child: Column(
-        children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.smart_toy_outlined, color: AppColors.primary),
-            title: Text('Roadmap planning'),
-            subtitle:
-                Text('How should I prioritize Flutter and backend practice?'),
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.smart_toy_outlined, color: AppColors.primary),
-            title: Text('Portfolio review'),
-            subtitle: Text('Ideas for making my GitHub repos stronger.'),
-          ),
-        ],
+        children: sessions
+            .take(2)
+            .map(
+              (session) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFE8F0FE),
+                  child:
+                      Icon(Icons.smart_toy_outlined, color: AppColors.primary),
+                ),
+                title: Text(session.title),
+                subtitle: Text(
+                  session.preview,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Text(
+                  session.dateLabel,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                onTap: () => context.go('/mentor'),
+              ),
+            )
+            .toList(),
       ),
     );
   }
