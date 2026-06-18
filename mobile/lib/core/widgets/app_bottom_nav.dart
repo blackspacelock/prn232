@@ -79,7 +79,7 @@ class AppBottomNav extends ConsumerWidget {
           case 2:
             context.go('/mentor');
           case 3:
-            context.go('/market-pulse');
+            context.go('/market');
           case 4:
             _showMoreSheet(context, ref);
         }

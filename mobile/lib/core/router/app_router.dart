@@ -16,7 +16,7 @@ import '../../features/skill_gap/screens/skill_input_screen.dart';
 import '../../features/skill_gap/screens/skill_gap_analysis_screen.dart';
 import '../../features/ai_mentor/screens/chat_screen.dart';
 import '../../features/job_trends/screens/market_pulse_screen.dart';
-import '../../features/portfolio/screens/github_portfolio_screen.dart';
+import '../../features/portfolio/screens/portfolio_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../widgets/app_bottom_nav.dart';
 
@@ -124,7 +124,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/portfolio',
-            builder: (_, __) => const GithubPortfolioScreen(),
+            builder: (_, __) => const PortfolioScreen(),
           ),
           GoRoute(
             path: '/settings',

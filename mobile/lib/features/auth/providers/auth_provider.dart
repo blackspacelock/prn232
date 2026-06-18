@@ -73,6 +73,7 @@ class AuthNotifier extends AsyncNotifier<UserDto?> {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
         userId: result.user.id,
+        profileId: result.user.profileId,
       );
 }
 

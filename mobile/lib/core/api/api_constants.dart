@@ -31,4 +31,13 @@ class ApiConstants {
 
   // Portfolio
   static const githubRepositories = '/api/github-repositories';
+
+  // Users
+  static const users = '/api/users';
+
+  // AI
+  static const aiPortfolioAnalysis = '/api/ai/portfolio-analysis';
+
+  // Job Trends
+  static const jobTrends = '/api/job-trends';
 }
