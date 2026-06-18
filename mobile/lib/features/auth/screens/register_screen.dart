@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../../../core/models/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_text_field.dart';
-import '../../../core/models/app_exception.dart';
 import '../providers/auth_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -24,6 +24,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _loading = false;
+  bool _submitted = false;
   int _passwordStrength = 0;
 
   @override
@@ -36,7 +37,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _submit() async {
+    setState(() => _submitted = true);
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _loading = true);
     try {
       await ref.read(authProvider.notifier).register(
@@ -91,179 +94,250 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: Column(
-        children: [
-          Container(
-            height: 200,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1A73E8), Color(0xFF0D47A1)],
-              ),
-            ),
-            child: SafeArea(
-              child: Stack(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
                 children: [
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => context.go('/login'),
+                  Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Form(
+                        key: _formKey,
+                        autovalidateMode: _submitted
+                            ? AutovalidateMode.onUserInteraction
+                            : AutovalidateMode.disabled,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const _AuthLogo(),
+                            const SizedBox(height: 20),
+                            Text(
+                              'Create your account',
+                              style: AppTextStyles.headlineMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Build your career roadmap in minutes',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 20),
+                            const _RegisterStepper(),
+                            const SizedBox(height: 24),
+                            AppTextField(
+                              label: 'Full Name',
+                              controller: _nameCtrl,
+                              prefixIcon: const Icon(Icons.person_outlined),
+                              autofillHints: const [AutofillHints.name],
+                              textInputAction: TextInputAction.next,
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Name required'
+                                  : null,
+                            ),
+                            const SizedBox(height: 16),
+                            AppTextField(
+                              label: 'Email address',
+                              controller: _emailCtrl,
+                              keyboardType: TextInputType.emailAddress,
+                              prefixIcon: const Icon(Icons.mail_outlined),
+                              autofillHints: const [AutofillHints.email],
+                              textInputAction: TextInputAction.next,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) {
+                                  return 'Email required';
+                                }
+                                if (!v.contains('@')) {
+                                  return 'Invalid email';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            AppTextField(
+                              label: 'Password',
+                              controller: _passwordCtrl,
+                              isPassword: true,
+                              prefixIcon: const Icon(Icons.lock_outlined),
+                              autofillHints: const [AutofillHints.newPassword],
+                              textInputAction: TextInputAction.next,
+                              onChanged: _updatePasswordStrength,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) {
+                                  return 'Password required';
+                                }
+                                if (v.length < 8) {
+                                  return 'At least 8 characters';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            _PasswordStrengthBar(strength: _passwordStrength),
+                            const SizedBox(height: 16),
+                            AppTextField(
+                              label: 'Confirm Password',
+                              controller: _confirmCtrl,
+                              isPassword: true,
+                              prefixIcon: const Icon(Icons.lock_outlined),
+                              autofillHints: const [AutofillHints.newPassword],
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _submit(),
+                              validator: (v) {
+                                if (v != _passwordCtrl.text) {
+                                  return 'Passwords do not match';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 24),
+                            AppButton(
+                              label: 'Create Account',
+                              onPressed: _submit,
+                              isLoading: _loading,
+                            ),
+                            const SizedBox(height: 12),
+                            AppButton(
+                              label: 'Continue with Google',
+                              variant: AppButtonVariant.outlined,
+                              leadingIcon: const Icon(Icons.g_mobiledata),
+                              onPressed: _submitGoogle,
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Already have an account? ',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.onSurfaceVariant,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => context.go('/login'),
+                                  child: const Text('Sign in'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.explore,
-                            color: Colors.white, size: 36),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Create Account',
-                          style: AppTextStyles.headlineMedium.copyWith(
-                              color: Colors.white, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Start your engineering journey today',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                              color: Colors.white.withValues(alpha: 0.85)),
-                        ),
-                      ],
-                    ),
+                  TextButton.icon(
+                    onPressed: () => context.go('/'),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back to landing'),
                   ),
                 ],
               ),
             ),
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              child: Transform.translate(
-                offset: const Offset(0, -24),
-                child: Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Join SECompass',
-                              style: AppTextStyles.headlineMedium),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Build your career roadmap in minutes',
-                            style: AppTextStyles.bodyMedium
-                                .copyWith(color: AppColors.onSurfaceVariant),
-                          ),
-                          const SizedBox(height: 24),
-                          AppTextField(
-                            label: 'Full Name',
-                            controller: _nameCtrl,
-                            prefixIcon: const Icon(Icons.person_outlined),
-                            autofillHints: const [AutofillHints.name],
-                            textInputAction: TextInputAction.next,
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Name required'
-                                : null,
-                          ),
-                          const SizedBox(height: 16),
-                          AppTextField(
-                            label: 'Email address',
-                            controller: _emailCtrl,
-                            keyboardType: TextInputType.emailAddress,
-                            prefixIcon: const Icon(Icons.mail_outlined),
-                            autofillHints: const [AutofillHints.email],
-                            textInputAction: TextInputAction.next,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return 'Email required';
-                              }
-                              if (!v.contains('@')) {
-                                return 'Invalid email';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          AppTextField(
-                            label: 'Password',
-                            controller: _passwordCtrl,
-                            isPassword: true,
-                            prefixIcon: const Icon(Icons.lock_outlined),
-                            autofillHints: const [AutofillHints.newPassword],
-                            textInputAction: TextInputAction.next,
-                            onChanged: _updatePasswordStrength,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return 'Password required';
-                              }
-                              if (v.length < 8) {
-                                return 'At least 8 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _PasswordStrengthBar(strength: _passwordStrength),
-                          const SizedBox(height: 16),
-                          AppTextField(
-                            label: 'Confirm Password',
-                            controller: _confirmCtrl,
-                            isPassword: true,
-                            prefixIcon: const Icon(Icons.lock_outlined),
-                            autofillHints: const [AutofillHints.newPassword],
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _submit(),
-                            validator: (v) {
-                              if (v != _passwordCtrl.text) {
-                                return 'Passwords do not match';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 24),
-                          AppButton(
-                            label: 'Create Account',
-                            onPressed: _submit,
-                            isLoading: _loading,
-                          ),
-                          const SizedBox(height: 12),
-                          AppButton(
-                            label: 'Continue with Google',
-                            variant: AppButtonVariant.outlined,
-                            leadingIcon: const Icon(Icons.g_mobiledata),
-                            onPressed: _submitGoogle,
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Already have an account? ',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                    color: AppColors.onSurfaceVariant),
-                              ),
-                              TextButton(
-                                onPressed: () => context.go('/login'),
-                                child: const Text('Sign In'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthLogo extends StatelessWidget {
+  const _AuthLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
           ),
-        ],
+          child:
+              const Icon(Icons.explore, color: AppColors.onPrimary, size: 30),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'SECompass',
+          style: AppTextStyles.titleLarge.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RegisterStepper extends StatelessWidget {
+  const _RegisterStepper();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Expanded(child: _StepItem(label: 'Account', active: true)),
+        _StepDivider(),
+        Expanded(child: _StepItem(label: 'Profile')),
+        _StepDivider(),
+        Expanded(child: _StepItem(label: 'Done')),
+      ],
+    );
+  }
+}
+
+class _StepItem extends StatelessWidget {
+  const _StepItem({required this.label, this.active = false});
+
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? AppColors.primary : AppColors.outline;
+    return Column(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: active ? AppColors.primary : AppColors.surfaceContainer,
+            shape: BoxShape.circle,
+            border: Border.all(color: color),
+          ),
+          child: active
+              ? const Icon(Icons.check, color: AppColors.onPrimary, size: 14)
+              : null,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(color: color),
+        ),
+      ],
+    );
+  }
+}
+
+class _StepDivider extends StatelessWidget {
+  const _StepDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 26),
+        child: Container(height: 1, color: AppColors.outlineVariant),
       ),
     );
   }

@@ -17,6 +17,7 @@ import '../../features/skill_gap/screens/skill_gap_analysis_screen.dart';
 import '../../features/ai_mentor/screens/chat_screen.dart';
 import '../../features/job_trends/screens/market_pulse_screen.dart';
 import '../../features/portfolio/screens/github_portfolio_screen.dart';
+import '../../features/settings/screens/settings_screen.dart';
 import '../widgets/app_bottom_nav.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -66,7 +67,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/career-roles/loading',
             builder: (_, state) => RoleSelectionLoadingScreen(
-              careerRoadmapId: state.uri.queryParameters['careerRoadmapId'] ?? '',
+              careerRoadmapId:
+                  state.uri.queryParameters['careerRoadmapId'] ?? '',
               profileId: state.uri.queryParameters['profileId'] ?? '',
             ),
           ),
@@ -89,13 +91,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/skill-gap/input',
             builder: (_, state) => SkillInputScreen(
-              careerRoadmapId: state.uri.queryParameters['careerRoadmapId'] ?? '',
+              careerRoadmapId:
+                  state.uri.queryParameters['careerRoadmapId'] ?? '',
             ),
           ),
           GoRoute(
             path: '/skill-gap/result',
             builder: (_, state) => SkillGapAnalysisScreen(
-              careerRoadmapId: state.uri.queryParameters['careerRoadmapId'] ?? '',
+              careerRoadmapId:
+                  state.uri.queryParameters['careerRoadmapId'] ?? '',
             ),
           ),
           GoRoute(
@@ -113,8 +117,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const MarketPulseScreen(),
           ),
           GoRoute(
+            path: '/market',
+            builder: (_, __) => const MarketPulseScreen(),
+          ),
+          GoRoute(
             path: '/portfolio',
             builder: (_, __) => const GithubPortfolioScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (_, __) => const SettingsScreen(),
           ),
         ],
       ),

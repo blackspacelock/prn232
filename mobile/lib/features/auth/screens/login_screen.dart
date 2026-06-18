@@ -22,6 +22,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
+  bool _submitted = false;
 
   @override
   void dispose() {
@@ -31,6 +32,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    setState(() => _submitted = true);
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
@@ -81,176 +83,183 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: AppColors.surface,
       body: Column(
         children: [
-          // Gradient header
-          Container(
-            height: 240,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1A73E8), Color(0xFF0D47A1)],
-              ),
-            ),
+          Expanded(
             child: SafeArea(
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => context.go('/'),
-                    ),
-                  ),
-                  Center(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.explore,
-                            color: Colors.white, size: 40),
-                        const SizedBox(height: 8),
-                        Text(
-                          'SECompass',
-                          style: AppTextStyles.headlineMedium.copyWith(
-                              color: Colors.white, fontWeight: FontWeight.w700),
+                        Card(
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Form(
+                              key: _formKey,
+                              autovalidateMode: _submitted
+                                  ? AutovalidateMode.onUserInteraction
+                                  : AutovalidateMode.disabled,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const _AuthLogo(),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    'Welcome back',
+                                    style: AppTextStyles.headlineMedium,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Sign in to continue your career journey',
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                        color: AppColors.onSurfaceVariant),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 24),
+                                  AppTextField(
+                                    label: 'Email address',
+                                    controller: _emailCtrl,
+                                    keyboardType: TextInputType.emailAddress,
+                                    prefixIcon: const Icon(Icons.mail_outlined),
+                                    autofillHints: const [AutofillHints.email],
+                                    textInputAction: TextInputAction.next,
+                                    validator: (v) {
+                                      if (v == null || v.isEmpty) {
+                                        return 'Email required';
+                                      }
+                                      if (!v.contains('@')) {
+                                        return 'Invalid email';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  AppTextField(
+                                    label: 'Password',
+                                    controller: _passwordCtrl,
+                                    isPassword: true,
+                                    prefixIcon: const Icon(Icons.lock_outlined),
+                                    autofillHints: const [
+                                      AutofillHints.password
+                                    ],
+                                    textInputAction: TextInputAction.done,
+                                    onSubmitted: (_) => _submit(),
+                                    validator: (v) => (v == null || v.isEmpty)
+                                        ? 'Password required'
+                                        : null,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: () {},
+                                      child: const Text('Forgot password?'),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  AppButton(
+                                    label: 'Sign In',
+                                    onPressed: _submit,
+                                    isLoading: _loading,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      const Expanded(child: Divider()),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16),
+                                        child: Text(
+                                          'or continue with',
+                                          style: AppTextStyles.bodySmall
+                                              .copyWith(
+                                                  color: AppColors
+                                                      .onSurfaceVariant),
+                                        ),
+                                      ),
+                                      const Expanded(child: Divider()),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  AppButton(
+                                    label: 'Continue with Google',
+                                    variant: AppButtonVariant.outlined,
+                                    leadingIcon: _GoogleIcon(),
+                                    onPressed: _submitGoogle,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        "Don't have an account? ",
+                                        style:
+                                            AppTextStyles.bodyMedium.copyWith(
+                                          color: AppColors.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            context.go('/register'),
+                                        child: const Text('Register'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'From Generalist to Job-Ready.',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                              color: Colors.white.withValues(alpha: 0.85)),
+                        TextButton.icon(
+                          onPressed: () => context.go('/'),
+                          icon: const Icon(Icons.arrow_back),
+                          label: const Text('Back to landing'),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          // Form area
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              child: Column(
-                children: [
-                  // Card overlapping header
-                  Transform.translate(
-                    offset: const Offset(0, -24),
-                    child: Card(
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Welcome back',
-                                  style: AppTextStyles.headlineMedium),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Sign in to continue your career journey',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                    color: AppColors.onSurfaceVariant),
-                              ),
-                              const SizedBox(height: 24),
-                              AppTextField(
-                                label: 'Email address',
-                                controller: _emailCtrl,
-                                keyboardType: TextInputType.emailAddress,
-                                prefixIcon: const Icon(Icons.mail_outlined),
-                                autofillHints: const [AutofillHints.email],
-                                textInputAction: TextInputAction.next,
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) {
-                                    return 'Email required';
-                                  }
-                                  if (!v.contains('@')) {
-                                    return 'Invalid email';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              AppTextField(
-                                label: 'Password',
-                                controller: _passwordCtrl,
-                                isPassword: true,
-                                prefixIcon: const Icon(Icons.lock_outlined),
-                                autofillHints: const [AutofillHints.password],
-                                textInputAction: TextInputAction.done,
-                                onSubmitted: (_) => _submit(),
-                                validator: (v) => (v == null || v.isEmpty)
-                                    ? 'Password required'
-                                    : null,
-                              ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () {},
-                                  child: const Text('Forgot password?'),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              AppButton(
-                                label: 'Sign in',
-                                onPressed: _submit,
-                                isLoading: _loading,
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  const Expanded(child: Divider()),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16),
-                                    child: Text(
-                                      'OR',
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.onSurfaceVariant),
-                                    ),
-                                  ),
-                                  const Expanded(child: Divider()),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              AppButton(
-                                label: 'Continue with Google',
-                                variant: AppButtonVariant.outlined,
-                                leadingIcon: _GoogleIcon(),
-                                onPressed: _submitGoogle,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Register link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: AppTextStyles.bodyMedium
-                            .copyWith(color: AppColors.onSurfaceVariant),
-                      ),
-                      TextButton(
-                        onPressed: () => context.go('/register'),
-                        child: const Text('Create account'),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AuthLogo extends StatelessWidget {
+  const _AuthLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+          ),
+          child:
+              const Icon(Icons.explore, color: AppColors.onPrimary, size: 30),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'SECompass',
+          style: AppTextStyles.titleLarge.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }
