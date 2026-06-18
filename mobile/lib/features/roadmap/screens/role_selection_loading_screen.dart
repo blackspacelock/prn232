@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_snackbar.dart';
 import '../providers/roadmap_providers.dart';
 
 class RoleSelectionLoadingScreen extends ConsumerStatefulWidget {
@@ -32,6 +34,7 @@ class _RoleSelectionLoadingScreenState
   }
 
   Future<void> _generate() async {
+    setState(() => _error = null);
     try {
       final profileId = widget.profileId.isNotEmpty
           ? widget.profileId
@@ -45,7 +48,9 @@ class _RoleSelectionLoadingScreenState
       if (!mounted) return;
       context.go('/roadmap/${roadmap.personalRoadmapId}');
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+      AppSnackbar.showError(context, 'Roadmap generation failed');
     }
   }
 
@@ -59,17 +64,43 @@ class _RoleSelectionLoadingScreenState
             mainAxisSize: MainAxisSize.min,
             children: [
               if (_error == null) ...[
-                const CircularProgressIndicator(),
+                const Icon(
+                  Icons.explore_outlined,
+                  size: 72,
+                  color: AppColors.primary,
+                )
+                    .animate(onPlay: (controller) => controller.repeat())
+                    .rotate(duration: 1800.ms)
+                    .then()
+                    .scale(
+                      begin: const Offset(1, 1),
+                      end: const Offset(1.08, 1.08),
+                      duration: 700.ms,
+                    )
+                    .then()
+                    .scale(
+                      begin: const Offset(1.08, 1.08),
+                      end: const Offset(1, 1),
+                      duration: 700.ms,
+                    ),
                 const SizedBox(height: 24),
-                Text('Building your roadmap...',
-                    style: AppTextStyles.titleMedium),
+                Text(
+                  'Building your personalized roadmap...',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
-                  'This may take a moment',
+                  'Analyzing skill requirements and learning milestones',
+                  textAlign: TextAlign.center,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.onSurfaceVariant,
                   ),
                 ),
+                const SizedBox(height: 24),
+                const LinearProgressIndicator(),
               ] else ...[
                 const Icon(Icons.error_outline,
                     size: 56, color: AppColors.error),
@@ -85,7 +116,23 @@ class _RoleSelectionLoadingScreenState
                   ),
                 ),
                 const SizedBox(height: 20),
-                AppButton(label: 'Try Again', onPressed: _generate),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppButton(
+                      label: 'Back',
+                      variant: AppButtonVariant.outlined,
+                      onPressed: () => context.go('/career-roles'),
+                      width: 116,
+                    ),
+                    const SizedBox(width: 12),
+                    AppButton(
+                      label: 'Try Again',
+                      onPressed: _generate,
+                      width: 132,
+                    ),
+                  ],
+                ),
               ],
             ],
           ),
