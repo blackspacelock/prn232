@@ -39,4 +39,20 @@ class UserDto {
         role: json['role'] as int? ?? 0,
         hasProfile: json['hasProfile'] as bool? ?? false,
       );
+
+  UserDto copyWith({
+    String? id,
+    String? email,
+    String? fullName,
+    int? role,
+    bool? hasProfile,
+  }) {
+    return UserDto(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      fullName: fullName ?? this.fullName,
+      role: role ?? this.role,
+      hasProfile: hasProfile ?? this.hasProfile,
+    );
+  }
 }

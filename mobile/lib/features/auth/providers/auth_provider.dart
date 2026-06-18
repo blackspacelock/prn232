@@ -18,7 +18,9 @@ class AuthNotifier extends AsyncNotifier<UserDto?> {
     if (!hasToken) return null;
     final id = await TokenStorage.getUserId();
     // Minimal user stub from storage; full profile loaded separately
-    return id != null ? UserDto(id: id, email: '', role: 0, hasProfile: false) : null;
+    return id != null
+        ? UserDto(id: id, email: '', role: 0, hasProfile: false)
+        : null;
   }
 
   Future<UserDto> login(String email, String password) async {
@@ -59,6 +61,12 @@ class AuthNotifier extends AsyncNotifier<UserDto?> {
     }
     await TokenStorage.clearTokens();
     state = const AsyncData(null);
+  }
+
+  void markProfileComplete() {
+    final user = state.valueOrNull;
+    if (user == null) return;
+    state = AsyncData(user.copyWith(hasProfile: true));
   }
 
   Future<void> _persist(AuthResponseDto result) => TokenStorage.saveTokens(
