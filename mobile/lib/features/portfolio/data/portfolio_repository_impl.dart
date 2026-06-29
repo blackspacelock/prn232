@@ -1,27 +1,43 @@
 import 'package:dio/dio.dart';
 import '../../../core/api/api_constants.dart';
 import '../../../core/api/dio_client.dart';
+import '../../../core/api/graphql_api.dart';
 import '../../../core/models/app_exception.dart';
 import '../../../core/models/portfolio_models.dart';
 import 'portfolio_repository.dart';
 
 class PortfolioRepositoryImpl implements PortfolioRepository {
-  PortfolioRepositoryImpl({Dio? dio}) : _dio = dio ?? DioClient.instance;
+  PortfolioRepositoryImpl({Dio? dio, GraphQLApi? graphQL})
+      : _dio = dio ?? DioClient.instance,
+        _graphQL = graphQL ?? GraphQLApi(dio: dio);
 
   final Dio _dio;
+  final GraphQLApi _graphQL;
 
   @override
   Future<List<GitHubRepositoryDto>> getRepos(String profileId) async {
-    try {
-      final response = await _dio.get(
-        ApiConstants.githubRepositories,
-        queryParameters: {'profileId': profileId},
-      );
-      final data = _asList(response.data);
-      return data.map(GitHubRepositoryDto.fromJson).toList();
-    } on DioException {
-      return [];
-    }
+    if (profileId.isEmpty) return const [];
+    final data = await _graphQL.queryField<List<dynamic>>(
+      'gitHubRepositoriesByProfile',
+      r'''
+      query GetGitHubRepositoriesByProfile($profileId: UUID!) {
+        gitHubRepositoriesByProfile(profileId: $profileId) {
+          id
+          profileId
+          repositoryName
+          repoUrl
+          description
+          isPrivate
+          createdAt
+        }
+      }
+      ''',
+      variables: {'profileId': profileId},
+    );
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(GitHubRepositoryDto.fromJson)
+        .toList();
   }
 
   @override
@@ -69,18 +85,30 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
 
   @override
   Future<PortfolioAnalysisDto?> getAnalysis(String profileId) async {
-    try {
-      final response = await _dio.get(
-        '${ApiConstants.aiPortfolioAnalysis}/$profileId',
-      );
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        return PortfolioAnalysisDto.fromJson(data);
+    if (profileId.isEmpty) return null;
+    final data = await _graphQL.queryField<Map<String, dynamic>?>(
+      'portfolioAnalysis',
+      r'''
+      query GetPortfolioAnalysis($profileId: UUID!) {
+        portfolioAnalysis(profileId: $profileId) {
+          profileId
+          repositoryNames
+          overallSummary
+          strengths
+          recommendations
+          repositoryAnalyses {
+            repositoryId
+            repositoryName
+            objective
+            techStacks
+            summary
+          }
+        }
       }
-      return null;
-    } on DioException {
-      return null;
-    }
+      ''',
+      variables: {'profileId': profileId},
+    );
+    return data == null ? null : PortfolioAnalysisDto.fromJson(data);
   }
 
   @override
@@ -105,7 +133,8 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
     String message = e.message ?? 'Request failed';
     if (data is String && data.isNotEmpty) message = data;
     if (data is Map) {
-      message = (data['message'] ?? data['error'] ?? data.toString()).toString();
+      message =
+          (data['message'] ?? data['error'] ?? data.toString()).toString();
     }
     if (status == 401) throw AuthException(message);
     if (status != null && status >= 400 && status < 500) {
@@ -116,13 +145,5 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
       throw const NetworkException();
     }
     throw ServerException(message, statusCode: status);
-  }
-
-  List<Map<String, dynamic>> _asList(Object? data) {
-    final value = data is Map<String, dynamic> && data['data'] is List
-        ? data['data']
-        : data;
-    if (value is! List) return const [];
-    return value.whereType<Map<String, dynamic>>().toList();
   }
 }

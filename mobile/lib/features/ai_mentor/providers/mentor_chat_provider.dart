@@ -114,6 +114,8 @@ class MentorChatNotifier extends FamilyAsyncNotifier<ChatState, String?> {
   }
 
   Future<String> _profileId() async {
-    return await TokenStorage.getUserId() ?? 'demo-profile';
+    return await TokenStorage.getProfileId() ??
+        await TokenStorage.getUserId() ??
+        '';
   }
 }

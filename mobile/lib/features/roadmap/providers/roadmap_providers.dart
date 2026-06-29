@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/job_trend_models.dart';
 import '../../../core/models/profile_models.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/storage/token_storage.dart';
+import '../../ai_mentor/data/chat_repository_impl.dart';
+import '../../job_trends/data/job_trends_repository_impl.dart';
+import '../../portfolio/data/portfolio_repository_impl.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../data/roadmap_repository.dart';
 import '../data/roadmap_repository_impl.dart';
@@ -11,7 +15,9 @@ final roadmapRepositoryProvider = Provider<RoadmapRepository>(
 );
 
 final profileIdProvider = FutureProvider<String>((ref) async {
-  return await TokenStorage.getUserId() ?? 'demo-profile';
+  return await TokenStorage.getProfileId() ??
+      await TokenStorage.getUserId() ??
+      '';
 });
 
 final careerRolesProvider = FutureProvider<List<CareerRoleDto>>((ref) {
@@ -102,6 +108,7 @@ final trendingSkillRecommendationsProvider =
 });
 
 final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
+  final profileId = await ref.watch(profileIdProvider.future);
   final roadmaps = await ref.watch(personalRoadmapsProvider.future);
   PersonalRoadmapDto? activeRoadmap;
   for (final roadmap in roadmaps) {
@@ -117,41 +124,95 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
               .reduce((a, b) => a + b) /
           roadmaps.length;
 
+  final profileRepo = ref.watch(profileRepositoryProvider);
+  final roadmapRepo = ref.watch(roadmapRepositoryProvider);
+  final portfolioRepo = PortfolioRepositoryImpl();
+  final chatRepo = ChatRepositoryImpl();
+  final trendsRepo = JobTrendsRepositoryImpl();
+
+  final results = await Future.wait<Object>([
+    if (profileId.isEmpty)
+      Future<List<SkillDto>>.value(const [])
+    else
+      profileRepo.getSkillsByProfile(profileId),
+    if (profileId.isEmpty)
+      Future.value(0)
+    else
+      portfolioRepo.getRepos(profileId).then((repos) => repos.length),
+    if (activeRoadmap == null || profileId.isEmpty)
+      Future<SkillGapAnalysisDto>.value(
+        const SkillGapAnalysisDto(
+          coveragePercentage: 0,
+          matchedSkills: [],
+          missingSkills: [],
+          categoryBreakdown: [],
+        ),
+      )
+    else
+      roadmapRepo.getSkillGapAnalysis(
+        profileId,
+        activeRoadmap.careerRoadmapId,
+      ),
+    trendsRepo.getTopTrending(5),
+    if (profileId.isEmpty)
+      Future.value(<MentorSessionSummary>[])
+    else
+      chatRepo.getSessions(profileId).then(
+            (sessions) => sessions
+                .take(3)
+                .map(
+                  (session) => MentorSessionSummary(
+                    title: session.title,
+                    preview: 'Continue this mentor conversation',
+                    dateLabel: _dateLabel(session.createdAt),
+                  ),
+                )
+                .toList(),
+          ),
+  ]);
+
+  final skills = results[0] as List<SkillDto>;
+  final repositoryCount = results[1] as int;
+  final skillGap = results[2] as SkillGapAnalysisDto;
+  final trendingSkills = results[3] as List<JobTrendDto>;
+  final mentorSessions = results[4] as List<MentorSessionSummary>;
+
   return DashboardData(
     roadmaps: roadmaps,
     activeRoadmap: activeRoadmap,
     roadmapCount: roadmaps.length,
     averageProgress: avgProgress,
-    skillsCount: 12,
-    repositoryCount: 3,
-    skillGapCategories: const [
-      SkillGapCategory('Frontend', 0.72, 0.9),
-      SkillGapCategory('Backend', 0.45, 0.78),
-      SkillGapCategory('Database', 0.62, 0.72),
-      SkillGapCategory('DevOps', 0.36, 0.68),
-      SkillGapCategory('Testing', 0.55, 0.75),
-    ],
-    trendingSkills: const [
-      SkillTrend('Flutter', 0.92),
-      SkillTrend('ASP.NET Core', 0.84),
-      SkillTrend('SQL', 0.76),
-      SkillTrend('Docker', 0.64),
-      SkillTrend('Azure', 0.58),
-    ],
-    recentMentorSessions: const [
-      MentorSessionSummary(
-        title: 'Roadmap planning',
-        preview: 'How should I prioritize Flutter and backend practice?',
-        dateLabel: 'Today',
-      ),
-      MentorSessionSummary(
-        title: 'Portfolio review',
-        preview: 'Ideas for making my GitHub repos stronger.',
-        dateLabel: 'Yesterday',
-      ),
-    ],
+    skillsCount: skills.length,
+    repositoryCount: repositoryCount,
+    skillGapCategories: skillGap.categoryBreakdown
+        .map(
+          (item) => SkillGapCategory(
+            item.category,
+            item.currentScore,
+            item.requiredScore,
+          ),
+        )
+        .toList(),
+    trendingSkills: trendingSkills
+        .map(
+          (item) => SkillTrend(
+            item.techSkill,
+            item.trendScore / 100,
+          ),
+        )
+        .toList(),
+    recentMentorSessions: mentorSessions,
   );
 });
+
+String _dateLabel(String value) {
+  final createdAt = DateTime.tryParse(value);
+  if (createdAt == null) return '';
+  final age = DateTime.now().difference(createdAt);
+  if (age.inDays == 0) return 'Today';
+  if (age.inDays == 1) return 'Yesterday';
+  return '${age.inDays} days ago';
+}
 
 class DashboardData {
   const DashboardData({

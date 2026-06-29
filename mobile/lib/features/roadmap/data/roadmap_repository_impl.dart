@@ -1,61 +1,127 @@
 import 'package:dio/dio.dart';
 import '../../../core/api/api_constants.dart';
 import '../../../core/api/dio_client.dart';
+import '../../../core/api/graphql_api.dart';
 import '../../../core/models/roadmap_models.dart';
-import 'mock_roadmap_data.dart';
 import 'roadmap_repository.dart';
 
 class RoadmapRepositoryImpl implements RoadmapRepository {
-  RoadmapRepositoryImpl({Dio? dio}) : _dio = dio ?? DioClient.instance;
+  RoadmapRepositoryImpl({Dio? dio, GraphQLApi? graphQL})
+      : _dio = dio ?? DioClient.instance,
+        _graphQL = graphQL ?? GraphQLApi(dio: dio);
 
   final Dio _dio;
+  final GraphQLApi _graphQL;
 
   @override
   Future<List<CareerRoleDto>> getCareerRoles() async {
-    try {
-      final response = await _dio.get('/api/career-roles');
-      final data = _asList(response.data);
-      return data.map(CareerRoleDto.fromJson).toList();
-    } on DioException {
-      return mockCareerRoles;
-    }
+    final data = await _graphQL.queryField<List<dynamic>>(
+      'careerRoles',
+      r'''
+      query GetCareerRoles {
+        careerRoles {
+          id
+          name
+          description
+        }
+      }
+      ''',
+    );
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(CareerRoleDto.fromJson)
+        .toList();
   }
 
   @override
   Future<List<CareerRoadmapDto>> getRoadmapsByRole(String careerRoleId) async {
-    try {
-      final response =
-          await _dio.get('/api/career-roadmaps/role/$careerRoleId');
-      final data = _asList(response.data);
-      return data.map(CareerRoadmapDto.fromJson).toList();
-    } on DioException {
-      return mockRoadmapsForRole(careerRoleId);
-    }
+    final data = await _graphQL.queryField<List<dynamic>>(
+      'careerRoadmapsByRole',
+      r'''
+      query GetCareerRoadmapsByRole($careerRoleId: UUID!) {
+        careerRoadmapsByRole(careerRoleId: $careerRoleId) {
+          id
+          careerRoleId
+          name
+          description
+        }
+      }
+      ''',
+      variables: {'careerRoleId': careerRoleId},
+    );
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(CareerRoadmapDto.fromJson)
+        .toList();
   }
 
   @override
   Future<List<PersonalRoadmapDto>> getPersonalRoadmaps(String profileId) async {
-    if (profileId.isEmpty) return [mockPersonalRoadmap()];
-    try {
-      final response = await _dio.get(
-        ApiConstants.personalRoadmaps,
-        queryParameters: {'profileId': profileId},
-      );
-      final data = _asList(response.data);
-      return data.map(PersonalRoadmapDto.fromJson).toList();
-    } on DioException {
-      return [mockPersonalRoadmap(profileId: profileId)];
-    }
+    if (profileId.isEmpty) return const [];
+    final data = await _graphQL.queryField<List<dynamic>>(
+      'personalRoadmapsByProfile',
+      r'''
+      query GetPersonalRoadmapsByProfile($profileId: UUID!) {
+        personalRoadmapsByProfile(profileId: $profileId) {
+          id
+          profileId
+          careerRoadmapId
+          careerRoadmapName
+          careerRoadmapDescription
+          progressPercentage
+          isActive
+          createdAt
+        }
+      }
+      ''',
+      variables: {'profileId': profileId},
+    );
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(_personalRoadmapFromGraphQL)
+        .toList();
   }
 
   @override
   Future<PersonalRoadmapDto> getPersonalRoadmapWithProgress(String id) async {
-    try {
-      final response = await _dio.get('${ApiConstants.personalRoadmaps}/$id');
-      return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
-    } on DioException {
-      return mockPersonalRoadmap(id: id);
+    final data = await _graphQL.queryField<Map<String, dynamic>?>(
+      'personalRoadmapWithProgress',
+      r'''
+      query GetPersonalRoadmapWithProgress($personalRoadmapId: UUID!) {
+        personalRoadmapWithProgress(personalRoadmapId: $personalRoadmapId) {
+          id
+          profileId
+          careerRoadmapId
+          careerRoadmapName
+          careerRoadmapDescription
+          progressPercentage
+          isActive
+          createdAt
+          nodeProgresses {
+            id
+            personalRoadmapId
+            roadmapNodeId
+            nodeId
+            status
+            note
+            createdAt
+            node {
+              id
+              parentNodeId
+              name
+              description
+              order
+            }
+          }
+        }
+      }
+      ''',
+      variables: {'personalRoadmapId': id},
+    );
+    if (data == null) {
+      throw StateError('Personal roadmap not found');
     }
+    return _personalRoadmapFromGraphQL(data);
   }
 
   @override
@@ -63,22 +129,14 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     String profileId,
     String careerRoadmapId,
   ) async {
-    try {
-      final response = await _dio.post(
-        '${ApiConstants.personalRoadmaps}/generate',
-        data: {
-          'profileId': profileId,
-          'careerRoadmapId': careerRoadmapId,
-        },
-      );
-      return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
-    } on DioException {
-      return mockPersonalRoadmap(
-        id: 'generated-$careerRoadmapId',
-        profileId: profileId,
-        careerRoadmapId: careerRoadmapId,
-      );
-    }
+    final response = await _dio.post(
+      '${ApiConstants.personalRoadmaps}/generate',
+      data: {
+        'profileId': profileId,
+        'careerRoadmapId': careerRoadmapId,
+      },
+    );
+    return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
   }
 
   @override
@@ -87,25 +145,35 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     int status, {
     String? note,
   }) async {
-    try {
-      await _dio.put(
-        '${ApiConstants.nodeProgress}/$nodeProgressId',
-        data: {'status': status, if (note != null) 'note': note},
-      );
-    } on DioException {
-      return;
-    }
+    await _dio.put(
+      '${ApiConstants.nodeProgress}/$nodeProgressId/status',
+      data: {'status': status, if (note != null) 'note': note},
+    );
   }
 
   @override
   Future<List<LearningResourceDto>> getResourcesByNode(String nodeId) async {
-    try {
-      final response = await _dio.get('/api/learning-resources/node/$nodeId');
-      final data = _asList(response.data);
-      return data.map(LearningResourceDto.fromJson).toList();
-    } on DioException {
-      return mockLearningResources(nodeId);
-    }
+    final data = await _graphQL.queryField<List<dynamic>>(
+      'learningResourcesByNode',
+      r'''
+      query GetLearningResourcesByNode($nodeId: UUID!) {
+        learningResourcesByNode(nodeId: $nodeId) {
+          id
+          nodeId
+          name
+          resourceUrl
+          resourceType
+          provider
+          isFree
+        }
+      }
+      ''',
+      variables: {'nodeId': nodeId},
+    );
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(LearningResourceDto.fromJson)
+        .toList();
   }
 
   @override
@@ -113,16 +181,27 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     String profileId,
     String nodeId,
   ) async {
-    try {
-      final response = await _dio.get(
-        '/api/learning-resources/recommended',
-        queryParameters: {'profileId': profileId, 'nodeId': nodeId},
-      );
-      final data = _asList(response.data);
-      return data.map(LearningResourceDto.fromJson).toList();
-    } on DioException {
-      return mockRecommendedResources(nodeId);
-    }
+    final data = await _graphQL.queryField<List<dynamic>>(
+      'recommendedResources',
+      r'''
+      query GetRecommendedResources($profileId: UUID!, $nodeId: UUID!) {
+        recommendedResources(profileId: $profileId, nodeId: $nodeId) {
+          id
+          nodeId
+          name
+          resourceUrl
+          resourceType
+          provider
+          isFree
+        }
+      }
+      ''',
+      variables: {'profileId': profileId, 'nodeId': nodeId},
+    );
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(LearningResourceDto.fromJson)
+        .toList();
   }
 
   @override
@@ -130,42 +209,60 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     String profileId,
     String careerRoadmapId,
   ) async {
-    try {
-      final response = await _dio.get(
-        '/api/skill-gap-analysis',
-        queryParameters: {
-          'profileId': profileId,
-          'careerRoadmapId': careerRoadmapId,
-        },
-      );
-      return SkillGapAnalysisDto.fromJson(
-          response.data as Map<String, dynamic>);
-    } on DioException {
-      return mockSkillGapAnalysis;
-    }
+    final data = await _graphQL.queryField<Map<String, dynamic>?>(
+      'skillGapAnalysis',
+      r'''
+      query GetSkillGapAnalysis($profileId: UUID!) {
+        skillGapAnalysis(profileId: $profileId) {
+          coveragePercentage
+          matchedSkills {
+            id
+            name
+            category
+          }
+          missingSkills {
+            id
+            name
+            category
+          }
+          categoryBreakdown {
+            category
+            yourLevel
+            requiredLevel
+          }
+        }
+      }
+      ''',
+      variables: {'profileId': profileId},
+    );
+    return SkillGapAnalysisDto.fromJson(data ?? const {});
   }
 
   @override
   Future<List<String>> getTrendingSkillRecommendations(String profileId) async {
-    try {
-      final response = await _dio.get(
-        '/api/skill-gap-analysis/trending',
-        queryParameters: {'profileId': profileId},
-      );
-      final data = _asList(response.data);
-      return data
-          .map((item) => (item['skillName'] ?? item['name'] ?? item).toString())
-          .toList();
-    } on DioException {
-      return mockTrendingSkillRecommendations;
-    }
+    final data = await _graphQL.queryField<List<dynamic>>(
+      'trendingSkillRecommendations',
+      r'''
+      query GetTrendingSkillRecommendations($profileId: UUID!) {
+        trendingSkillRecommendations(profileId: $profileId)
+      }
+      ''',
+      variables: {'profileId': profileId},
+    );
+    return data.map((item) => item.toString()).toList();
   }
 
-  List<Map<String, dynamic>> _asList(Object? data) {
-    final value = data is Map<String, dynamic> && data['data'] is List
-        ? data['data']
-        : data;
-    if (value is! List) return const [];
-    return value.whereType<Map<String, dynamic>>().toList();
+  PersonalRoadmapDto _personalRoadmapFromGraphQL(Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    if (normalized['careerRoadmap'] == null &&
+        (normalized['careerRoadmapName'] != null ||
+            normalized['careerRoadmapDescription'] != null)) {
+      normalized['careerRoadmap'] = {
+        'id': normalized['careerRoadmapId'],
+        'name': normalized['careerRoadmapName'],
+        'description': normalized['careerRoadmapDescription'],
+      };
+    }
+    return PersonalRoadmapDto.fromJson(normalized);
   }
 }

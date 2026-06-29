@@ -24,9 +24,10 @@ class GitHubRepositoryDto {
         githubRepoId:
             (json['githubRepoId'] ?? json['id'] ?? json['repoId'] ?? '')
                 .toString(),
-        profileId: (json['profileId'] ?? '').toString(),
-        repositoryName: (json['repositoryName'] ?? json['name'] ?? json['repoName'] ?? '')
-            .toString(),
+        profileId: (json['profileId'] ?? json['userId'] ?? '').toString(),
+        repositoryName:
+            (json['repositoryName'] ?? json['name'] ?? json['repoName'] ?? '')
+                .toString(),
         repoUrl: (json['repoUrl'] ?? json['url'] ?? json['repositoryUrl'] ?? '')
             .toString(),
         description: json['description'] as String?,
@@ -49,12 +50,12 @@ class RepoAnalysisDto {
 
   factory RepoAnalysisDto.fromJson(Map<String, dynamic> json) =>
       RepoAnalysisDto(
-        repositoryName: (json['repositoryName'] ?? json['name'] ?? '').toString(),
+        repositoryName:
+            (json['repositoryName'] ?? json['name'] ?? '').toString(),
         objective: (json['objective'] ?? json['description'] ?? '').toString(),
-        techStacks: (json['techStacks'] as List?)
-                ?.map((t) => t.toString())
-                .toList() ??
-            const [],
+        techStacks:
+            (json['techStacks'] as List?)?.map((t) => t.toString()).toList() ??
+                const [],
       );
 }
 
@@ -73,12 +74,11 @@ class PortfolioAnalysisDto {
 
   factory PortfolioAnalysisDto.fromJson(Map<String, dynamic> json) =>
       PortfolioAnalysisDto(
-        summary: json['summary'] as String? ??
-            json['overallSummary'] as String?,
-        strengths: (json['strengths'] as List?)
-                ?.map((s) => s.toString())
-                .toList() ??
-            const [],
+        summary:
+            json['summary'] as String? ?? json['overallSummary'] as String?,
+        strengths:
+            (json['strengths'] as List?)?.map((s) => s.toString()).toList() ??
+                const [],
         recommendations: (json['recommendations'] as List?)
                 ?.map((r) => r.toString())
                 .toList() ??
@@ -161,7 +161,8 @@ class ProfileWithSkillsDto {
   factory ProfileWithSkillsDto.fromJson(Map<String, dynamic> json) {
     final skillsList = json['skills'] ?? json['profileSkills'];
     return ProfileWithSkillsDto(
-      profileId: (json['profileId'] ?? json['id'] ?? '').toString(),
+      profileId:
+          (json['profileId'] ?? json['id'] ?? json['userId'] ?? '').toString(),
       userId: (json['userId'] ?? '').toString(),
       bioDescription: json['bioDescription'] as String?,
       phoneNumber: json['phoneNumber'] as String?,

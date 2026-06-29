@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import '../data/google_sign_in_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
@@ -56,22 +56,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submitGoogle() async {
     setState(() => _loading = true);
     try {
-      final account = await GoogleSignIn(scopes: ['email', 'profile']).signIn();
-      if (account == null) return;
-
-      final auth = await account.authentication;
-      final idToken = auth.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        throw const AuthException('Google sign-in did not return an ID token');
-      }
+      final idToken = await GoogleSignInService.getIdToken();
+      if (idToken == null) return;
 
       final user = await ref.read(authProvider.notifier).googleLogin(idToken);
       if (!mounted) return;
       context.go(user.hasProfile ? '/dashboard' : '/profile-setup');
     } on AppException catch (e) {
       if (mounted) AppSnackbar.showError(context, e.message);
-    } catch (_) {
-      if (mounted) AppSnackbar.showError(context, 'Google sign-in failed');
+    } catch (e) {
+      debugPrint('Google sign-in failed: $e');
+      if (mounted) {
+        AppSnackbar.showError(context, 'Google sign-in failed');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

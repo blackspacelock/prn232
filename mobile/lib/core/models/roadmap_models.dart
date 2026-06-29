@@ -201,20 +201,26 @@ class SkillGapAnalysisDto {
       SkillGapAnalysisDto(
         coveragePercentage:
             (json['coveragePercentage'] as num?)?.toDouble() ?? 0,
-        matchedSkills: (json['matchedSkills'] as List?)
-                ?.map((skill) => skill.toString())
-                .toList() ??
-            const [],
-        missingSkills: (json['missingSkills'] as List?)
-                ?.map((skill) => skill.toString())
-                .toList() ??
-            const [],
+        matchedSkills:
+            (json['matchedSkills'] as List?)?.map(_skillName).toList() ??
+                const [],
+        missingSkills:
+            (json['missingSkills'] as List?)?.map(_skillName).toList() ??
+                const [],
         categoryBreakdown: (json['categoryBreakdown'] as List?)
                 ?.whereType<Map<String, dynamic>>()
                 .map(CategoryBreakdownDto.fromJson)
                 .toList() ??
             const [],
       );
+
+  static String _skillName(Object? skill) {
+    if (skill is Map) {
+      return (skill['name'] ?? skill['skillName'] ?? skill['id'] ?? '')
+          .toString();
+    }
+    return skill.toString();
+  }
 }
 
 class CategoryBreakdownDto {
@@ -233,11 +239,14 @@ class CategoryBreakdownDto {
         category: (json['category'] ?? json['name'] ?? 'General').toString(),
         currentScore: (json['currentScore'] ??
                     json['current'] ??
-                    json['yourScore'] as num?)
+                    json['yourScore'] ??
+                    json['yourLevel'] as num?)
                 ?.toDouble() ??
             0,
-        requiredScore:
-            (json['requiredScore'] ?? json['required'] as num?)?.toDouble() ??
-                1,
+        requiredScore: (json['requiredScore'] ??
+                    json['required'] ??
+                    json['requiredLevel'] as num?)
+                ?.toDouble() ??
+            1,
       );
 }
