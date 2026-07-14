@@ -386,20 +386,27 @@ class LearningResourceDto {
 class SkillGapAnalysisDto {
   const SkillGapAnalysisDto({
     required this.coveragePercentage,
+    required this.requiredSkills,
     required this.matchedSkills,
     required this.missingSkills,
     required this.categoryBreakdown,
+    this.summary,
   });
 
   final double coveragePercentage;
+  final List<String> requiredSkills;
   final List<String> matchedSkills;
   final List<String> missingSkills;
   final List<CategoryBreakdownDto> categoryBreakdown;
+  final String? summary;
 
   factory SkillGapAnalysisDto.fromJson(Map<String, dynamic> json) =>
       SkillGapAnalysisDto(
         coveragePercentage:
             (json['coveragePercentage'] as num?)?.toDouble() ?? 0,
+        requiredSkills:
+            (json['requiredSkills'] as List?)?.map(_skillName).toList() ??
+                const [],
         matchedSkills:
             (json['matchedSkills'] as List?)?.map(_skillName).toList() ??
                 const [],
@@ -411,6 +418,7 @@ class SkillGapAnalysisDto {
                 .map(CategoryBreakdownDto.fromJson)
                 .toList() ??
             const [],
+        summary: json['summary'] as String?,
       );
 
   static String _skillName(Object? skill) {

@@ -13,7 +13,6 @@ import '../../features/roadmap/screens/roadmap_catalog_screen.dart';
 import '../../features/roadmap/screens/roadmaps_manage_screen.dart';
 import '../../features/roadmap/screens/roadmap_viewer_screen.dart';
 import '../../features/roadmap/screens/learning_resources_screen.dart';
-import '../../features/skill_gap/screens/skill_gap_selection_screen.dart';
 import '../../features/skill_gap/screens/skill_input_screen.dart';
 import '../../features/skill_gap/screens/skill_gap_analysis_screen.dart';
 import '../../features/ai_mentor/screens/chat_screen.dart';
@@ -145,7 +144,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/skill-gap/select',
-            builder: (_, __) => const SkillGapSelectionScreen(),
+            builder: (_, __) => const SkillGapAnalysisScreen(
+              careerRoadmapId: '',
+            ),
           ),
           GoRoute(
             path: '/skill-gap/input',
