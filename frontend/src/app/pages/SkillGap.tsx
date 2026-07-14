@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
@@ -5,8 +6,8 @@ import { EmptyState } from '../components/EmptyState';
 import { Download, SlidersHorizontal } from 'lucide-react';
 import { ActionButton } from '../components/ActionButton';
 import { SkillChip, getSkillCategoryColorIndex } from '../components/SkillChip';
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, ResponsiveContainer } from 'recharts';
-import { useQuery } from '@apollo/client/react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useLazyQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
 import {
   GET_SKILL_GAP_ANALYSIS,
@@ -18,19 +19,25 @@ export function SkillGapPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const profileId = user?.profileId ?? '';
+  const [analysed, setAnalysed] = useState(false);
 
-  const { data: skillGapData, loading: skillGapLoading, error: skillGapError, refetch } = useQuery(GET_SKILL_GAP_ANALYSIS, {
-    variables: { profileId },
-    skip: !profileId,
-  });
-
-  const { data: trendingData, loading: trendingLoading } = useQuery(GET_TRENDING_SKILL_RECOMMENDATIONS, {
-    variables: { profileId },
-    skip: !profileId,
-  });
+  const [fetchSkillGap, { data: skillGapData, loading: skillGapLoading, error: skillGapError }] = useLazyQuery(GET_SKILL_GAP_ANALYSIS);
+  const [fetchTrending, { data: trendingData, loading: trendingLoading }] = useLazyQuery(GET_TRENDING_SKILL_RECOMMENDATIONS);
 
   const skillGap: SkillGapAnalysisDto | null = (skillGapData as { skillGapAnalysis?: SkillGapAnalysisDto })?.skillGapAnalysis ?? null;
   const trendingSkills: string[] = (trendingData as { trendingSkillRecommendations?: string[] })?.trendingSkillRecommendations ?? [];
+
+  const handleAnalyse = () => {
+    setAnalysed(true);
+    fetchSkillGap({ variables: { profileId } });
+    fetchTrending({ variables: { profileId } });
+  };
+
+  const chartData = skillGap?.categoryBreakdown.map((c) => ({
+    category: c.category,
+    'Your Level': c.yourLevel,
+    'Required': c.requiredLevel,
+  })) ?? [];
 
   return (
     <AppShell breadcrumb="Skill Gap Analysis">
@@ -38,16 +45,36 @@ export function SkillGapPage() {
         <PageHeader
           title="Skill Gap Analysis"
           description="See exactly where you stand against your target role."
-          actions={<ActionButton icon={Download} label="Export PDF" variant="neutral" size="md" onClick={() => window.print()} />}
+          actions={
+            <div className="flex items-center gap-2">
+              <ActionButton
+                icon={SlidersHorizontal}
+                label={skillGapLoading ? 'Analysing...' : 'Analyse'}
+                variant="primary"
+                size="md"
+                onClick={handleAnalyse}
+                disabled={!profileId || skillGapLoading}
+              />
+              <ActionButton icon={Download} label="Export PDF" variant="neutral" size="md" onClick={() => window.print()} />
+            </div>
+          }
         />
 
-        {skillGapLoading ? (
+        {!analysed ? (
+          <EmptyState
+            icon={SlidersHorizontal}
+            title="Analyse your skill gap"
+            description="Click the Analyse button to compare your skills against your active roadmap's requirements."
+            actionLabel="Analyse now"
+            onAction={handleAnalyse}
+          />
+        ) : skillGapLoading ? (
           <div className="desktop-grid-2">
             <Skeleton className="h-96 rounded-xl" />
             <Skeleton className="h-96 rounded-xl" />
           </div>
         ) : skillGapError ? (
-          <EmptyState icon={SlidersHorizontal} title="Failed to load analysis" description="Please try again." actionLabel="Retry" onAction={refetch} />
+          <EmptyState icon={SlidersHorizontal} title="Failed to load analysis" description="Please try again." actionLabel="Retry" onAction={handleAnalyse} />
         ) : !skillGap ? (
           <EmptyState
             icon={SlidersHorizontal}
@@ -64,14 +91,15 @@ export function SkillGapPage() {
 
               <div className="h-[320px] flex items-center justify-center mb-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={skillGap.categoryBreakdown}>
-                    <PolarGrid stroke="#E8EAED" />
-                    <PolarAngleAxis dataKey="category" tick={{ fontSize: 12, fill: '#5F6368' }} />
-                    <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                    <Radar name="Your Skills" dataKey="yourLevel" stroke="#1A73E8" fill="rgba(26,115,232,0.2)" strokeWidth={2} />
-                    <Radar name="Required" dataKey="requiredLevel" stroke="#FBBC04" fill="rgba(251,188,4,0.15)" strokeWidth={2} strokeDasharray="5 5" />
-                    <Legend />
-                  </RadarChart>
+                  <BarChart data={chartData} margin={{ top: 5, right: 16, left: 0, bottom: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8EAED" />
+                    <XAxis dataKey="category" tick={{ fontSize: 11, fill: '#5F6368' }} angle={-30} textAnchor="end" interval={0} />
+                    <YAxis tick={{ fontSize: 12, fill: '#5F6368' }} domain={[0, 100]} />
+                    <Tooltip />
+                    <Legend verticalAlign="top" />
+                    <Bar dataKey="Your Level" fill="#1A73E8" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Required" fill="#FBBC04" radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
 
