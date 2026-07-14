@@ -20,12 +20,14 @@ import {
   GET_CAREER_ROADMAP_WITH_NODES,
   GET_PERSONAL_ROADMAP_WITH_PROGRESS,
   GET_NODE_PROGRESS,
+  GET_PERSONAL_ROADMAPS_BY_PROFILE,
   GET_LEARNING_RESOURCES_BY_NODE,
   GET_RECOMMENDED_RESOURCES,
 } from '@/graphql/queries';
 import type {
   CareerRoadmapWithNodesDto,
   NodeProgressDto,
+  PersonalRoadmapDto,
   UpdateNodeProgressStatusDto,
 } from '@/types/api';
 
@@ -132,6 +134,8 @@ export function RoadmapCanvasPage() {
           ? { nodeProgress: current.nodeProgress.map(updateProgressNode) }
           : current,
       );
+
+      // Update the detailed progress query
       apolloClient.cache.updateQuery<{ personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } }>(
         { query: GET_PERSONAL_ROADMAP_WITH_PROGRESS, variables: { personalRoadmapId } },
         (current) => current?.personalRoadmapWithProgress?.nodeProgresses
@@ -143,6 +147,26 @@ export function RoadmapCanvasPage() {
             }
           : current,
       );
+
+      // Sync inProgressCount in the roadmaps list cache so the card badge stays accurate
+      apolloClient.cache.updateQuery<{ personalRoadmapsByProfile?: PersonalRoadmapDto[] }>(
+        { query: GET_PERSONAL_ROADMAPS_BY_PROFILE, variables: { profileId } },
+        (current) => {
+          if (!current?.personalRoadmapsByProfile) return current;
+          return {
+            personalRoadmapsByProfile: current.personalRoadmapsByProfile.map((r) => {
+              if (r.id !== personalRoadmapId) return r;
+              // Re-derive inProgressCount from the updated node progress list
+              const updatedNodes = (apolloClient.cache.readQuery<{ nodeProgress?: ProgressNode[] }>(
+                { query: GET_NODE_PROGRESS, variables: { personalRoadmapId } },
+              ) as { nodeProgress?: ProgressNode[] } | null)?.nodeProgress ?? [];
+              const inProgressCount = updatedNodes.filter((n) => n.status === 1).length;
+              return { ...r, inProgressCount };
+            }),
+          };
+        },
+      );
+
       setSelectedNodeProgress((current) =>
         current && optimisticStatus !== null
           ? {

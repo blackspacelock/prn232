@@ -9,6 +9,7 @@ public class PersonalRoadmapDto
     public string? CareerRoadmapDescription { get; set; }
     public string? Note { get; set; }
     public decimal ProgressPercentage { get; set; }
+    public int InProgressCount { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 }
