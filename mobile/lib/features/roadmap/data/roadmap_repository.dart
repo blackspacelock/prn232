@@ -9,6 +9,20 @@ abstract class RoadmapRepository {
     String profileId,
     String careerRoadmapId,
   );
+  Future<void> deleteRoadmap(String personalRoadmapId);
+  Future<void> toggleActiveRoadmap(String personalRoadmapId);
+  Future<RoadmapTagDto> addTag(
+    String personalRoadmapId,
+    String name, {
+    String? color,
+  });
+  Future<RoadmapTagDto> updateTag(
+    String personalRoadmapId,
+    String tagId, {
+    String? name,
+    String? color,
+  });
+  Future<void> deleteTag(String personalRoadmapId, String tagId);
   Future<void> updateNodeStatus(
     String nodeProgressId,
     int status, {

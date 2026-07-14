@@ -106,26 +106,47 @@ class PersonalRoadmapDto {
     required this.progressPercentage,
     required this.isActive,
     required this.createdAt,
+    this.careerRoadmapName,
+    this.careerRoadmapDescription,
+    this.note,
+    this.inProgressCount = 0,
     this.careerRoadmap,
     this.nodeProgresses = const [],
+    this.tags = const [],
   });
 
   final String personalRoadmapId;
   final String profileId;
   final String careerRoadmapId;
+  final String? careerRoadmapName;
+  final String? careerRoadmapDescription;
+  final String? note;
   final double progressPercentage;
+  final int inProgressCount;
   final bool isActive;
   final String createdAt;
   final CareerRoadmapDto? careerRoadmap;
   final List<NodeProgressDto> nodeProgresses;
+  final List<RoadmapTagDto> tags;
+
+  String get displayName =>
+      careerRoadmapName ?? careerRoadmap?.name ?? 'Personal Roadmap';
+
+  String? get displayDescription =>
+      careerRoadmapDescription ?? careerRoadmap?.description;
 
   factory PersonalRoadmapDto.fromJson(Map<String, dynamic> json) {
     final nodes = json['nodeProgresses'];
+    final tags = json['tags'];
     return PersonalRoadmapDto(
       personalRoadmapId: (json['personalRoadmapId'] ?? json['id']).toString(),
       profileId: (json['profileId'] ?? '').toString(),
       careerRoadmapId: (json['careerRoadmapId'] ?? '').toString(),
+      careerRoadmapName: json['careerRoadmapName'] as String?,
+      careerRoadmapDescription: json['careerRoadmapDescription'] as String?,
+      note: json['note'] as String?,
       progressPercentage: (json['progressPercentage'] as num?)?.toDouble() ?? 0,
+      inProgressCount: json['inProgressCount'] as int? ?? 0,
       isActive: json['isActive'] as bool? ?? false,
       createdAt: (json['createdAt'] ?? '').toString(),
       careerRoadmap: json['careerRoadmap'] is Map<String, dynamic>
@@ -139,8 +160,59 @@ class PersonalRoadmapDto {
               .map(NodeProgressDto.fromJson)
               .toList()
           : const [],
+      tags: tags is List
+          ? tags
+              .whereType<Map<String, dynamic>>()
+              .map(RoadmapTagDto.fromJson)
+              .toList()
+          : const [],
     );
   }
+
+  PersonalRoadmapDto copyWith({
+    bool? isActive,
+    List<RoadmapTagDto>? tags,
+  }) {
+    return PersonalRoadmapDto(
+      personalRoadmapId: personalRoadmapId,
+      profileId: profileId,
+      careerRoadmapId: careerRoadmapId,
+      careerRoadmapName: careerRoadmapName,
+      careerRoadmapDescription: careerRoadmapDescription,
+      note: note,
+      progressPercentage: progressPercentage,
+      inProgressCount: inProgressCount,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt,
+      careerRoadmap: careerRoadmap,
+      nodeProgresses: nodeProgresses,
+      tags: tags ?? this.tags,
+    );
+  }
+}
+
+class RoadmapTagDto {
+  const RoadmapTagDto({
+    required this.roadmapTagId,
+    required this.personalRoadmapId,
+    required this.name,
+    this.color,
+    this.createdAt,
+  });
+
+  final String roadmapTagId;
+  final String personalRoadmapId;
+  final String name;
+  final String? color;
+  final String? createdAt;
+
+  factory RoadmapTagDto.fromJson(Map<String, dynamic> json) => RoadmapTagDto(
+        roadmapTagId: (json['roadmapTagId'] ?? json['id']).toString(),
+        personalRoadmapId: (json['personalRoadmapId'] ?? '').toString(),
+        name: (json['name'] ?? 'Tag').toString(),
+        color: json['color'] as String?,
+        createdAt: json['createdAt']?.toString(),
+      );
 }
 
 class LearningResourceDto {

@@ -9,6 +9,7 @@ import '../../features/auth/screens/profile_setup_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/roadmap/screens/career_role_selection_screen.dart';
 import '../../features/roadmap/screens/role_selection_loading_screen.dart';
+import '../../features/roadmap/screens/roadmaps_manage_screen.dart';
 import '../../features/roadmap/screens/roadmap_viewer_screen.dart';
 import '../../features/roadmap/screens/learning_resources_screen.dart';
 import '../../features/skill_gap/screens/skill_gap_selection_screen.dart';
@@ -59,6 +60,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dashboard',
             builder: (_, __) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/roadmaps',
+            builder: (_, __) => const RoadmapsManageScreen(),
           ),
           GoRoute(
             path: '/career-roles',

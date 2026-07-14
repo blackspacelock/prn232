@@ -82,6 +82,87 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   }
 
   @override
+  Future<void> deleteRoadmap(String personalRoadmapId) async {
+    try {
+      await _dio.delete('${ApiConstants.personalRoadmaps}/$personalRoadmapId');
+    } on DioException {
+      return;
+    }
+  }
+
+  @override
+  Future<void> toggleActiveRoadmap(String personalRoadmapId) async {
+    try {
+      await _dio.put(
+        '${ApiConstants.personalRoadmaps}/$personalRoadmapId/toggle-active',
+      );
+    } on DioException {
+      return;
+    }
+  }
+
+  @override
+  Future<RoadmapTagDto> addTag(
+    String personalRoadmapId,
+    String name, {
+    String? color,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '${ApiConstants.personalRoadmaps}/$personalRoadmapId/tags',
+        data: {'name': name, if (color != null) 'color': color},
+      );
+      return RoadmapTagDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException {
+      return RoadmapTagDto(
+        roadmapTagId: 'tag-${DateTime.now().millisecondsSinceEpoch}',
+        personalRoadmapId: personalRoadmapId,
+        name: name,
+        color: color,
+        createdAt: DateTime.now().toIso8601String(),
+      );
+    }
+  }
+
+  @override
+  Future<RoadmapTagDto> updateTag(
+    String personalRoadmapId,
+    String tagId, {
+    String? name,
+    String? color,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '${ApiConstants.personalRoadmaps}/$personalRoadmapId/tags/$tagId',
+        data: {
+          if (name != null) 'name': name,
+          if (color != null) 'color': color,
+        },
+      );
+      return RoadmapTagDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException {
+      return RoadmapTagDto(
+        roadmapTagId: tagId,
+        personalRoadmapId: personalRoadmapId,
+        name: name ?? 'Tag',
+        color: color,
+        createdAt: DateTime.now().toIso8601String(),
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteTag(String personalRoadmapId, String tagId) async {
+    try {
+      await _dio.delete(
+        '${ApiConstants.personalRoadmaps}/$personalRoadmapId/tags/$tagId',
+      );
+    } on DioException {
+      return;
+    }
+  }
+
+  @override
   Future<void> updateNodeStatus(
     String nodeProgressId,
     int status, {
