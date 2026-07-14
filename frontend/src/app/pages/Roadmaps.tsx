@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -12,7 +12,7 @@ import { Snackbar } from '../components/Snackbar';
 import { ToggleSwitch } from '../components/ToggleSwitch';
 import { AdminListToolbar, AdminPagination, useAdminList, type AdminSortOption } from '../components/admin/AdminListControls';
 import { AdminFilterSelect } from '../components/admin/AdminListControls';
-import { FolderOpen, MoreVertical, Rocket, Trash2 } from 'lucide-react';
+import { FolderOpen, MoreVertical, Rocket, Tag, Trash2, X } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -24,7 +24,7 @@ import {
   GET_CAREER_ROLES,
   GET_CAREER_ROADMAPS_BY_ROLE,
 } from '@/graphql/queries';
-import type { GeneratePersonalRoadmapRequestDto, PersonalRoadmapDto } from '@/types/api';
+import type { AddRoadmapTagDto, GeneratePersonalRoadmapRequestDto, PersonalRoadmapDto, RoadmapTagDto } from '@/types/api';
 
 interface CareerRole { id: string; name: string; description?: string }
 interface CareerRoadmap { id: string; name: string; description?: string }
@@ -54,6 +54,7 @@ export function RoadmapsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [tagModalRoadmap, setTagModalRoadmap] = useState<PersonalRoadmap | null>(null);
 
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<RoadmapSort>('createdAt');
@@ -160,6 +161,47 @@ export function RoadmapsPage() {
     },
   });
 
+  const addTagMutation = useMutation({
+    mutationFn: ({ roadmapId, dto }: { roadmapId: string; dto: AddRoadmapTagDto }) =>
+      apiClient.post<RoadmapTagDto>(`/api/personal-roadmaps/${roadmapId}/tags`, dto).then((r) => r.data),
+    onSuccess: (newTag, { roadmapId }) => {
+      apolloClient.cache.updateQuery<{ personalRoadmapsByProfile?: PersonalRoadmap[] }>(personalRoadmapsQueryOptions, (current) => {
+        if (!current?.personalRoadmapsByProfile) return current;
+        return {
+          personalRoadmapsByProfile: current.personalRoadmapsByProfile.map((rm) =>
+            rm.id === roadmapId ? { ...rm, tags: [...(rm.tags ?? []), newTag] } : rm
+          ),
+        };
+      });
+      // Sync tagModalRoadmap state so the modal updates immediately
+      setTagModalRoadmap((prev) => prev?.id === roadmapId ? { ...prev, tags: [...(prev.tags ?? []), newTag] } : prev);
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: string | { message?: string } } })?.response?.data;
+      showError(typeof msg === 'string' ? msg : (msg?.message ?? 'Failed to add tag.'));
+    },
+  });
+
+  const deleteTagMutation = useMutation({
+    mutationFn: ({ roadmapId, tagId }: { roadmapId: string; tagId: string }) =>
+      deleteWithCascadeMode(`/api/personal-roadmaps/${roadmapId}/tags/${tagId}`),
+    onSuccess: (_data, { roadmapId, tagId }) => {
+      apolloClient.cache.updateQuery<{ personalRoadmapsByProfile?: PersonalRoadmap[] }>(personalRoadmapsQueryOptions, (current) => {
+        if (!current?.personalRoadmapsByProfile) return current;
+        return {
+          personalRoadmapsByProfile: current.personalRoadmapsByProfile.map((rm) =>
+            rm.id === roadmapId ? { ...rm, tags: (rm.tags ?? []).filter((t) => t.id !== tagId) } : rm
+          ),
+        };
+      });
+      setTagModalRoadmap((prev) => prev?.id === roadmapId ? { ...prev, tags: (prev.tags ?? []).filter((t) => t.id !== tagId) } : prev);
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to remove tag.';
+      showError(msg);
+    },
+  });
+
   if (roadmapsLoading) {
     return (
       <AppShell breadcrumb="Roadmaps">
@@ -222,6 +264,7 @@ export function RoadmapsPage() {
                   onDelete={() => setDeleteId(roadmap.id)}
                   onActivate={() => activateMutation.mutate(roadmap.id)}
                   activating={activateMutation.isPending && activateMutation.variables === roadmap.id}
+                  onManageTags={() => setTagModalRoadmap(roadmap)}
                 />
               ))}
             </div>
@@ -273,15 +316,36 @@ export function RoadmapsPage() {
           onCancel={() => setDeleteId(null)}
         />
 
+        {tagModalRoadmap && (
+          <TagManagerModal
+            roadmap={tagModalRoadmap}
+            onClose={() => setTagModalRoadmap(null)}
+            onAddTag={(dto) => addTagMutation.mutate({ roadmapId: tagModalRoadmap.id, dto })}
+            onDeleteTag={(tagId) => deleteTagMutation.mutate({ roadmapId: tagModalRoadmap.id, tagId })}
+            adding={addTagMutation.isPending}
+          />
+        )}
+
         <Snackbar isOpen={snackbar.open} message={snackbar.message} variant="error" onClose={() => setSnackbar({ open: false, message: '' })} />
       </div>
     </AppShell>
   );
 }
 
-function RoadmapCard({ roadmap, onDelete, onActivate, activating }: { roadmap: PersonalRoadmap; onDelete: () => void; onActivate: () => void; activating: boolean }) {
+function RoadmapCard({ roadmap, onDelete, onActivate, activating, onManageTags }: { roadmap: PersonalRoadmap; onDelete: () => void; onActivate: () => void; activating: boolean; onManageTags: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const progress = Math.round(roadmap.progressPercentage);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
   const hasInProgress = roadmap.inProgressCount > 0;
   const getProgressColor = () => {
     if (progress >= 70) return 'var(--md3-success)';
@@ -306,11 +370,32 @@ function RoadmapCard({ roadmap, onDelete, onActivate, activating }: { roadmap: P
           <MoreVertical className="h-5 w-5" />
         </button>
         {menuOpen && (
-          <div className="absolute right-4 top-14 z-10 min-w-36 rounded-xl border border-[var(--md3-outline-variant)] bg-white p-1 shadow-lg">
+          <div ref={menuRef} className="absolute right-4 top-14 z-10 min-w-40 rounded-xl border border-[var(--md3-outline-variant)] bg-white p-1 shadow-lg">
+            <ActionButton icon={Tag} label="Manage Tags" variant="text" onClick={() => { setMenuOpen(false); onManageTags(); }} className="w-full justify-start rounded-lg" />
             <ActionButton icon={Trash2} label="Delete" variant="danger" onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full justify-start rounded-lg" />
           </div>
         )}
       </div>
+
+      {/* Tags */}
+      {roadmap.tags && roadmap.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {roadmap.tags.map((tag) => (
+            <span
+              key={tag.id}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: tag.color ? `${tag.color}22` : 'var(--md3-surface-variant)',
+                color: tag.color ?? 'var(--md3-on-surface-variant)',
+                border: `1px solid ${tag.color ? `${tag.color}55` : 'var(--md3-outline-variant)'}`,
+              }}
+            >
+              <Tag className="h-3 w-3" />
+              {tag.name}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-[var(--md3-on-surface-variant)]">Progress</span>
@@ -467,6 +552,136 @@ function GenerateRoadmapModalWired({ isOpen, onClose, careerRoles, rolesLoading,
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Tag Manager Modal ──────────────────────────────────────────────────────
+
+interface TagManagerModalProps {
+  roadmap: PersonalRoadmap;
+  onClose: () => void;
+  onAddTag: (dto: AddRoadmapTagDto) => void;
+  onDeleteTag: (tagId: string) => void;
+  adding: boolean;
+}
+
+const TAG_COLORS = [
+  '#6366f1', // indigo
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#f43f5e', // rose
+  '#f97316', // orange
+  '#eab308', // yellow
+  '#22c55e', // green
+  '#14b8a6', // teal
+  '#3b82f6', // blue
+  '#64748b', // slate
+];
+
+function TagManagerModal({ roadmap, onClose, onAddTag, onDeleteTag, adding }: TagManagerModalProps) {
+  const [name, setName] = useState('');
+  const [color, setColor] = useState(TAG_COLORS[0]);
+
+  const handleAdd = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    onAddTag({ name: trimmed, color });
+    setName('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleAdd();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-[var(--md3-on-surface)]">Manage Tags</h2>
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--md3-on-surface-variant)] hover:bg-[var(--md3-surface-variant)]"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <p className="text-sm text-[var(--md3-on-surface-variant)] mb-4">
+          Tags for <span className="font-medium text-[var(--md3-on-surface)]">{roadmap.careerRoadmapName}</span>
+        </p>
+
+        {/* Existing tags */}
+        {roadmap.tags && roadmap.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mb-5 p-3 rounded-xl bg-[var(--md3-surface-variant)]">
+            {roadmap.tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium"
+                style={{
+                  backgroundColor: tag.color ? `${tag.color}22` : '#f1f5f9',
+                  color: tag.color ?? 'var(--md3-on-surface-variant)',
+                  border: `1px solid ${tag.color ? `${tag.color}55` : '#cbd5e1'}`,
+                }}
+              >
+                <Tag className="h-3 w-3" />
+                {tag.name}
+                <button
+                  onClick={() => onDeleteTag(tag.id)}
+                  className="ml-0.5 rounded-full hover:opacity-70"
+                  aria-label={`Remove tag ${tag.name}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--md3-on-surface-variant)] italic mb-5">No tags yet.</p>
+        )}
+
+        {/* Add new tag */}
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-[var(--md3-on-surface)]">Add a tag</p>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Tag name..."
+            maxLength={100}
+            className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)] focus:ring-2 focus:ring-[var(--md3-primary)]/20"
+          />
+          <div>
+            <p className="text-xs text-[var(--md3-on-surface-variant)] mb-2">Color</p>
+            <div className="flex flex-wrap gap-2">
+              {TAG_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{
+                    backgroundColor: c,
+                    borderColor: color === c ? 'var(--md3-on-surface)' : 'transparent',
+                  }}
+                  aria-label={`Select color ${c}`}
+                />
+              ))}
+            </div>
+          </div>
+          <ActionButton
+            icon={Tag}
+            label={adding ? 'Adding...' : 'Add Tag'}
+            variant="primary"
+            size="md"
+            onClick={handleAdd}
+            disabled={!name.trim() || adding}
+            className="w-full justify-center"
+          />
+        </div>
       </div>
     </div>
   );

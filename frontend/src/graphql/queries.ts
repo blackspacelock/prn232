@@ -177,6 +177,13 @@ export const GET_PERSONAL_ROADMAPS_BY_PROFILE = gql`
       inProgressCount
       isActive
       createdAt
+      tags {
+        id
+        personalRoadmapId
+        name
+        color
+        createdAt
+      }
     }
   }
 `;
@@ -193,6 +200,13 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
       progressPercentage
       isActive
       createdAt
+      tags {
+        id
+        personalRoadmapId
+        name
+        color
+        createdAt
+      }
       nodeProgresses {
         id
         personalRoadmapId

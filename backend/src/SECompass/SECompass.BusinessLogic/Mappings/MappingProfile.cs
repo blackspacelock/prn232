@@ -14,6 +14,7 @@ using SECompass.BusinessLogic.DTOs.Profile;
 using SECompass.BusinessLogic.DTOs.PublicPortfolio;
 using SECompass.BusinessLogic.DTOs.RoadmapNode;
 using SECompass.BusinessLogic.DTOs.RoadmapNodeEdge;
+using SECompass.BusinessLogic.DTOs.RoadmapTag;
 using SECompass.BusinessLogic.DTOs.Skill;
 using SECompass.BusinessLogic.DTOs.User;
 using SECompass.DataAccess.Entities;
@@ -85,11 +86,16 @@ public class MappingProfile : AutoMapper.Profile
         // PersonalRoadmap
         CreateMap<PersonalRoadmap, PersonalRoadmapDto>()
             .ForMember(d => d.CareerRoadmapName, o => o.MapFrom(s => s.CareerRoadmap.Name))
-            .ForMember(d => d.CareerRoadmapDescription, o => o.MapFrom(s => s.CareerRoadmap.Description));
+            .ForMember(d => d.CareerRoadmapDescription, o => o.MapFrom(s => s.CareerRoadmap.Description))
+            .ForMember(d => d.Tags, o => o.MapFrom(s => s.Tags));
         CreateMap<PersonalRoadmap, PersonalRoadmapDetailDto>()
             .ForMember(d => d.CareerRoadmapName, o => o.MapFrom(s => s.CareerRoadmap.Name))
             .ForMember(d => d.CareerRoadmapDescription, o => o.MapFrom(s => s.CareerRoadmap.Description))
-            .ForMember(d => d.NodeProgresses, o => o.MapFrom(s => s.NodeProgresses));
+            .ForMember(d => d.NodeProgresses, o => o.MapFrom(s => s.NodeProgresses))
+            .ForMember(d => d.Tags, o => o.MapFrom(s => s.Tags));
+
+        // RoadmapTag
+        CreateMap<RoadmapTag, RoadmapTagDto>();
 
         // NodeProgress
         CreateMap<NodeProgress, NodeProgressDto>()
