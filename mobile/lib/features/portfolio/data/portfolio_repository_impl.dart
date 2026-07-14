@@ -94,6 +94,39 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
   }
 
   @override
+  Future<PublicPortfolioDto?> getPublicPortfolio(String profileId) async {
+    final data = await _query(
+      _publicPortfolioByProfileQuery,
+      variables: {'profileId': profileId},
+    );
+    final portfolio = data['publicPortfolioByProfile'];
+    if (portfolio is Map<String, dynamic>) {
+      return PublicPortfolioDto.fromJson(portfolio);
+    }
+    return null;
+  }
+
+  @override
+  Future<PublicPortfolioDto> updatePublicPortfolio(
+    String profileId,
+    UpdatePublicPortfolioDto dto,
+  ) async {
+    try {
+      final response = await _dio.put(
+        '${ApiConstants.publicPortfolios}/$profileId',
+        data: dto.toJson(),
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return PublicPortfolioDto.fromJson(data);
+      }
+      throw const ServerException('Invalid response from server');
+    } on DioException catch (e) {
+      _throwMapped(e);
+    }
+  }
+
+  @override
   Future<PublicPortfolioViewData> getPublicPortfolioView(String userId) async {
     try {
       final data = await _query(
@@ -212,6 +245,37 @@ query MobilePortfolioAnalysis($profileId: UUID!) {
       objective
       techStacks
       summary
+    }
+  }
+}
+''';
+
+const _publicPortfolioByProfileQuery = r'''
+query MobilePublicPortfolioByProfile($profileId: UUID!) {
+  publicPortfolioByProfile(profileId: $profileId) {
+    id
+    profileId
+    headline
+    publicBio
+    location
+    websiteUrl
+    linkedInUrl
+    contactEmail
+    isPublic
+    lastAnalyzedAt
+    cachedPortfolioAnalysis {
+      profileId
+      repositoryNames
+      overallSummary
+      strengths
+      recommendations
+      repositoryAnalyses {
+        repositoryId
+        repositoryName
+        objective
+        techStacks
+        summary
+      }
     }
   }
 }

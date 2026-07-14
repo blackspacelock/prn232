@@ -141,6 +141,36 @@ class PublicPortfolioDto {
       );
 }
 
+class UpdatePublicPortfolioDto {
+  const UpdatePublicPortfolioDto({
+    this.headline,
+    this.publicBio,
+    this.location,
+    this.websiteUrl,
+    this.linkedInUrl,
+    this.contactEmail,
+    this.isPublic,
+  });
+
+  final String? headline;
+  final String? publicBio;
+  final String? location;
+  final String? websiteUrl;
+  final String? linkedInUrl;
+  final String? contactEmail;
+  final bool? isPublic;
+
+  Map<String, dynamic> toJson() => {
+        'headline': headline,
+        'publicBio': publicBio,
+        'location': location,
+        'websiteUrl': websiteUrl,
+        'linkedInUrl': linkedInUrl,
+        'contactEmail': contactEmail,
+        'isPublic': isPublic,
+      }..removeWhere((_, value) => value == null);
+}
+
 class PublicPortfolioViewData {
   const PublicPortfolioViewData({
     required this.profile,

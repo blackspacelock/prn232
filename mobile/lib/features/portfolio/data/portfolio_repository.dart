@@ -7,5 +7,10 @@ abstract class PortfolioRepository {
   Future<void> deleteRepo(String id);
   Future<PortfolioAnalysisDto?> getAnalysis(String profileId);
   Future<PortfolioAnalysisDto> runAnalysis(String profileId);
+  Future<PublicPortfolioDto?> getPublicPortfolio(String profileId);
+  Future<PublicPortfolioDto> updatePublicPortfolio(
+    String profileId,
+    UpdatePublicPortfolioDto dto,
+  );
   Future<PublicPortfolioViewData> getPublicPortfolioView(String userId);
 }
