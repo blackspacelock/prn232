@@ -42,7 +42,8 @@ class ProfileDto {
   final int? studiedYear;
 
   factory ProfileDto.fromJson(Map<String, dynamic> json) => ProfileDto(
-        profileId: (json['profileId'] ?? json['id'] ?? '').toString(),
+        profileId: (json['profileId'] ?? json['id'] ?? json['userId'] ?? '')
+            .toString(),
         userId: (json['userId'] ?? '').toString(),
         bioDescription: json['bioDescription'] as String?,
         phoneNumber: json['phoneNumber'] as String?,
@@ -57,18 +58,21 @@ class SkillDto {
     required this.skillId,
     required this.profileId,
     required this.skillName,
+    this.category = 'General',
     this.note,
   });
 
   final String skillId;
   final String profileId;
   final String skillName;
+  final String category;
   final String? note;
 
   factory SkillDto.fromJson(Map<String, dynamic> json) => SkillDto(
         skillId: (json['skillId'] ?? json['id'] ?? '').toString(),
         profileId: (json['profileId'] ?? '').toString(),
         skillName: (json['skillName'] ?? json['name'] ?? '').toString(),
+        category: (json['category'] ?? 'General').toString(),
         note: json['note'] as String?,
       );
 }

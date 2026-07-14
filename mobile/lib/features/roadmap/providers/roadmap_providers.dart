@@ -1,7 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/chat_models.dart';
+import '../../../core/models/job_trend_models.dart';
+import '../../../core/models/portfolio_models.dart';
 import '../../../core/models/profile_models.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/storage/token_storage.dart';
+import '../../ai_mentor/providers/mentor_chat_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../job_trends/providers/market_pulse_provider.dart';
+import '../../portfolio/providers/portfolio_provider.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../data/roadmap_repository.dart';
 import '../data/roadmap_repository_impl.dart';
@@ -11,7 +18,18 @@ final roadmapRepositoryProvider = Provider<RoadmapRepository>(
 );
 
 final profileIdProvider = FutureProvider<String>((ref) async {
-  return await TokenStorage.getUserId() ?? 'demo-profile';
+  final user = ref.watch(authProvider).valueOrNull;
+  final authProfileId = user?.profileId;
+  if (authProfileId != null && authProfileId.isNotEmpty) {
+    return authProfileId;
+  }
+
+  final storedProfileId = await TokenStorage.getProfileId();
+  if (storedProfileId != null && storedProfileId.isNotEmpty) {
+    return storedProfileId;
+  }
+
+  return user?.id ?? await TokenStorage.getUserId() ?? '';
 });
 
 final careerRolesProvider = FutureProvider<List<CareerRoleDto>>((ref) {
@@ -27,6 +45,18 @@ final roadmapsBySelectedRoleProvider =
   return ref
       .watch(roadmapRepositoryProvider)
       .getRoadmapsByRole(selected.careerRoleId);
+});
+
+final roadmapsByRoleProvider =
+    FutureProvider.family<List<CareerRoadmapDto>, String>((ref, roleId) {
+  return ref.watch(roadmapRepositoryProvider).getRoadmapsByRole(roleId);
+});
+
+final careerRoadmapTemplateProvider =
+    FutureProvider.family<CareerRoadmapWithNodesDto, String>((ref, roadmapId) {
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getCareerRoadmapWithNodes(roadmapId);
 });
 
 final personalRoadmapsProvider =
@@ -103,6 +133,7 @@ final trendingSkillRecommendationsProvider =
 
 final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
   final roadmaps = await ref.watch(personalRoadmapsProvider.future);
+  final profileId = await ref.watch(profileIdProvider.future);
   PersonalRoadmapDto? activeRoadmap;
   for (final roadmap in roadmaps) {
     if (roadmap.isActive) {
@@ -117,41 +148,97 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
               .reduce((a, b) => a + b) /
           roadmaps.length;
 
+  final skills = profileId.isEmpty
+      ? const <SkillDto>[]
+      : await _orDefault(
+          () => ref.read(profileRepositoryProvider).getSkillsByProfile(
+                profileId,
+              ),
+          const <SkillDto>[],
+        );
+  final repos = profileId.isEmpty
+      ? const <GitHubRepositoryDto>[]
+      : await _orDefault(
+          () => ref.read(portfolioRepositoryProvider).getRepos(profileId),
+          const <GitHubRepositoryDto>[],
+        );
+  final skillGap = activeRoadmap == null || profileId.isEmpty
+      ? null
+      : await _orDefault<SkillGapAnalysisDto?>(
+          () => ref.read(roadmapRepositoryProvider).getSkillGapAnalysis(
+                profileId,
+                activeRoadmap!.careerRoadmapId,
+              ),
+          null,
+        );
+  final topSkills = await _orDefault(
+    () => ref.read(jobTrendsRepositoryProvider).getTopTrending(6),
+    const <JobTrendDto>[],
+  );
+  final sessions = profileId.isEmpty
+      ? const <ChatSessionDto>[]
+      : await _orDefault(
+          () => ref.read(chatRepositoryProvider).getSessions(profileId),
+          const <ChatSessionDto>[],
+        );
+
   return DashboardData(
     roadmaps: roadmaps,
     activeRoadmap: activeRoadmap,
     roadmapCount: roadmaps.length,
     averageProgress: avgProgress,
-    skillsCount: 12,
-    repositoryCount: 3,
-    skillGapCategories: const [
-      SkillGapCategory('Frontend', 0.72, 0.9),
-      SkillGapCategory('Backend', 0.45, 0.78),
-      SkillGapCategory('Database', 0.62, 0.72),
-      SkillGapCategory('DevOps', 0.36, 0.68),
-      SkillGapCategory('Testing', 0.55, 0.75),
-    ],
-    trendingSkills: const [
-      SkillTrend('Flutter', 0.92),
-      SkillTrend('ASP.NET Core', 0.84),
-      SkillTrend('SQL', 0.76),
-      SkillTrend('Docker', 0.64),
-      SkillTrend('Azure', 0.58),
-    ],
-    recentMentorSessions: const [
-      MentorSessionSummary(
-        title: 'Roadmap planning',
-        preview: 'How should I prioritize Flutter and backend practice?',
-        dateLabel: 'Today',
-      ),
-      MentorSessionSummary(
-        title: 'Portfolio review',
-        preview: 'Ideas for making my GitHub repos stronger.',
-        dateLabel: 'Yesterday',
-      ),
-    ],
+    skillsCount: skills.length,
+    repositoryCount: repos.length,
+    skillGapCategories: skillGap?.categoryBreakdown
+            .map(
+              (category) => SkillGapCategory(
+                category.category,
+                category.currentScore,
+                category.requiredScore,
+              ),
+            )
+            .toList() ??
+        const [],
+    trendingSkills: topSkills
+        .map(
+          (skill) => SkillTrend(skill.techSkill, skill.trendScore),
+        )
+        .toList(),
+    recentMentorSessions: sessions
+        .take(2)
+        .map(
+          (session) => MentorSessionSummary(
+            title: session.title,
+            preview: session.messages.isNotEmpty
+                ? session.messages.last.messageContent
+                : 'Continue your AI mentor conversation.',
+            dateLabel: _dateLabel(session.createdAt),
+          ),
+        )
+        .toList(),
   );
 });
+
+Future<T> _orDefault<T>(Future<T> Function() load, T fallback) async {
+  try {
+    return await load();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+String _dateLabel(String value) {
+  final date = DateTime.tryParse(value)?.toLocal();
+  if (date == null) return '';
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final sessionDay = DateTime(date.year, date.month, date.day);
+  final days = today.difference(sessionDay).inDays;
+  if (days == 0) return 'Today';
+  if (days == 1) return 'Yesterday';
+  if (days < 7) return '${days}d ago';
+  return '${date.month}/${date.day}/${date.year}';
+}
 
 class DashboardData {
   const DashboardData({

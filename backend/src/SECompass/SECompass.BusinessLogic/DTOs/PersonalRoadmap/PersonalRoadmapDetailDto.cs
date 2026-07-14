@@ -1,4 +1,5 @@
 using SECompass.BusinessLogic.DTOs.NodeProgress;
+using SECompass.BusinessLogic.DTOs.RoadmapTag;
 
 namespace SECompass.BusinessLogic.DTOs.PersonalRoadmap;
 
@@ -14,4 +15,5 @@ public class PersonalRoadmapDetailDto
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<NodeProgressDto> NodeProgresses { get; set; } = new();
+    public List<RoadmapTagDto> Tags { get; set; } = new();
 }

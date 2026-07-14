@@ -209,7 +209,7 @@ class _RoadmapSummaryCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    roadmap.careerRoadmap?.name ?? 'Personal Roadmap',
+                    roadmap.displayName,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.titleSmall,
@@ -221,8 +221,8 @@ class _RoadmapSummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              roadmap.careerRoadmap?.careerRole?.name ?? 'Software Engineering',
-              maxLines: 1,
+              roadmap.displayDescription ?? 'Personal roadmap',
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.onSurfaceVariant,
@@ -277,68 +277,77 @@ class _SkillGapSnapshot extends StatelessWidget {
               actionLabel: 'Choose Role',
               onAction: () => context.go('/career-roles'),
             )
-          : InkWell(
-              onTap: () => context.go('/skill-gap/select'),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 220,
-                    child: RadarChart(
-                      RadarChartData(
-                        radarShape: RadarShape.polygon,
-                        tickCount: 4,
-                        ticksTextStyle: const TextStyle(
-                          color: Colors.transparent,
-                          fontSize: 0,
+          : categories.isEmpty
+              ? EmptyStateView(
+                  icon: Icons.radar,
+                  title: 'No skill-gap data yet',
+                  subtitle:
+                      'Add skills or refresh your active roadmap analysis.',
+                  actionLabel: 'Analyze',
+                  onAction: () => context.go('/skill-gap/select'),
+                )
+              : InkWell(
+                  onTap: () => context.go('/skill-gap/select'),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 220,
+                        child: RadarChart(
+                          RadarChartData(
+                            radarShape: RadarShape.polygon,
+                            tickCount: 4,
+                            ticksTextStyle: const TextStyle(
+                              color: Colors.transparent,
+                              fontSize: 0,
+                            ),
+                            getTitle: (index, angle) {
+                              final category = categories[index];
+                              return RadarChartTitle(
+                                text: category.name,
+                                angle: angle,
+                              );
+                            },
+                            titleTextStyle: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                            dataSets: [
+                              RadarDataSet(
+                                fillColor:
+                                    AppColors.primary.withValues(alpha: 0.22),
+                                borderColor: AppColors.primary,
+                                entryRadius: 2,
+                                dataEntries: categories
+                                    .map((category) =>
+                                        RadarEntry(value: category.current))
+                                    .toList(),
+                              ),
+                              RadarDataSet(
+                                fillColor:
+                                    AppColors.warning.withValues(alpha: 0.12),
+                                borderColor: AppColors.warning,
+                                entryRadius: 2,
+                                dataEntries: categories
+                                    .map((category) =>
+                                        RadarEntry(value: category.required))
+                                    .toList(),
+                              ),
+                            ],
+                          ),
                         ),
-                        getTitle: (index, angle) {
-                          final category = categories[index];
-                          return RadarChartTitle(
-                            text: category.name,
-                            angle: angle,
-                          );
-                        },
-                        titleTextStyle: AppTextStyles.labelSmall.copyWith(
+                      ),
+                      const SizedBox(height: 12),
+                      const _LegendRow(),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap to inspect missing skills for your active roadmap.',
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.onSurfaceVariant,
                         ),
-                        dataSets: [
-                          RadarDataSet(
-                            fillColor:
-                                AppColors.primary.withValues(alpha: 0.22),
-                            borderColor: AppColors.primary,
-                            entryRadius: 2,
-                            dataEntries: categories
-                                .map((category) =>
-                                    RadarEntry(value: category.current))
-                                .toList(),
-                          ),
-                          RadarDataSet(
-                            fillColor:
-                                AppColors.warning.withValues(alpha: 0.12),
-                            borderColor: AppColors.warning,
-                            entryRadius: 2,
-                            dataEntries: categories
-                                .map((category) =>
-                                    RadarEntry(value: category.required))
-                                .toList(),
-                          ),
-                        ],
+                        textAlign: TextAlign.center,
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  const _LegendRow(),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap to inspect missing skills for your active roadmap.',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 }
@@ -393,74 +402,83 @@ class _TrendingSkills extends StatelessWidget {
       title: 'Trending Skills',
       actionLabel: 'View all',
       onAction: () => context.go('/market-pulse'),
-      child: SizedBox(
-        height: 220,
-        child: BarChart(
-          BarChartData(
-            alignment: BarChartAlignment.spaceAround,
-            maxY: 1,
-            minY: 0,
-            gridData: FlGridData(
-              drawVerticalLine: false,
-              getDrawingHorizontalLine: (_) => const FlLine(
-                color: AppColors.outlineVariant,
-                strokeWidth: 0.6,
-              ),
-            ),
-            borderData: FlBorderData(show: false),
-            titlesData: FlTitlesData(
-              leftTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 48,
-                  getTitlesWidget: (value, meta) {
-                    final index = value.toInt();
-                    if (index < 0 || index >= skills.length) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: SizedBox(
-                        width: 54,
-                        child: Text(
-                          skills[index].name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.labelSmall,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            barGroups: [
-              for (var i = 0; i < skills.length; i++)
-                BarChartGroupData(
-                  x: i,
-                  barRods: [
-                    BarChartRodData(
-                      toY: skills[i].score,
-                      width: 18,
-                      borderRadius: BorderRadius.circular(6),
-                      color: _rankColor(i),
+      child: skills.isEmpty
+          ? EmptyStateView(
+              icon: Icons.trending_up_outlined,
+              title: 'No market data yet',
+              subtitle:
+                  'Trending skills will appear when the backend has job trend snapshots.',
+              actionLabel: 'View Market',
+              onAction: () => context.go('/market-pulse'),
+            )
+          : SizedBox(
+              height: 220,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: 100,
+                  minY: 0,
+                  gridData: FlGridData(
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (_) => const FlLine(
+                      color: AppColors.outlineVariant,
+                      strokeWidth: 0.6,
                     ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  titlesData: FlTitlesData(
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 48,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= skills.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: SizedBox(
+                              width: 54,
+                              child: Text(
+                                skills[index].name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.labelSmall,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  barGroups: [
+                    for (var i = 0; i < skills.length; i++)
+                      BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: skills[i].score.clamp(0, 100),
+                            width: 18,
+                            borderRadius: BorderRadius.circular(6),
+                            color: _rankColor(i),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
-            ],
-          ),
-        ),
-      ),
+              ),
+            ),
     );
   }
 
@@ -484,34 +502,43 @@ class _RecentMentorSessions extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Panel(
       title: 'Recent AI Mentor Sessions',
-      child: Column(
-        children: sessions
-            .take(2)
-            .map(
-              (session) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFFE8F0FE),
-                  child:
-                      Icon(Icons.smart_toy_outlined, color: AppColors.primary),
-                ),
-                title: Text(session.title),
-                subtitle: Text(
-                  session.preview,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: Text(
-                  session.dateLabel,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
-                onTap: () => context.go('/mentor'),
-              ),
+      child: sessions.isEmpty
+          ? EmptyStateView(
+              icon: Icons.smart_toy_outlined,
+              title: 'No mentor sessions yet',
+              subtitle:
+                  'Start a chat when you need help planning your next move.',
+              actionLabel: 'Ask Mentor',
+              onAction: () => context.go('/mentor'),
             )
-            .toList(),
-      ),
+          : Column(
+              children: sessions
+                  .take(2)
+                  .map(
+                    (session) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const CircleAvatar(
+                        backgroundColor: Color(0xFFE8F0FE),
+                        child: Icon(Icons.smart_toy_outlined,
+                            color: AppColors.primary),
+                      ),
+                      title: Text(session.title),
+                      subtitle: Text(
+                        session.preview,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Text(
+                        session.dateLabel,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                      onTap: () => context.go('/mentor'),
+                    ),
+                  )
+                  .toList(),
+            ),
     );
   }
 }

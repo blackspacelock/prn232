@@ -169,6 +169,15 @@ List<LearningResourceDto> mockRecommendedResources(String nodeId) => [
 
 const mockSkillGapAnalysis = SkillGapAnalysisDto(
   coveragePercentage: 68,
+  requiredSkills: [
+    'Flutter',
+    'Dart',
+    'SQL',
+    'ASP.NET Core',
+    'Docker',
+    'Testing',
+    'Azure',
+  ],
   matchedSkills: ['Flutter', 'Dart', 'SQL'],
   missingSkills: ['ASP.NET Core', 'Docker', 'Testing', 'Azure'],
   categoryBreakdown: [

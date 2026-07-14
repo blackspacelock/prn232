@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/api/api_constants.dart';
 import '../../../core/api/dio_client.dart';
 import '../../../core/models/job_trend_models.dart';
 import 'job_trends_repository.dart';
@@ -10,30 +11,24 @@ class JobTrendsRepositoryImpl implements JobTrendsRepository {
 
   @override
   Future<List<JobTrendDto>> getByRegion(String region) async {
-    try {
-      final response = await _dio.get(
-        '/api/job-trends',
-        queryParameters: {if (region.isNotEmpty) 'region': region},
-      );
-      final data = _asList(response.data);
-      return data.map(JobTrendDto.fromJson).toList();
-    } on DioException {
-      return _mockTrends(region.isEmpty ? 'Global' : region);
-    }
+    final data = await _query(
+      _jobTrendsByRegionQuery,
+      variables: {'region': region.isEmpty ? 'Global' : region},
+    );
+    return _asList(data['jobTrendsByRegion'])
+        .map(JobTrendDto.fromJson)
+        .toList();
   }
 
   @override
   Future<List<JobTrendDto>> getTopTrending(int count) async {
-    try {
-      final response = await _dio.get(
-        '/api/job-trends/top',
-        queryParameters: {'count': count},
-      );
-      final data = _asList(response.data);
-      return data.map(JobTrendDto.fromJson).toList();
-    } on DioException {
-      return _mockTrends('Global').take(count).toList();
-    }
+    final data = await _query(
+      _topTrendingSkillsQuery,
+      variables: {'count': count},
+    );
+    return _asList(data['topTrendingSkills'])
+        .map(JobTrendDto.fromJson)
+        .toList();
   }
 
   List<Map<String, dynamic>> _asList(Object? data) {
@@ -44,31 +39,53 @@ class JobTrendsRepositoryImpl implements JobTrendsRepository {
     return value.whereType<Map<String, dynamic>>().toList();
   }
 
-  List<JobTrendDto> _mockTrends(String region) {
-    final skills = [
-      ('Flutter', 91.0),
-      ('ASP.NET Core', 84.0),
-      ('SQL', 78.0),
-      ('Docker', 72.0),
-      ('Azure', 67.0),
-      ('React', 63.0),
-      ('Testing', 58.0),
-      ('GraphQL', 44.0),
-    ];
-    return [
-      for (var i = 0; i < skills.length; i++)
-        JobTrendDto(
-          jobTrendId: '${region.toLowerCase()}-$i',
-          techSkill: skills[i].$1,
-          trendScore: (skills[i].$2 - i).clamp(0, 100),
-          snapshotDate: DateTime.now()
-              .subtract(Duration(days: 30 * (i % 6)))
-              .toIso8601String(),
-          region: region,
-          source: i.isEven ? 'LinkedIn' : 'Indeed',
-          description:
-              'Demand signal based on recent entry-level software roles.',
-        ),
-    ];
+  Future<Map<String, dynamic>> _query(
+    String query, {
+    Map<String, dynamic> variables = const {},
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.graphqlEndpoint,
+      data: {'query': query, 'variables': variables},
+    );
+    final payload = response.data;
+    if (payload is! Map<String, dynamic>) {
+      throw StateError('Invalid GraphQL response');
+    }
+    final errors = payload['errors'];
+    if (errors is List && errors.isNotEmpty) {
+      throw StateError(errors.first.toString());
+    }
+    final data = payload['data'];
+    return data is Map<String, dynamic> ? data : const {};
   }
 }
+
+const _jobTrendsByRegionQuery = r'''
+query MobileJobTrendsByRegion($region: String!) {
+  jobTrendsByRegion(region: $region) {
+    id
+    techSkill
+    description
+    source
+    region
+    trendScore
+    snapshotDate
+    createdAt
+  }
+}
+''';
+
+const _topTrendingSkillsQuery = r'''
+query MobileTopTrendingSkills($count: Int!) {
+  topTrendingSkills(count: $count) {
+    id
+    techSkill
+    description
+    source
+    region
+    trendScore
+    snapshotDate
+    createdAt
+  }
+}
+''';
