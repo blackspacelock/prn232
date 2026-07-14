@@ -17,6 +17,7 @@ import '../../features/skill_gap/screens/skill_input_screen.dart';
 import '../../features/skill_gap/screens/skill_gap_analysis_screen.dart';
 import '../../features/ai_mentor/screens/chat_screen.dart';
 import '../../features/job_trends/screens/market_pulse_screen.dart';
+import '../../features/portfolio/screens/github_portfolio_screen.dart';
 import '../../features/portfolio/screens/portfolio_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../widgets/app_bottom_nav.dart';
@@ -33,12 +34,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final isAuthenticated = authState.valueOrNull != null;
       final location = state.matchedLocation;
+      final path = state.uri.path;
 
       final publicRoutes = ['/', '/login', '/register'];
-      final isPublic = publicRoutes.contains(location);
+      final isPublicPortfolio = RegExp(r'^/portfolio/[^/]+$').hasMatch(path);
+      final isPublic = publicRoutes.contains(location) || isPublicPortfolio;
 
-      if (!isAuthenticated && !isPublic) return '/login';
-      if (isAuthenticated && isPublic) return '/dashboard';
+      if (!isAuthenticated && !isPublic) {
+        return '/login';
+      }
+      if (isAuthenticated && publicRoutes.contains(location)) {
+        return '/dashboard';
+      }
       return null;
     },
     routes: [
@@ -46,6 +53,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (_, __) => const LandingScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/portfolio/:userId',
+        builder: (_, state) => GithubPortfolioScreen(
+          userId: state.pathParameters['userId']!,
+        ),
+      ),
       GoRoute(
         path: '/profile-setup',
         builder: (_, __) => const ProfileSetupScreen(),

@@ -38,7 +38,8 @@ class PortfolioNotifier extends AsyncNotifier<PortfolioState> {
   @override
   Future<PortfolioState> build() async {
     final profileId = await _getProfileId();
-    final repos = await ref.read(portfolioRepositoryProvider).getRepos(profileId);
+    final repos =
+        await ref.read(portfolioRepositoryProvider).getRepos(profileId);
     final analysis =
         await ref.read(portfolioRepositoryProvider).getAnalysis(profileId);
     return PortfolioState(repos: repos, analysis: analysis);
@@ -52,7 +53,8 @@ class PortfolioNotifier extends AsyncNotifier<PortfolioState> {
   }
 
   Future<void> updateRepo(String id, UpdateRepoDto dto) async {
-    final updated = await ref.read(portfolioRepositoryProvider).updateRepo(id, dto);
+    final updated =
+        await ref.read(portfolioRepositoryProvider).updateRepo(id, dto);
     final repos = state.value!.repos
         .map((r) => r.githubRepoId == id ? updated : r)
         .toList();
@@ -61,9 +63,8 @@ class PortfolioNotifier extends AsyncNotifier<PortfolioState> {
 
   Future<void> deleteRepo(String id) async {
     await ref.read(portfolioRepositoryProvider).deleteRepo(id);
-    final repos = state.value!.repos
-        .where((r) => r.githubRepoId != id)
-        .toList();
+    final repos =
+        state.value!.repos.where((r) => r.githubRepoId != id).toList();
     state = AsyncData(state.value!.copyWith(repos: repos));
   }
 
@@ -98,3 +99,8 @@ final portfolioProvider =
     AsyncNotifierProvider<PortfolioNotifier, PortfolioState>(
   PortfolioNotifier.new,
 );
+
+final publicPortfolioProvider =
+    FutureProvider.family<PublicPortfolioViewData, String>((ref, userId) {
+  return ref.read(portfolioRepositoryProvider).getPublicPortfolioView(userId);
+});

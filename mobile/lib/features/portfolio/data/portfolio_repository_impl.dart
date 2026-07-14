@@ -99,13 +99,72 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
     }
   }
 
+  @override
+  Future<PublicPortfolioViewData> getPublicPortfolioView(String userId) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.graphqlEndpoint,
+        data: {
+          'query': _publicPortfolioQuery,
+          'variables': {'userId': userId},
+        },
+      );
+      final payload = response.data;
+      if (payload is! Map<String, dynamic>) {
+        throw const ServerException('Invalid response from server');
+      }
+      final errors = payload['errors'];
+      if (errors is List && errors.isNotEmpty) {
+        throw ServerException(errors.first.toString());
+      }
+
+      final data = payload['data'];
+      if (data is! Map<String, dynamic>) {
+        throw const ServerException('Portfolio not found');
+      }
+
+      final profileJson = data['profileWithSkills'];
+      if (profileJson is! Map<String, dynamic>) {
+        throw const ValidationException('Portfolio not found');
+      }
+
+      final profile = ProfileWithSkillsDto.fromJson(profileJson);
+      final profileId =
+          profile.profileId.isNotEmpty ? profile.profileId : userId;
+
+      final repos = (data['gitHubRepositoriesByProfile'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(GitHubRepositoryDto.fromJson)
+              .toList() ??
+          const <GitHubRepositoryDto>[];
+
+      final publicPortfolioJson = data['publicPortfolioByProfile'];
+      final publicPortfolio = publicPortfolioJson is Map<String, dynamic>
+          ? PublicPortfolioDto.fromJson(publicPortfolioJson)
+          : null;
+
+      if (profileId.isEmpty) {
+        throw const ValidationException('Portfolio not found');
+      }
+
+      return PublicPortfolioViewData(
+        profile: profile,
+        repositories: repos,
+        publicPortfolio: publicPortfolio,
+      );
+    } on DioException catch (e) {
+      _throwMapped(e);
+    }
+  }
+
   Never _throwMapped(DioException e) {
     final status = e.response?.statusCode;
     final data = e.response?.data;
     String message = e.message ?? 'Request failed';
     if (data is String && data.isNotEmpty) message = data;
     if (data is Map) {
-      message = (data['message'] ?? data['error'] ?? data.toString()).toString();
+      message =
+          (data['message'] ?? data['error'] ?? data.toString()).toString();
     }
     if (status == 401) throw AuthException(message);
     if (status != null && status >= 400 && status < 500) {
@@ -126,3 +185,62 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
     return value.whereType<Map<String, dynamic>>().toList();
   }
 }
+
+const _publicPortfolioQuery = r'''
+query MobilePublicPortfolio($userId: UUID!) {
+  profileWithSkills(userId: $userId) {
+    userId
+    fullName
+    avatarUrl
+    bioDescription
+    phoneNumber
+    university
+    major
+    studiedYear
+    skills {
+      id
+      profileId
+      technicalSkillId
+      skillName
+      category
+      note
+      createdAt
+    }
+  }
+  gitHubRepositoriesByProfile(profileId: $userId) {
+    id
+    profileId
+    repositoryName
+    repoUrl
+    description
+    isPrivate
+    createdAt
+  }
+  publicPortfolioByProfile(profileId: $userId) {
+    id
+    profileId
+    headline
+    publicBio
+    location
+    websiteUrl
+    linkedInUrl
+    contactEmail
+    isPublic
+    lastAnalyzedAt
+    cachedPortfolioAnalysis {
+      profileId
+      repositoryNames
+      overallSummary
+      strengths
+      recommendations
+      repositoryAnalyses {
+        repositoryId
+        repositoryName
+        objective
+        techStacks
+        summary
+      }
+    }
+  }
+}
+''';
