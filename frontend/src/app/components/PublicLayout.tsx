@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
-import { ArrowRight, Compass, LogIn } from 'lucide-react';
+import { ArrowRight, Compass, LayoutDashboard, LogIn } from 'lucide-react';
 import { ActionLink } from './ActionButton';
+import { useAuthStore } from '@/store/authStore';
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ export function PublicLayout({
   className = '',
 }: PublicLayoutProps) {
   const location = useLocation();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   return (
     <div className="min-h-screen bg-white">
@@ -53,8 +55,14 @@ export function PublicLayout({
           </div>
 
           <div className="flex items-center gap-3">
-            <ActionLink icon={LogIn} label="Sign in" to="/login" variant="text" size="md" />
-            <ActionLink icon={ArrowRight} label="Get started free" to="/register" variant="primary" size="md" />
+            {isAuthenticated ? (
+              <ActionLink icon={LayoutDashboard} label="Go to Dashboard" to="/dashboard" variant="primary" size="md" />
+            ) : (
+              <>
+                <ActionLink icon={LogIn} label="Sign in" to="/login" variant="text" size="md" />
+                <ActionLink icon={ArrowRight} label="Get started free" to="/register" variant="primary" size="md" />
+              </>
+            )}
           </div>
         </div>
       </nav>
