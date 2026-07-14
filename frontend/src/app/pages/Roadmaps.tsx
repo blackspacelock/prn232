@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -334,7 +334,18 @@ export function RoadmapsPage() {
 
 function RoadmapCard({ roadmap, onDelete, onActivate, activating, onManageTags }: { roadmap: PersonalRoadmap; onDelete: () => void; onActivate: () => void; activating: boolean; onManageTags: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const progress = Math.round(roadmap.progressPercentage);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
   const hasInProgress = roadmap.inProgressCount > 0;
   const getProgressColor = () => {
     if (progress >= 70) return 'var(--md3-success)';
@@ -359,7 +370,7 @@ function RoadmapCard({ roadmap, onDelete, onActivate, activating, onManageTags }
           <MoreVertical className="h-5 w-5" />
         </button>
         {menuOpen && (
-          <div className="absolute right-4 top-14 z-10 min-w-40 rounded-xl border border-[var(--md3-outline-variant)] bg-white p-1 shadow-lg">
+          <div ref={menuRef} className="absolute right-4 top-14 z-10 min-w-40 rounded-xl border border-[var(--md3-outline-variant)] bg-white p-1 shadow-lg">
             <ActionButton icon={Tag} label="Manage Tags" variant="text" onClick={() => { setMenuOpen(false); onManageTags(); }} className="w-full justify-start rounded-lg" />
             <ActionButton icon={Trash2} label="Delete" variant="danger" onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full justify-start rounded-lg" />
           </div>
