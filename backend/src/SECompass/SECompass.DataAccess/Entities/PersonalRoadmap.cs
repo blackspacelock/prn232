@@ -11,4 +11,5 @@ public class PersonalRoadmap : BaseAuditableEntity
     public Profile Profile { get; set; } = null!;
     public CareerRoadmap CareerRoadmap { get; set; } = null!;
     public ICollection<NodeProgress> NodeProgresses { get; set; } = new List<NodeProgress>();
+    public ICollection<RoadmapTag> Tags { get; set; } = new List<RoadmapTag>();
 }

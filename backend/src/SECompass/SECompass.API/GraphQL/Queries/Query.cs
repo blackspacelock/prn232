@@ -11,6 +11,7 @@ using SECompass.BusinessLogic.DTOs.NodeProgress;
 using SECompass.BusinessLogic.DTOs.PersonalRoadmap;
 using SECompass.BusinessLogic.DTOs.Profile;
 using SECompass.BusinessLogic.DTOs.PublicPortfolio;
+using SECompass.BusinessLogic.DTOs.RoadmapTag;
 using SECompass.BusinessLogic.DTOs.Skill;
 using SECompass.BusinessLogic.DTOs.User;
 using SECompass.BusinessLogic.Interfaces;
@@ -94,6 +95,13 @@ public class Query
     {
         var result = await service.GetWithProgressAsync(personalRoadmapId);
         return result.Success ? result.Data : null;
+    }
+
+    // Roadmap Tags
+    public async Task<List<RoadmapTagDto>> GetTagsByRoadmap([Service] IRoadmapTagService tagService, Guid personalRoadmapId)
+    {
+        var result = await tagService.GetByRoadmapAsync(personalRoadmapId);
+        return result.Success ? result.Data! : new();
     }
 
     // Nodes

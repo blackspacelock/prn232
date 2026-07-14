@@ -309,6 +309,7 @@ export interface PersonalRoadmapDto {
   inProgressCount: number;
   isActive: boolean;
   createdAt: string;
+  tags: RoadmapTagDto[];
 }
 
 export interface PersonalRoadmapDetailDto {
@@ -321,6 +322,28 @@ export interface PersonalRoadmapDetailDto {
   progressPercentage: number;
   isActive: boolean;
   nodeProgresses: NodeProgressDto[];
+  tags: RoadmapTagDto[];
+}
+
+// Matches backend RoadmapTagDto
+export interface RoadmapTagDto {
+  id: string;
+  personalRoadmapId: string;
+  name: string;
+  color?: string;
+  createdAt: string;
+}
+
+// Matches backend AddRoadmapTagDto
+export interface AddRoadmapTagDto {
+  name: string;
+  color?: string;
+}
+
+// Matches backend UpdateRoadmapTagDto
+export interface UpdateRoadmapTagDto {
+  name?: string;
+  color?: string;
 }
 
 export interface GeneratePersonalRoadmapRequestDto {
