@@ -89,7 +89,11 @@ class NodeProgressDto {
       NodeProgressDto(
         nodeProgressId: (json['nodeProgressId'] ?? json['id']).toString(),
         personalRoadmapId: (json['personalRoadmapId'] ?? '').toString(),
-        nodeId: (json['nodeId'] ?? json['node']?['nodeId'] ?? '').toString(),
+        nodeId: (json['nodeId'] ??
+                json['node']?['nodeId'] ??
+                json['node']?['id'] ??
+                '')
+            .toString(),
         status: json['status'] as int? ?? 0,
         note: json['note'] as String?,
         node: json['node'] is Map<String, dynamic>
@@ -273,20 +277,25 @@ class SkillGapAnalysisDto {
       SkillGapAnalysisDto(
         coveragePercentage:
             (json['coveragePercentage'] as num?)?.toDouble() ?? 0,
-        matchedSkills: (json['matchedSkills'] as List?)
-                ?.map((skill) => skill.toString())
-                .toList() ??
-            const [],
-        missingSkills: (json['missingSkills'] as List?)
-                ?.map((skill) => skill.toString())
-                .toList() ??
-            const [],
+        matchedSkills:
+            (json['matchedSkills'] as List?)?.map(_skillName).toList() ??
+                const [],
+        missingSkills:
+            (json['missingSkills'] as List?)?.map(_skillName).toList() ??
+                const [],
         categoryBreakdown: (json['categoryBreakdown'] as List?)
                 ?.whereType<Map<String, dynamic>>()
                 .map(CategoryBreakdownDto.fromJson)
                 .toList() ??
             const [],
       );
+
+  static String _skillName(Object? skill) {
+    if (skill is Map<String, dynamic>) {
+      return (skill['name'] ?? skill['skillName'] ?? '').toString();
+    }
+    return skill.toString();
+  }
 }
 
 class CategoryBreakdownDto {
@@ -300,16 +309,17 @@ class CategoryBreakdownDto {
   final double currentScore;
   final double requiredScore;
 
-  factory CategoryBreakdownDto.fromJson(Map<String, dynamic> json) =>
-      CategoryBreakdownDto(
-        category: (json['category'] ?? json['name'] ?? 'General').toString(),
-        currentScore: (json['currentScore'] ??
-                    json['current'] ??
-                    json['yourScore'] as num?)
-                ?.toDouble() ??
-            0,
-        requiredScore:
-            (json['requiredScore'] ?? json['required'] as num?)?.toDouble() ??
-                1,
-      );
+  factory CategoryBreakdownDto.fromJson(Map<String, dynamic> json) {
+    final current = json['currentScore'] ??
+        json['current'] ??
+        json['yourScore'] ??
+        json['yourLevel'];
+    final required =
+        json['requiredScore'] ?? json['required'] ?? json['requiredLevel'];
+    return CategoryBreakdownDto(
+      category: (json['category'] ?? json['name'] ?? 'General').toString(),
+      currentScore: current is num ? current.toDouble() : 0,
+      requiredScore: required is num ? required.toDouble() : 1,
+    );
+  }
 }

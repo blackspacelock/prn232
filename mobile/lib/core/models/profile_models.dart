@@ -42,7 +42,8 @@ class ProfileDto {
   final int? studiedYear;
 
   factory ProfileDto.fromJson(Map<String, dynamic> json) => ProfileDto(
-        profileId: (json['profileId'] ?? json['id'] ?? '').toString(),
+        profileId: (json['profileId'] ?? json['id'] ?? json['userId'] ?? '')
+            .toString(),
         userId: (json['userId'] ?? '').toString(),
         bioDescription: json['bioDescription'] as String?,
         phoneNumber: json['phoneNumber'] as String?,

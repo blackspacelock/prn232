@@ -11,27 +11,26 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Future<List<ChatSessionDto>> getSessions(String profileId) async {
-    try {
-      final response = await _dio.get(
-        ApiConstants.chatSessions,
-        queryParameters: {'profileId': profileId},
-      );
-      final data = _asList(response.data);
-      return data.map(ChatSessionDto.fromJson).toList();
-    } on DioException {
-      return _mockSessions(profileId);
-    }
+    final data = await _query(
+      _chatSessionsByProfileQuery,
+      variables: {'profileId': profileId},
+    );
+    return _asList(data['chatSessionsByProfile'])
+        .map(ChatSessionDto.fromJson)
+        .toList();
   }
 
   @override
   Future<ChatSessionDto> getSessionWithMessages(String sessionId) async {
-    try {
-      final response =
-          await _dio.get('${ApiConstants.chatSessions}/$sessionId');
-      return ChatSessionDto.fromJson(response.data as Map<String, dynamic>);
-    } on DioException {
-      return _mockSessionDetail(sessionId);
+    final data = await _query(
+      _chatSessionWithMessagesQuery,
+      variables: {'sessionId': sessionId},
+    );
+    final session = data['chatSessionWithMessages'];
+    if (session is! Map<String, dynamic>) {
+      throw StateError('Chat session not found');
     }
+    return ChatSessionDto.fromJson(session);
   }
 
   @override
@@ -39,7 +38,8 @@ class ChatRepositoryImpl implements ChatRepository {
     try {
       final response = await _dio.post(
         ApiConstants.chatSessions,
-        data: {'profileId': profileId, 'title': title},
+        queryParameters: {'profileId': profileId},
+        data: {'title': title},
       );
       return ChatSessionDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException {
@@ -64,7 +64,11 @@ class ChatRepositoryImpl implements ChatRepository {
         '${ApiConstants.chatSessions}/$sessionId/messages',
         data: {'sender': sender, 'messageContent': content},
       );
-      return ChatMessageDto.fromJson(response.data as Map<String, dynamic>);
+      final data = response.data as Map<String, dynamic>;
+      final assistantMessage = data['assistantMessage'];
+      return ChatMessageDto.fromJson(
+        assistantMessage is Map<String, dynamic> ? assistantMessage : data,
+      );
     } on DioException {
       return ChatMessageDto(
         chatMessageId: 'ai-${DateTime.now().millisecondsSinceEpoch}',
@@ -87,7 +91,12 @@ class ChatRepositoryImpl implements ChatRepository {
       );
       return ChatSessionDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException {
-      return _mockSessionDetail(sessionId).copyWith(title: newTitle);
+      return ChatSessionDto(
+        chatSessionId: sessionId,
+        profileId: '',
+        title: newTitle,
+        createdAt: DateTime.now().toIso8601String(),
+      );
     }
   }
 
@@ -99,29 +108,54 @@ class ChatRepositoryImpl implements ChatRepository {
     return value.whereType<Map<String, dynamic>>().toList();
   }
 
-  List<ChatSessionDto> _mockSessions(String profileId) => [
-        ChatSessionDto(
-          chatSessionId: 'mentor-roadmap',
-          profileId: profileId,
-          title: 'Roadmap planning',
-          createdAt: DateTime.now().toIso8601String(),
-        ),
-      ];
-
-  ChatSessionDto _mockSessionDetail(String sessionId) => ChatSessionDto(
-        chatSessionId: sessionId,
-        profileId: 'demo-profile',
-        title: 'Roadmap planning',
-        createdAt: DateTime.now().toIso8601String(),
-        messages: [
-          ChatMessageDto(
-            chatMessageId: '$sessionId-1',
-            chatSessionId: sessionId,
-            sender: 'AI',
-            messageContent:
-                'Hi, I am your SECompass mentor. Tell me what career goal you are aiming for and where you feel stuck.',
-            createdAt: DateTime.now().toIso8601String(),
-          ),
-        ],
-      );
+  Future<Map<String, dynamic>> _query(
+    String query, {
+    Map<String, dynamic> variables = const {},
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.graphqlEndpoint,
+      data: {'query': query, 'variables': variables},
+    );
+    final payload = response.data;
+    if (payload is! Map<String, dynamic>) {
+      throw StateError('Invalid GraphQL response');
+    }
+    final errors = payload['errors'];
+    if (errors is List && errors.isNotEmpty) {
+      throw StateError(errors.first.toString());
+    }
+    final data = payload['data'];
+    return data is Map<String, dynamic> ? data : const {};
+  }
 }
+
+const _chatSessionsByProfileQuery = r'''
+query MobileChatSessionsByProfile($profileId: UUID!) {
+  chatSessionsByProfile(profileId: $profileId) {
+    id
+    profileId
+    title
+    summary
+    createdAt
+  }
+}
+''';
+
+const _chatSessionWithMessagesQuery = r'''
+query MobileChatSessionWithMessages($sessionId: UUID!) {
+  chatSessionWithMessages(sessionId: $sessionId) {
+    id
+    profileId
+    title
+    summary
+    createdAt
+    messages {
+      id
+      chatSessionId
+      sender
+      messageContent
+      createdAt
+    }
+  }
+}
+''';

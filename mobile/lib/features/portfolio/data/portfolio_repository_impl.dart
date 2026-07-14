@@ -12,16 +12,13 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
 
   @override
   Future<List<GitHubRepositoryDto>> getRepos(String profileId) async {
-    try {
-      final response = await _dio.get(
-        ApiConstants.githubRepositories,
-        queryParameters: {'profileId': profileId},
-      );
-      final data = _asList(response.data);
-      return data.map(GitHubRepositoryDto.fromJson).toList();
-    } on DioException {
-      return [];
-    }
+    final data = await _query(
+      _githubReposByProfileQuery,
+      variables: {'profileId': profileId},
+    );
+    return _asList(data['gitHubRepositoriesByProfile'])
+        .map(GitHubRepositoryDto.fromJson)
+        .toList();
   }
 
   @override
@@ -69,18 +66,15 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
 
   @override
   Future<PortfolioAnalysisDto?> getAnalysis(String profileId) async {
-    try {
-      final response = await _dio.get(
-        '${ApiConstants.aiPortfolioAnalysis}/$profileId',
-      );
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        return PortfolioAnalysisDto.fromJson(data);
-      }
-      return null;
-    } on DioException {
-      return null;
+    final data = await _query(
+      _portfolioAnalysisQuery,
+      variables: {'profileId': profileId},
+    );
+    final analysis = data['portfolioAnalysis'];
+    if (analysis is Map<String, dynamic>) {
+      return PortfolioAnalysisDto.fromJson(analysis);
     }
+    return null;
   }
 
   @override
@@ -102,26 +96,10 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
   @override
   Future<PublicPortfolioViewData> getPublicPortfolioView(String userId) async {
     try {
-      final response = await _dio.post(
-        ApiConstants.graphqlEndpoint,
-        data: {
-          'query': _publicPortfolioQuery,
-          'variables': {'userId': userId},
-        },
+      final data = await _query(
+        _publicPortfolioQuery,
+        variables: {'userId': userId},
       );
-      final payload = response.data;
-      if (payload is! Map<String, dynamic>) {
-        throw const ServerException('Invalid response from server');
-      }
-      final errors = payload['errors'];
-      if (errors is List && errors.isNotEmpty) {
-        throw ServerException(errors.first.toString());
-      }
-
-      final data = payload['data'];
-      if (data is! Map<String, dynamic>) {
-        throw const ServerException('Portfolio not found');
-      }
 
       final profileJson = data['profileWithSkills'];
       if (profileJson is! Map<String, dynamic>) {
@@ -184,7 +162,60 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
     if (value is! List) return const [];
     return value.whereType<Map<String, dynamic>>().toList();
   }
+
+  Future<Map<String, dynamic>> _query(
+    String query, {
+    Map<String, dynamic> variables = const {},
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.graphqlEndpoint,
+      data: {'query': query, 'variables': variables},
+    );
+    final payload = response.data;
+    if (payload is! Map<String, dynamic>) {
+      throw const ServerException('Invalid GraphQL response');
+    }
+    final errors = payload['errors'];
+    if (errors is List && errors.isNotEmpty) {
+      throw ServerException(errors.first.toString());
+    }
+    final data = payload['data'];
+    return data is Map<String, dynamic> ? data : const {};
+  }
 }
+
+const _githubReposByProfileQuery = r'''
+query MobileGitHubRepositoriesByProfile($profileId: UUID!) {
+  gitHubRepositoriesByProfile(profileId: $profileId) {
+    id
+    profileId
+    repositoryName
+    repoUrl
+    description
+    isPrivate
+    createdAt
+  }
+}
+''';
+
+const _portfolioAnalysisQuery = r'''
+query MobilePortfolioAnalysis($profileId: UUID!) {
+  portfolioAnalysis(profileId: $profileId) {
+    profileId
+    repositoryNames
+    overallSummary
+    strengths
+    recommendations
+    repositoryAnalyses {
+      repositoryId
+      repositoryName
+      objective
+      techStacks
+      summary
+    }
+  }
+}
+''';
 
 const _publicPortfolioQuery = r'''
 query MobilePublicPortfolio($userId: UUID!) {

@@ -38,68 +38,45 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<ProfileDto> getProfileByUserId(String userId) async {
-    try {
-      final response = await _dio.get('${ApiConstants.profiles}/$userId');
-      final data = response.data;
-      if (data is Map<String, dynamic>) return ProfileDto.fromJson(data);
-      return ProfileDto(profileId: userId, userId: userId);
-    } on DioException {
-      return ProfileDto(profileId: userId, userId: userId);
+    final data = await _query(
+      _profileByUserIdQuery,
+      variables: {'userId': userId},
+    );
+    final profile = data['profileByUserId'];
+    if (profile is Map<String, dynamic>) {
+      return ProfileDto.fromJson(profile);
     }
+    return ProfileDto(profileId: userId, userId: userId);
   }
 
   @override
   Future<ProfileWithSkillsDto> getProfileWithSkills(String userId) async {
-    try {
-      final response = await _dio.get('${ApiConstants.profiles}/$userId');
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final profile = ProfileWithSkillsDto.fromJson(data);
-        // If skills not embedded, fetch separately
-        if (profile.skills.isEmpty && profile.profileId.isNotEmpty) {
-          final skills = await getSkillsByProfile(profile.profileId);
-          return ProfileWithSkillsDto(
-            profileId: profile.profileId,
-            userId: profile.userId,
-            bioDescription: profile.bioDescription,
-            phoneNumber: profile.phoneNumber,
-            university: profile.university,
-            major: profile.major,
-            studiedYear: profile.studiedYear,
-            skills: skills,
-          );
-        }
-        return profile;
-      }
-      return ProfileWithSkillsDto(profileId: userId, userId: userId);
-    } on DioException {
-      return ProfileWithSkillsDto(profileId: userId, userId: userId);
+    final data = await _query(
+      _profileWithSkillsQuery,
+      variables: {'userId': userId},
+    );
+    final profile = data['profileWithSkills'];
+    if (profile is Map<String, dynamic>) {
+      return ProfileWithSkillsDto.fromJson(profile);
     }
+    return ProfileWithSkillsDto(profileId: userId, userId: userId);
   }
 
   @override
   Future<List<SkillDto>> getSkillsByProfile(String profileId) async {
-    try {
-      final response = await _dio.get(
-        ApiConstants.skills,
-        queryParameters: {'profileId': profileId},
-      );
-      final data = _asList(response.data);
-      return data.map(SkillDto.fromJson).toList();
-    } on DioException {
-      return [];
-    }
+    final data = await _query(
+      _skillsByProfileQuery,
+      variables: {'profileId': profileId},
+    );
+    return _asList(data['skillsByProfile']).map(SkillDto.fromJson).toList();
   }
 
   @override
   Future<List<TechnicalSkillDto>> getTechnicalSkills() async {
-    try {
-      final response = await _dio.get('/api/technical-skills');
-      final data = _asList(response.data);
-      return data.map(TechnicalSkillDto.fromJson).toList();
-    } on DioException {
-      return _mockTechnicalSkills;
-    }
+    final data = await _query(_technicalSkillsQuery);
+    return _asList(data['technicalSkills'])
+        .map(TechnicalSkillDto.fromJson)
+        .toList();
   }
 
   @override
@@ -132,12 +109,13 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<UserDto> getUserById(String userId) async {
-    try {
-      final response = await _dio.get('${ApiConstants.users}/$userId');
-      final data = response.data;
-      if (data is Map<String, dynamic>) return UserDto.fromJson(data);
-    } on DioException {
-      // fallthrough to stub
+    final data = await _query(
+      _userByIdQuery,
+      variables: {'userId': userId},
+    );
+    final user = data['userById'];
+    if (user is Map<String, dynamic>) {
+      return UserDto.fromJson(user);
     }
     return UserDto(id: userId, email: '', role: 0, hasProfile: true);
   }
@@ -190,46 +168,98 @@ class ProfileRepositoryImpl implements ProfileRepository {
     return value.whereType<Map<String, dynamic>>().toList();
   }
 
-  static const _mockTechnicalSkills = [
-    TechnicalSkillDto(
-        technicalSkillId: 'flutter', skillName: 'Flutter', category: 'Mobile'),
-    TechnicalSkillDto(
-        technicalSkillId: 'dart', skillName: 'Dart', category: 'Programming'),
-    TechnicalSkillDto(
-        technicalSkillId: 'aspnet',
-        skillName: 'ASP.NET Core',
-        category: 'Backend'),
-    TechnicalSkillDto(
-        technicalSkillId: 'react', skillName: 'React', category: 'Frontend'),
-    TechnicalSkillDto(
-        technicalSkillId: 'sql', skillName: 'SQL', category: 'Database'),
-    TechnicalSkillDto(
-        technicalSkillId: 'docker', skillName: 'Docker', category: 'DevOps'),
-    TechnicalSkillDto(
-        technicalSkillId: 'azure', skillName: 'Azure', category: 'Cloud'),
-    TechnicalSkillDto(
-        technicalSkillId: 'nodejs', skillName: 'Node.js', category: 'Backend'),
-    TechnicalSkillDto(
-        technicalSkillId: 'graphql',
-        skillName: 'GraphQL',
-        category: 'API Design'),
-    TechnicalSkillDto(
-        technicalSkillId: 'testing',
-        skillName: 'Testing',
-        category: 'Quality'),
-    TechnicalSkillDto(
-        technicalSkillId: 'git', skillName: 'Git', category: 'Tools'),
-    TechnicalSkillDto(
-        technicalSkillId: 'csharp',
-        skillName: 'C#',
-        category: 'Programming'),
-    TechnicalSkillDto(
-        technicalSkillId: 'typescript',
-        skillName: 'TypeScript',
-        category: 'Programming'),
-    TechnicalSkillDto(
-        technicalSkillId: 'python',
-        skillName: 'Python',
-        category: 'Programming'),
-  ];
+  Future<Map<String, dynamic>> _query(
+    String query, {
+    Map<String, dynamic> variables = const {},
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.graphqlEndpoint,
+      data: {'query': query, 'variables': variables},
+    );
+    final payload = response.data;
+    if (payload is! Map<String, dynamic>) {
+      throw const ServerException('Invalid GraphQL response');
+    }
+    final errors = payload['errors'];
+    if (errors is List && errors.isNotEmpty) {
+      throw ServerException(errors.first.toString());
+    }
+    final data = payload['data'];
+    return data is Map<String, dynamic> ? data : const {};
+  }
 }
+
+const _userByIdQuery = r'''
+query MobileUserById($userId: UUID!) {
+  userById(id: $userId) {
+    id
+    fullName
+    email
+    role
+    isActive
+    avatarUrl
+    createdAt
+  }
+}
+''';
+
+const _profileByUserIdQuery = r'''
+query MobileProfileByUserId($userId: UUID!) {
+  profileByUserId(userId: $userId) {
+    userId
+    bioDescription
+    phoneNumber
+    university
+    major
+    studiedYear
+  }
+}
+''';
+
+const _profileWithSkillsQuery = r'''
+query MobileProfileWithSkills($userId: UUID!) {
+  profileWithSkills(userId: $userId) {
+    userId
+    fullName
+    avatarUrl
+    bioDescription
+    phoneNumber
+    university
+    major
+    studiedYear
+    skills {
+      id
+      profileId
+      technicalSkillId
+      skillName
+      category
+      note
+      createdAt
+    }
+  }
+}
+''';
+
+const _skillsByProfileQuery = r'''
+query MobileSkillsByProfile($profileId: UUID!) {
+  skillsByProfile(profileId: $profileId) {
+    id
+    profileId
+    technicalSkillId
+    skillName
+    category
+    note
+    createdAt
+  }
+}
+''';
+
+const _technicalSkillsQuery = r'''
+query MobileTechnicalSkills {
+  technicalSkills {
+    id
+    name
+    category
+  }
+}
+''';
