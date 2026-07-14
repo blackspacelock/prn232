@@ -47,6 +47,18 @@ final roadmapsBySelectedRoleProvider =
       .getRoadmapsByRole(selected.careerRoleId);
 });
 
+final roadmapsByRoleProvider =
+    FutureProvider.family<List<CareerRoadmapDto>, String>((ref, roleId) {
+  return ref.watch(roadmapRepositoryProvider).getRoadmapsByRole(roleId);
+});
+
+final careerRoadmapTemplateProvider =
+    FutureProvider.family<CareerRoadmapWithNodesDto, String>((ref, roadmapId) {
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getCareerRoadmapWithNodes(roadmapId);
+});
+
 final personalRoadmapsProvider =
     FutureProvider<List<PersonalRoadmapDto>>((ref) async {
   final profileId = await ref.watch(profileIdProvider.future);

@@ -9,6 +9,7 @@ import '../../features/auth/screens/profile_setup_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/roadmap/screens/career_role_selection_screen.dart';
 import '../../features/roadmap/screens/role_selection_loading_screen.dart';
+import '../../features/roadmap/screens/roadmap_catalog_screen.dart';
 import '../../features/roadmap/screens/roadmaps_manage_screen.dart';
 import '../../features/roadmap/screens/roadmap_viewer_screen.dart';
 import '../../features/roadmap/screens/learning_resources_screen.dart';
@@ -38,7 +39,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final publicRoutes = ['/', '/login', '/register'];
       final isPublicPortfolio = RegExp(r'^/portfolio/[^/]+$').hasMatch(path);
-      final isPublic = publicRoutes.contains(location) || isPublicPortfolio;
+      final isPublicCatalog = path == '/explore/roles' ||
+          RegExp(r'^/explore/roles/[^/]+$').hasMatch(path) ||
+          RegExp(r'^/explore/roadmaps/[^/]+$').hasMatch(path);
+      final isPublic = publicRoutes.contains(location) ||
+          isPublicPortfolio ||
+          isPublicCatalog;
 
       if (!isAuthenticated && !isPublic) {
         return '/login';
@@ -63,6 +69,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile-setup',
         builder: (_, __) => const ProfileSetupScreen(),
       ),
+      GoRoute(
+        path: '/explore/roles',
+        builder: (_, __) => const RoadmapCatalogScreen(publicCatalog: true),
+      ),
+      GoRoute(
+        path: '/explore/roles/:roleId',
+        builder: (_, state) => RoadmapRoleTemplatesScreen(
+          roleId: state.pathParameters['roleId']!,
+          publicCatalog: true,
+        ),
+      ),
+      GoRoute(
+        path: '/explore/roadmaps/:roadmapId',
+        builder: (_, state) => RoadmapTemplateDetailScreen(
+          roadmapId: state.pathParameters['roadmapId']!,
+          publicCatalog: true,
+        ),
+      ),
 
       // Authenticated shell with bottom nav
       ShellRoute(
@@ -81,6 +105,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/career-roles',
             builder: (_, __) => const CareerRoleSelectionScreen(),
+          ),
+          GoRoute(
+            path: '/catalog',
+            builder: (_, __) => const RoadmapCatalogScreen(),
+          ),
+          GoRoute(
+            path: '/catalog/roles/:roleId',
+            builder: (_, state) => RoadmapRoleTemplatesScreen(
+              roleId: state.pathParameters['roleId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/roadmap-template/:roadmapId',
+            builder: (_, state) => RoadmapTemplateDetailScreen(
+              roadmapId: state.pathParameters['roadmapId']!,
+            ),
           ),
           GoRoute(
             path: '/career-roles/loading',

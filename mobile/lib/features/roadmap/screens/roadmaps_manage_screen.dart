@@ -49,6 +49,11 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
         title: const Text('My Roadmaps'),
         actions: [
           IconButton(
+            tooltip: 'Browse templates',
+            onPressed: () => context.go('/catalog'),
+            icon: const Icon(Icons.travel_explore_outlined),
+          ),
+          IconButton(
             tooltip: 'Refresh',
             onPressed: () => ref.invalidate(personalRoadmapsProvider),
             icon: const Icon(Icons.refresh),

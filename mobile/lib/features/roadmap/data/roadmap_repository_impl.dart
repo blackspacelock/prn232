@@ -27,6 +27,21 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   }
 
   @override
+  Future<CareerRoadmapWithNodesDto> getCareerRoadmapWithNodes(
+    String careerRoadmapId,
+  ) async {
+    final data = await _query(
+      _careerRoadmapWithNodesQuery,
+      variables: {'roadmapId': careerRoadmapId},
+    );
+    final roadmap = data['careerRoadmapWithNodes'];
+    if (roadmap is Map<String, dynamic>) {
+      return CareerRoadmapWithNodesDto.fromJson(roadmap);
+    }
+    throw StateError('Roadmap template not found');
+  }
+
+  @override
   Future<List<PersonalRoadmapDto>> getPersonalRoadmaps(String profileId) async {
     if (profileId.isEmpty) return const [];
     final data = await _query(
@@ -266,6 +281,47 @@ query MobileCareerRoadmapsByRole($careerRoleId: UUID!) {
     careerRoleId
     name
     description
+    isCustom
+    createdAt
+  }
+}
+''';
+
+const _careerRoadmapWithNodesQuery = r'''
+query MobileCareerRoadmapWithNodes($roadmapId: UUID!) {
+  careerRoadmapWithNodes(roadmapId: $roadmapId) {
+    id
+    careerRoleId
+    name
+    description
+    isCustom
+    nodes {
+      id
+      careerRoadmapId
+      nodeId
+      parentRoadmapNodeId
+      order
+      nodeType
+      requirementType
+      positionX
+      positionY
+      createdAt
+      node {
+        id
+        parentNodeId
+        name
+        description
+        order
+      }
+    }
+    edges {
+      id
+      careerRoadmapId
+      fromRoadmapNodeId
+      toRoadmapNodeId
+      edgeType
+      createdAt
+    }
   }
 }
 ''';

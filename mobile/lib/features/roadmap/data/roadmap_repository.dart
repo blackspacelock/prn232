@@ -3,6 +3,9 @@ import '../../../core/models/roadmap_models.dart';
 abstract class RoadmapRepository {
   Future<List<CareerRoleDto>> getCareerRoles();
   Future<List<CareerRoadmapDto>> getRoadmapsByRole(String careerRoleId);
+  Future<CareerRoadmapWithNodesDto> getCareerRoadmapWithNodes(
+    String careerRoadmapId,
+  );
   Future<List<PersonalRoadmapDto>> getPersonalRoadmaps(String profileId);
   Future<PersonalRoadmapDto> getPersonalRoadmapWithProgress(String id);
   Future<PersonalRoadmapDto> generateRoadmap(

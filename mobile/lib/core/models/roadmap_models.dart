@@ -26,18 +26,21 @@ class CareerRoadmapDto {
     required this.name,
     this.description,
     this.careerRole,
+    this.isCustom = false,
   });
 
   final String careerRoadmapId;
   final String name;
   final String? description;
   final CareerRoleDto? careerRole;
+  final bool isCustom;
 
   factory CareerRoadmapDto.fromJson(Map<String, dynamic> json) =>
       CareerRoadmapDto(
         careerRoadmapId: (json['careerRoadmapId'] ?? json['id']).toString(),
         name: (json['name'] ?? json['title'] ?? 'Career Roadmap').toString(),
         description: json['description'] as String?,
+        isCustom: json['isCustom'] as bool? ?? false,
         careerRole: json['careerRole'] is Map<String, dynamic>
             ? CareerRoleDto.fromJson(json['careerRole'] as Map<String, dynamic>)
             : null,
@@ -217,6 +220,126 @@ class RoadmapTagDto {
         color: json['color'] as String?,
         createdAt: json['createdAt']?.toString(),
       );
+}
+
+class RoadmapTemplateNodeDto {
+  const RoadmapTemplateNodeDto({
+    required this.roadmapNodeId,
+    required this.careerRoadmapId,
+    required this.nodeId,
+    required this.order,
+    required this.nodeType,
+    required this.requirementType,
+    this.parentRoadmapNodeId,
+    this.positionX,
+    this.positionY,
+    this.createdAt,
+    this.node,
+  });
+
+  final String roadmapNodeId;
+  final String careerRoadmapId;
+  final String nodeId;
+  final String? parentRoadmapNodeId;
+  final int order;
+  final String nodeType;
+  final String requirementType;
+  final int? positionX;
+  final int? positionY;
+  final String? createdAt;
+  final NodeDto? node;
+
+  String get displayName => node?.name ?? 'Roadmap topic';
+  String? get displayDescription => node?.description;
+
+  factory RoadmapTemplateNodeDto.fromJson(Map<String, dynamic> json) =>
+      RoadmapTemplateNodeDto(
+        roadmapNodeId: (json['roadmapNodeId'] ?? json['id']).toString(),
+        careerRoadmapId: (json['careerRoadmapId'] ?? '').toString(),
+        nodeId: (json['nodeId'] ?? json['node']?['id'] ?? '').toString(),
+        parentRoadmapNodeId: json['parentRoadmapNodeId']?.toString(),
+        order: json['order'] as int? ?? 0,
+        nodeType: (json['nodeType'] ?? 'Topic').toString(),
+        requirementType: (json['requirementType'] ?? 'Required').toString(),
+        positionX: json['positionX'] as int?,
+        positionY: json['positionY'] as int?,
+        createdAt: json['createdAt']?.toString(),
+        node: json['node'] is Map<String, dynamic>
+            ? NodeDto.fromJson(json['node'] as Map<String, dynamic>)
+            : null,
+      );
+}
+
+class RoadmapTemplateEdgeDto {
+  const RoadmapTemplateEdgeDto({
+    required this.edgeId,
+    required this.careerRoadmapId,
+    required this.fromRoadmapNodeId,
+    required this.toRoadmapNodeId,
+    required this.edgeType,
+    this.createdAt,
+  });
+
+  final String edgeId;
+  final String careerRoadmapId;
+  final String fromRoadmapNodeId;
+  final String toRoadmapNodeId;
+  final String edgeType;
+  final String? createdAt;
+
+  factory RoadmapTemplateEdgeDto.fromJson(Map<String, dynamic> json) =>
+      RoadmapTemplateEdgeDto(
+        edgeId: (json['edgeId'] ?? json['id']).toString(),
+        careerRoadmapId: (json['careerRoadmapId'] ?? '').toString(),
+        fromRoadmapNodeId: (json['fromRoadmapNodeId'] ?? '').toString(),
+        toRoadmapNodeId: (json['toRoadmapNodeId'] ?? '').toString(),
+        edgeType: (json['edgeType'] ?? 'default').toString(),
+        createdAt: json['createdAt']?.toString(),
+      );
+}
+
+class CareerRoadmapWithNodesDto {
+  const CareerRoadmapWithNodesDto({
+    required this.careerRoadmapId,
+    required this.careerRoleId,
+    required this.name,
+    required this.isCustom,
+    this.description,
+    this.nodes = const [],
+    this.edges = const [],
+  });
+
+  final String careerRoadmapId;
+  final String careerRoleId;
+  final String name;
+  final String? description;
+  final bool isCustom;
+  final List<RoadmapTemplateNodeDto> nodes;
+  final List<RoadmapTemplateEdgeDto> edges;
+
+  factory CareerRoadmapWithNodesDto.fromJson(Map<String, dynamic> json) {
+    final nodes = json['nodes'];
+    final edges = json['edges'];
+    return CareerRoadmapWithNodesDto(
+      careerRoadmapId: (json['careerRoadmapId'] ?? json['id']).toString(),
+      careerRoleId: (json['careerRoleId'] ?? '').toString(),
+      name: (json['name'] ?? 'Roadmap Template').toString(),
+      description: json['description'] as String?,
+      isCustom: json['isCustom'] as bool? ?? false,
+      nodes: nodes is List
+          ? nodes
+              .whereType<Map<String, dynamic>>()
+              .map(RoadmapTemplateNodeDto.fromJson)
+              .toList()
+          : const [],
+      edges: edges is List
+          ? edges
+              .whereType<Map<String, dynamic>>()
+              .map(RoadmapTemplateEdgeDto.fromJson)
+              .toList()
+          : const [],
+    );
+  }
 }
 
 class LearningResourceDto {
