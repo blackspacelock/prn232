@@ -1,0 +1,205 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/profile_models.dart';
+import '../../../core/models/roadmap_models.dart';
+import '../../../core/storage/token_storage.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../data/roadmap_repository.dart';
+import '../data/roadmap_repository_impl.dart';
+
+final roadmapRepositoryProvider = Provider<RoadmapRepository>(
+  (_) => RoadmapRepositoryImpl(),
+);
+
+final profileIdProvider = FutureProvider<String>((ref) async {
+  return await TokenStorage.getUserId() ?? 'demo-profile';
+});
+
+final careerRolesProvider = FutureProvider<List<CareerRoleDto>>((ref) {
+  return ref.watch(roadmapRepositoryProvider).getCareerRoles();
+});
+
+final selectedCareerRoleProvider = StateProvider<CareerRoleDto?>((ref) => null);
+
+final roadmapsBySelectedRoleProvider =
+    FutureProvider<List<CareerRoadmapDto>>((ref) async {
+  final selected = ref.watch(selectedCareerRoleProvider);
+  if (selected == null) return const [];
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getRoadmapsByRole(selected.careerRoleId);
+});
+
+final personalRoadmapsProvider =
+    FutureProvider<List<PersonalRoadmapDto>>((ref) async {
+  final profileId = await ref.watch(profileIdProvider.future);
+  return ref.watch(roadmapRepositoryProvider).getPersonalRoadmaps(profileId);
+});
+
+final personalRoadmapDetailProvider =
+    FutureProvider.family<PersonalRoadmapDto, String>((ref, id) {
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getPersonalRoadmapWithProgress(id);
+});
+
+final learningResourcesProvider =
+    FutureProvider.family<List<LearningResourceDto>, String>((ref, nodeId) {
+  return ref.watch(roadmapRepositoryProvider).getResourcesByNode(nodeId);
+});
+
+final recommendedResourcesProvider =
+    FutureProvider.family<List<LearningResourceDto>, String>(
+        (ref, nodeId) async {
+  final profileId = await ref.watch(profileIdProvider.future);
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getRecommendedResources(profileId, nodeId);
+});
+
+class SkillInputNotifier extends AsyncNotifier<List<SkillDto>> {
+  @override
+  Future<List<SkillDto>> build() async {
+    final profileId = await ref.watch(profileIdProvider.future);
+    return ref.watch(profileRepositoryProvider).getSkillsByProfile(profileId);
+  }
+
+  Future<void> addSkill(String skillName) async {
+    final profileId = await ref.read(profileIdProvider.future);
+    await ref.read(profileRepositoryProvider).addSkill(profileId, skillName);
+    ref.invalidateSelf();
+  }
+
+  Future<void> removeSkill(String skillId) async {
+    await ref.read(profileRepositoryProvider).deleteSkill(skillId);
+    ref.invalidateSelf();
+  }
+}
+
+final skillInputProvider =
+    AsyncNotifierProvider<SkillInputNotifier, List<SkillDto>>(
+  SkillInputNotifier.new,
+);
+
+final technicalSkillsProvider = FutureProvider<List<TechnicalSkillDto>>((ref) {
+  return ref.watch(profileRepositoryProvider).getTechnicalSkills();
+});
+
+final skillGapAnalysisProvider =
+    FutureProvider.family<SkillGapAnalysisDto, String>(
+        (ref, careerRoadmapId) async {
+  final profileId = await ref.watch(profileIdProvider.future);
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getSkillGapAnalysis(profileId, careerRoadmapId);
+});
+
+final trendingSkillRecommendationsProvider =
+    FutureProvider<List<String>>((ref) async {
+  final profileId = await ref.watch(profileIdProvider.future);
+  return ref
+      .watch(roadmapRepositoryProvider)
+      .getTrendingSkillRecommendations(profileId);
+});
+
+final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
+  final roadmaps = await ref.watch(personalRoadmapsProvider.future);
+  PersonalRoadmapDto? activeRoadmap;
+  for (final roadmap in roadmaps) {
+    if (roadmap.isActive) {
+      activeRoadmap = roadmap;
+      break;
+    }
+  }
+  final avgProgress = roadmaps.isEmpty
+      ? 0.0
+      : roadmaps
+              .map((roadmap) => roadmap.progressPercentage)
+              .reduce((a, b) => a + b) /
+          roadmaps.length;
+
+  return DashboardData(
+    roadmaps: roadmaps,
+    activeRoadmap: activeRoadmap,
+    roadmapCount: roadmaps.length,
+    averageProgress: avgProgress,
+    skillsCount: 12,
+    repositoryCount: 3,
+    skillGapCategories: const [
+      SkillGapCategory('Frontend', 0.72, 0.9),
+      SkillGapCategory('Backend', 0.45, 0.78),
+      SkillGapCategory('Database', 0.62, 0.72),
+      SkillGapCategory('DevOps', 0.36, 0.68),
+      SkillGapCategory('Testing', 0.55, 0.75),
+    ],
+    trendingSkills: const [
+      SkillTrend('Flutter', 0.92),
+      SkillTrend('ASP.NET Core', 0.84),
+      SkillTrend('SQL', 0.76),
+      SkillTrend('Docker', 0.64),
+      SkillTrend('Azure', 0.58),
+    ],
+    recentMentorSessions: const [
+      MentorSessionSummary(
+        title: 'Roadmap planning',
+        preview: 'How should I prioritize Flutter and backend practice?',
+        dateLabel: 'Today',
+      ),
+      MentorSessionSummary(
+        title: 'Portfolio review',
+        preview: 'Ideas for making my GitHub repos stronger.',
+        dateLabel: 'Yesterday',
+      ),
+    ],
+  );
+});
+
+class DashboardData {
+  const DashboardData({
+    required this.roadmaps,
+    required this.activeRoadmap,
+    required this.roadmapCount,
+    required this.averageProgress,
+    required this.skillsCount,
+    required this.repositoryCount,
+    required this.skillGapCategories,
+    required this.trendingSkills,
+    required this.recentMentorSessions,
+  });
+
+  final List<PersonalRoadmapDto> roadmaps;
+  final PersonalRoadmapDto? activeRoadmap;
+  final int roadmapCount;
+  final double averageProgress;
+  final int skillsCount;
+  final int repositoryCount;
+  final List<SkillGapCategory> skillGapCategories;
+  final List<SkillTrend> trendingSkills;
+  final List<MentorSessionSummary> recentMentorSessions;
+}
+
+class SkillGapCategory {
+  const SkillGapCategory(this.name, this.current, this.required);
+
+  final String name;
+  final double current;
+  final double required;
+}
+
+class SkillTrend {
+  const SkillTrend(this.name, this.score);
+
+  final String name;
+  final double score;
+}
+
+class MentorSessionSummary {
+  const MentorSessionSummary({
+    required this.title,
+    required this.preview,
+    required this.dateLabel,
+  });
+
+  final String title;
+  final String preview;
+  final String dateLabel;
+}

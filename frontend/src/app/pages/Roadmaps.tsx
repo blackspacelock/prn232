@@ -80,8 +80,8 @@ export function RoadmapsPage() {
         const progress = Math.round(r.progressPercentage);
         if (statusFilter === 'active') return r.isActive;
         if (statusFilter === 'completed') return progress === 100;
-        if (statusFilter === 'in-progress') return progress > 0 && progress < 100;
-        if (statusFilter === 'not-started') return progress === 0;
+        if (statusFilter === 'in-progress') return progress < 100 && (progress > 0 || r.inProgressCount > 0);
+        if (statusFilter === 'not-started') return progress === 0 && r.inProgressCount === 0;
         return true;
       })
     : allRoadmaps;
@@ -282,6 +282,7 @@ export function RoadmapsPage() {
 function RoadmapCard({ roadmap, onDelete, onActivate, activating }: { roadmap: PersonalRoadmap; onDelete: () => void; onActivate: () => void; activating: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const progress = Math.round(roadmap.progressPercentage);
+  const hasInProgress = roadmap.inProgressCount > 0;
   const getProgressColor = () => {
     if (progress >= 70) return 'var(--md3-success)';
     if (progress >= 30) return 'var(--md3-primary)';
@@ -324,8 +325,8 @@ function RoadmapCard({ roadmap, onDelete, onActivate, activating }: { roadmap: P
         {roadmap.isActive && <ActiveBadge />}
         {progress === 100 ? (
           <StatusChip status="completed" count={0} label="Completed" />
-        ) : progress > 0 ? (
-          <StatusChip status="in-progress" count={0} label="In Progress" />
+        ) : progress > 0 || hasInProgress ? (
+          <StatusChip status="in-progress" count={roadmap.inProgressCount} label="In Progress" />
         ) : (
           <StatusChip status="not-started" count={0} label="Not Started" />
         )}

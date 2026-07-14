@@ -174,6 +174,7 @@ export const GET_PERSONAL_ROADMAPS_BY_PROFILE = gql`
       careerRoadmapDescription
       note
       progressPercentage
+      inProgressCount
       isActive
       createdAt
     }

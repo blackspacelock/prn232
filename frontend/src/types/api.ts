@@ -306,6 +306,7 @@ export interface PersonalRoadmapDto {
   careerRoadmapDescription?: string;
   note?: string;
   progressPercentage: number;
+  inProgressCount: number;
   isActive: boolean;
   createdAt: string;
 }

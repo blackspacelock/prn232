@@ -66,8 +66,14 @@ public class PersonalRoadmapService : IPersonalRoadmapService
 
     public async Task<ServiceResult<List<PersonalRoadmapDto>>> GetByProfileAsync(Guid profileId)
     {
-        var roadmaps = await _uow.PersonalRoadmaps.GetByProfileWithCareerRoadmapAsync(profileId);
-        return ServiceResult<List<PersonalRoadmapDto>>.Ok(_mapper.Map<List<PersonalRoadmapDto>>(roadmaps));
+        var roadmaps = await _uow.PersonalRoadmaps.GetByProfileWithProgressAsync(profileId);
+        var dtos = roadmaps.Select(r =>
+        {
+            var dto = _mapper.Map<PersonalRoadmapDto>(r);
+            dto.InProgressCount = r.NodeProgresses?.Count(np => np.Status == NodeProgressStatus.InProgress) ?? 0;
+            return dto;
+        }).ToList();
+        return ServiceResult<List<PersonalRoadmapDto>>.Ok(dtos);
     }
 
     public async Task<ServiceResult<PersonalRoadmapDetailDto>> GetWithProgressAsync(Guid personalRoadmapId)
