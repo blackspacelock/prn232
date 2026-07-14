@@ -85,6 +85,13 @@ class LandingScreen extends StatelessWidget {
                     variant: AppButtonVariant.outlined,
                     onPressed: () => context.go('/login'),
                   ),
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: 'Browse Roadmaps',
+                    variant: AppButtonVariant.text,
+                    leadingIcon: const Icon(Icons.travel_explore_outlined),
+                    onPressed: () => context.go('/explore/roles'),
+                  ),
                   const SizedBox(height: 16),
                   Center(
                     child: Text(
