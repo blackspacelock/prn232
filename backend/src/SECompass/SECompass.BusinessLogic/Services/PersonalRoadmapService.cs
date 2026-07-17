@@ -158,6 +158,14 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         return ServiceResult<PersonalRoadmapDetailDto>.Ok(_mapper.Map<PersonalRoadmapDetailDto>(result));
     }
 
+    public async Task<ServiceResult<PersonalRoadmapDetailDto>> CopySharedAsync(Guid profileId, Guid sharedPersonalRoadmapId)
+    {
+        var sharedRoadmap = await _uow.PersonalRoadmaps.GetSharedWithNodesAndProgressAsync(sharedPersonalRoadmapId);
+        if (sharedRoadmap == null) return ServiceResult<PersonalRoadmapDetailDto>.Fail("Shared roadmap not found.");
+
+        return await GenerateAsync(profileId, sharedRoadmap.CareerRoadmapId);
+    }
+
     private async Task<List<Guid>> GetRoadmapNodeIdsAsync(Guid careerRoadmapId)
     {
         var roadmapNodes = await _uow.RoadmapNodes.FindAsync(rn => rn.CareerRoadmapId == careerRoadmapId);

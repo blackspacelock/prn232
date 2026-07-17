@@ -30,6 +30,20 @@ public class PersonalRoadmapsController : ControllerBase
         return CreatedAtAction(nameof(Generate), result.Data);
     }
 
+    [HttpPost("shared/{id:guid}/copy")]
+    [ProducesResponseType(typeof(PersonalRoadmapDetailDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CopyShared(Guid id, [FromBody] CopySharedRoadmapRequestDto dto)
+    {
+        var result = await _service.CopySharedAsync(dto.ProfileId, id);
+        if (!result.Success)
+        {
+            return result.Error == "Shared roadmap not found." ? NotFound(result.Error) : BadRequest(result.Error);
+        }
+        return CreatedAtAction(nameof(CopyShared), result.Data);
+    }
+
     [HttpPost]
     [ProducesResponseType(typeof(PersonalRoadmapDetailDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -7,6 +7,7 @@ public interface IPersonalRoadmapService
 {
     Task<ServiceResult<PersonalRoadmapDetailDto>> CreateAsync(CreatePersonalRoadmapDto dto);
     Task<ServiceResult<PersonalRoadmapDetailDto>> GenerateAsync(Guid profileId, Guid careerRoadmapId);
+    Task<ServiceResult<PersonalRoadmapDetailDto>> CopySharedAsync(Guid profileId, Guid sharedPersonalRoadmapId);
     Task<ServiceResult<List<PersonalRoadmapDto>>> GetByProfileAsync(Guid profileId);
     Task<ServiceResult<List<PersonalRoadmapDto>>> GetSharedAsync();
     Task<ServiceResult<PersonalRoadmapDetailDto>> GetWithProgressAsync(Guid personalRoadmapId);
