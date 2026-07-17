@@ -89,11 +89,10 @@ export function SettingsPage() {
 
   const existingSkillIds = new Set(skills.map((s) => s.technicalSkillId));
   const skillQuery = newSkill.trim().toLowerCase();
-  const skillSuggestions = skillQuery
-    ? technicalSkills
-        .filter((ts) => !existingSkillIds.has(ts.id) && ts.name.toLowerCase().includes(skillQuery))
-        .slice(0, 8)
-    : [];
+  const skillSuggestions = technicalSkills
+    .filter((ts) => !existingSkillIds.has(ts.id))
+    .filter((ts) => !skillQuery || ts.name.toLowerCase().includes(skillQuery))
+    .slice(0, 8);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

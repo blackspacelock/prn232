@@ -61,6 +61,11 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         {
             var name = step.value.Name.Trim();
             if (string.IsNullOrWhiteSpace(name)) continue;
+            var parentRoadmapNode = step.value.ParentStepIndex.HasValue &&
+                step.value.ParentStepIndex.Value >= 0 &&
+                step.value.ParentStepIndex.Value < roadmapNodes.Count
+                    ? roadmapNodes[step.value.ParentStepIndex.Value]
+                    : null;
 
             var node = new Node
             {
@@ -72,16 +77,48 @@ public class PersonalRoadmapService : IPersonalRoadmapService
             };
             await _uow.Nodes.AddAsync(node);
 
+            foreach (var skillId in step.value.TechnicalSkillIds.Distinct())
+            {
+                if (!await _uow.TechnicalSkills.ExistsAsync(skill => skill.Id == skillId)) continue;
+                await _uow.NodeTechnicalSkills.AddAsync(new NodeTechnicalSkill
+                {
+                    Id = Guid.NewGuid(),
+                    NodeId = node.Id,
+                    TechnicalSkillId = skillId,
+                    CreatedAt = now
+                });
+            }
+
+            foreach (var resourceDto in step.value.LearningResources)
+            {
+                var resourceName = resourceDto.Name.Trim();
+                var resourceUrl = resourceDto.ResourceUrl.Trim();
+                if (string.IsNullOrWhiteSpace(resourceName) || string.IsNullOrWhiteSpace(resourceUrl)) continue;
+
+                await _uow.LearningResources.AddAsync(new LearningResource
+                {
+                    Id = Guid.NewGuid(),
+                    NodeId = node.Id,
+                    Name = resourceName,
+                    ResourceUrl = resourceUrl,
+                    ResourceType = string.IsNullOrWhiteSpace(resourceDto.ResourceType) ? "Article" : resourceDto.ResourceType.Trim(),
+                    Provider = string.IsNullOrWhiteSpace(resourceDto.Provider) ? null : resourceDto.Provider.Trim(),
+                    IsFree = resourceDto.IsFree,
+                    CreatedAt = now
+                });
+            }
+
             var roadmapNode = new RoadmapNode
             {
                 Id = Guid.NewGuid(),
                 CareerRoadmapId = careerRoadmap.Id,
                 NodeId = node.Id,
+                ParentRoadmapNodeId = parentRoadmapNode?.Id,
                 Order = step.index + 1,
                 NodeType = "Topic",
                 RequirementType = "Required",
-                PositionX = 120 + (step.index % 3) * 280,
-                PositionY = 120 + (step.index / 3) * 180,
+                PositionX = parentRoadmapNode == null ? 120 + (step.index % 3) * 280 : (parentRoadmapNode.PositionX ?? 120) + 280,
+                PositionY = parentRoadmapNode == null ? 120 + (step.index / 3) * 180 : (parentRoadmapNode.PositionY ?? 120) + ((step.index % 2 == 0) ? -110 : 110),
                 Node = node,
                 CreatedAt = now
             };
@@ -100,14 +137,15 @@ public class PersonalRoadmapService : IPersonalRoadmapService
 
         if (roadmapNodes.Count == 0) return ServiceResult<PersonalRoadmapDetailDto>.Fail("Add at least one roadmap step.");
 
-        for (var i = 0; i < roadmapNodes.Count - 1; i++)
+        for (var i = 1; i < roadmapNodes.Count; i++)
         {
+            var parentRoadmapNodeId = roadmapNodes[i].ParentRoadmapNodeId ?? roadmapNodes[i - 1].Id;
             await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
             {
                 Id = Guid.NewGuid(),
                 CareerRoadmapId = careerRoadmap.Id,
-                FromRoadmapNodeId = roadmapNodes[i].Id,
-                ToRoadmapNodeId = roadmapNodes[i + 1].Id,
+                FromRoadmapNodeId = parentRoadmapNodeId,
+                ToRoadmapNodeId = roadmapNodes[i].Id,
                 EdgeType = "Next",
                 CreatedAt = now
             });
