@@ -65,6 +65,11 @@ final personalRoadmapsProvider =
   return ref.watch(roadmapRepositoryProvider).getPersonalRoadmaps(profileId);
 });
 
+final sharedRoadmapsProvider =
+    FutureProvider<List<PersonalRoadmapDto>>((ref) async {
+  return ref.watch(roadmapRepositoryProvider).getSharedRoadmaps();
+});
+
 final personalRoadmapDetailProvider =
     FutureProvider.family<PersonalRoadmapDto, String>((ref, id) {
   return ref
