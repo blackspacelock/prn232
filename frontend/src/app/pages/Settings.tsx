@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ActionButton } from '../components/ActionButton';
-import { SkillChip, getSkillCategoryColorIndex } from '../components/SkillChip';
+import { SkillChip } from '../components/SkillChip';
+import { getSkillCategoryColorIndex } from '../components/skillColorUtils';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import {

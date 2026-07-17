@@ -9,7 +9,7 @@ namespace SECompass.API.Controllers;
 
 [ApiController]
 [Route("api/career-roadmaps")]
-[Authorize(Roles = "Admin,0")]
+[Authorize]
 public class CareerRoadmapsController : ControllerBase
 {
     private readonly ICareerRoadmapService _service;
@@ -78,7 +78,8 @@ public class CareerRoadmapsController : ControllerBase
     public async Task<IActionResult> UpdateRoadmapNode(Guid id, Guid roadmapNodeId, [FromBody] UpdateRoadmapNodeDto dto)
     {
         var result = await _service.UpdateRoadmapNodeAsync(id, roadmapNodeId, dto);
-        if (!result.Success) return NotFound(result.Error);
+        if (!result.Success && result.Error?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true) return NotFound(result.Error);
+        if (!result.Success) return BadRequest(result.Error);
         return Ok(result.Data);
     }
 

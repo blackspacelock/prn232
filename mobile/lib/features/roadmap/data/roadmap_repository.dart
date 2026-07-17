@@ -6,6 +6,16 @@ abstract class RoadmapRepository {
   Future<CareerRoadmapWithNodesDto> getCareerRoadmapWithNodes(
     String careerRoadmapId,
   );
+  Future<RoadmapTemplateNodeDto> assignRoadmapNode(
+    String careerRoadmapId,
+    CreateRoadmapNodeDto dto,
+  );
+  Future<RoadmapTemplateNodeDto> updateRoadmapNode(
+    String careerRoadmapId,
+    String roadmapNodeId,
+    UpdateRoadmapNodeDto dto,
+  );
+  Future<void> deleteRoadmapNode(String careerRoadmapId, String roadmapNodeId);
   Future<List<PersonalRoadmapDto>> getPersonalRoadmaps(String profileId);
   Future<List<PersonalRoadmapDto>> getSharedRoadmaps();
   Future<PersonalRoadmapDto> getPersonalRoadmapWithProgress(String id);

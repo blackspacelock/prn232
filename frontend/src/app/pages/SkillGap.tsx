@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
@@ -6,7 +6,8 @@ import { EmptyState } from '../components/EmptyState';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Download, SlidersHorizontal } from 'lucide-react';
 import { ActionButton } from '../components/ActionButton';
-import { SkillChip, getSkillCategoryColorIndex } from '../components/SkillChip';
+import { SkillChip } from '../components/SkillChip';
+import { getSkillCategoryColorIndex } from '../components/skillColorUtils';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, Legend, ResponsiveContainer,
 } from 'recharts';
@@ -22,7 +23,7 @@ export function SkillGapPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const profileId = user?.profileId ?? '';
-  const [showNoActiveRoadmapDialog, setShowNoActiveRoadmapDialog] = useState(false);
+  const [hideNoActiveRoadmapDialog, setHideNoActiveRoadmapDialog] = useState(false);
 
   const {
     data: skillGapData,
@@ -49,19 +50,13 @@ export function SkillGapPage() {
     (trendingData as { trendingSkillRecommendations?: string[] })?.trendingSkillRecommendations ?? [];
   const hasNoActiveRoadmap = Boolean(profileId && !skillGapLoading && !skillGapError && !skillGap);
 
-  useEffect(() => {
-    if (hasNoActiveRoadmap) {
-      setShowNoActiveRoadmapDialog(true);
-    }
-  }, [hasNoActiveRoadmap]);
-
   const handleAnalyse = () => {
     refetchSkillGap({ profileId });
     refetchTrending({ profileId });
   };
 
   const goToRoadmaps = () => {
-    setShowNoActiveRoadmapDialog(false);
+    setHideNoActiveRoadmapDialog(true);
     navigate('/roadmaps');
   };
 
@@ -225,13 +220,13 @@ export function SkillGapPage() {
         )}
       </div>
       <ConfirmDialog
-        isOpen={showNoActiveRoadmapDialog && hasNoActiveRoadmap}
+        isOpen={hasNoActiveRoadmap && !hideNoActiveRoadmapDialog}
         title="No active roadmap"
         message="You need to activate at least one roadmap before running skill gap analysis."
         confirmLabel="Go to Roadmaps"
         cancelLabel="Later"
         onConfirm={goToRoadmaps}
-        onCancel={() => setShowNoActiveRoadmapDialog(false)}
+        onCancel={() => setHideNoActiveRoadmapDialog(true)}
       />
     </AppShell>
   );
