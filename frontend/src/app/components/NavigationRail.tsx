@@ -16,7 +16,6 @@ import {
   Database,
   Telescope,
   Users,
-  ClipboardList,
   SlidersHorizontal,
   LogOut,
 } from 'lucide-react';
@@ -48,7 +47,6 @@ const adminItems: NavItem[] = [
   { icon: BookOpen, label: 'Resources', path: '/admin/learning-resources' },
   { icon: Database, label: 'Trends', path: '/admin/job-trends' },
   { icon: SlidersHorizontal, label: 'Config', path: '/admin/config' },
-  { icon: ClipboardList, label: 'Reports', path: '/admin/reports' },
 ];
 
 export function NavigationRail() {
