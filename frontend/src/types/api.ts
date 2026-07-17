@@ -266,6 +266,7 @@ export interface CreateRoadmapNodeDto {
   requirementType?: string;
   positionX?: number;
   positionY?: number;
+  technicalSkillIds?: string[];
 }
 
 export interface UpdateRoadmapNodeDto {
@@ -275,6 +276,7 @@ export interface UpdateRoadmapNodeDto {
   requirementType?: string;
   positionX?: number;
   positionY?: number;
+  technicalSkillIds?: string[];
 }
 
 export interface RoadmapNodeEdgeDto {

@@ -9,4 +9,5 @@ public class CreateRoadmapNodeDto
     public string RequirementType { get; set; } = "Required";
     public int? PositionX { get; set; }
     public int? PositionY { get; set; }
+    public List<Guid>? TechnicalSkillIds { get; set; }
 }

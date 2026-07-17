@@ -8,6 +8,7 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   RoadmapRepositoryImpl({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
   final Dio _dio;
+  static const _cascadeDeleteQuery = {'delete': true};
 
   @override
   Future<List<CareerRoleDto>> getCareerRoles() async {
@@ -39,6 +40,46 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
       return CareerRoadmapWithNodesDto.fromJson(roadmap);
     }
     throw StateError('Roadmap template not found');
+  }
+
+  @override
+  Future<RoadmapTemplateNodeDto> assignRoadmapNode(
+    String careerRoadmapId,
+    CreateRoadmapNodeDto dto,
+  ) async {
+    final response = await _dio.post(
+      '${ApiConstants.careerRoadmaps}/$careerRoadmapId/roadmap-nodes',
+      data: dto.toJson(),
+    );
+    return RoadmapTemplateNodeDto.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  @override
+  Future<RoadmapTemplateNodeDto> updateRoadmapNode(
+    String careerRoadmapId,
+    String roadmapNodeId,
+    UpdateRoadmapNodeDto dto,
+  ) async {
+    final response = await _dio.put(
+      '${ApiConstants.careerRoadmaps}/$careerRoadmapId/roadmap-nodes/$roadmapNodeId',
+      data: dto.toJson(),
+    );
+    return RoadmapTemplateNodeDto.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  @override
+  Future<void> deleteRoadmapNode(
+    String careerRoadmapId,
+    String roadmapNodeId,
+  ) async {
+    await _dio.delete(
+      '${ApiConstants.careerRoadmaps}/$careerRoadmapId/roadmap-nodes/$roadmapNodeId',
+      queryParameters: _cascadeDeleteQuery,
+    );
   }
 
   @override
@@ -135,7 +176,10 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   @override
   Future<void> deleteRoadmap(String personalRoadmapId) async {
     try {
-      await _dio.delete('${ApiConstants.personalRoadmaps}/$personalRoadmapId');
+      await _dio.delete(
+        '${ApiConstants.personalRoadmaps}/$personalRoadmapId',
+        queryParameters: _cascadeDeleteQuery,
+      );
     } on DioException {
       return;
     }
@@ -214,6 +258,7 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     try {
       await _dio.delete(
         '${ApiConstants.personalRoadmaps}/$personalRoadmapId/tags/$tagId',
+        queryParameters: _cascadeDeleteQuery,
       );
     } on DioException {
       return;
