@@ -13,23 +13,32 @@ class PortfolioState {
   const PortfolioState({
     required this.repos,
     this.analysis,
+    this.publicPortfolio,
     this.isAnalyzing = false,
+    this.isSavingPublicSettings = false,
   });
 
   final List<GitHubRepositoryDto> repos;
   final PortfolioAnalysisDto? analysis;
+  final PublicPortfolioDto? publicPortfolio;
   final bool isAnalyzing;
+  final bool isSavingPublicSettings;
 
   PortfolioState copyWith({
     List<GitHubRepositoryDto>? repos,
     PortfolioAnalysisDto? analysis,
+    PublicPortfolioDto? publicPortfolio,
     bool clearAnalysis = false,
     bool? isAnalyzing,
+    bool? isSavingPublicSettings,
   }) {
     return PortfolioState(
       repos: repos ?? this.repos,
       analysis: clearAnalysis ? null : analysis ?? this.analysis,
+      publicPortfolio: publicPortfolio ?? this.publicPortfolio,
       isAnalyzing: isAnalyzing ?? this.isAnalyzing,
+      isSavingPublicSettings:
+          isSavingPublicSettings ?? this.isSavingPublicSettings,
     );
   }
 }
@@ -38,10 +47,18 @@ class PortfolioNotifier extends AsyncNotifier<PortfolioState> {
   @override
   Future<PortfolioState> build() async {
     final profileId = await _getProfileId();
-    final repos = await ref.read(portfolioRepositoryProvider).getRepos(profileId);
+    final repos =
+        await ref.read(portfolioRepositoryProvider).getRepos(profileId);
     final analysis =
         await ref.read(portfolioRepositoryProvider).getAnalysis(profileId);
-    return PortfolioState(repos: repos, analysis: analysis);
+    final publicPortfolio = await ref
+        .read(portfolioRepositoryProvider)
+        .getPublicPortfolio(profileId);
+    return PortfolioState(
+      repos: repos,
+      analysis: analysis,
+      publicPortfolio: publicPortfolio,
+    );
   }
 
   Future<void> addRepo(CreateRepoDto dto) async {
@@ -52,7 +69,8 @@ class PortfolioNotifier extends AsyncNotifier<PortfolioState> {
   }
 
   Future<void> updateRepo(String id, UpdateRepoDto dto) async {
-    final updated = await ref.read(portfolioRepositoryProvider).updateRepo(id, dto);
+    final updated =
+        await ref.read(portfolioRepositoryProvider).updateRepo(id, dto);
     final repos = state.value!.repos
         .map((r) => r.githubRepoId == id ? updated : r)
         .toList();
@@ -61,9 +79,8 @@ class PortfolioNotifier extends AsyncNotifier<PortfolioState> {
 
   Future<void> deleteRepo(String id) async {
     await ref.read(portfolioRepositoryProvider).deleteRepo(id);
-    final repos = state.value!.repos
-        .where((r) => r.githubRepoId != id)
-        .toList();
+    final repos =
+        state.value!.repos.where((r) => r.githubRepoId != id).toList();
     state = AsyncData(state.value!.copyWith(repos: repos));
   }
 
@@ -75,12 +92,44 @@ class PortfolioNotifier extends AsyncNotifier<PortfolioState> {
       final profileId = await _getProfileId();
       final analysis =
           await ref.read(portfolioRepositoryProvider).runAnalysis(profileId);
+      final publicPortfolio = await ref
+          .read(portfolioRepositoryProvider)
+          .getPublicPortfolio(profileId);
       state = AsyncData(state.value!.copyWith(
         analysis: analysis,
+        publicPortfolio: publicPortfolio,
         isAnalyzing: false,
       ));
     } catch (_) {
       state = AsyncData(state.value!.copyWith(isAnalyzing: false));
+      rethrow;
+    }
+  }
+
+  Future<void> updatePublicPortfolio(UpdatePublicPortfolioDto dto) async {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(isSavingPublicSettings: true));
+    try {
+      final profileId = await _getProfileId();
+      final updated = await ref
+          .read(portfolioRepositoryProvider)
+          .updatePublicPortfolio(profileId, dto);
+      state = AsyncData(
+        state.value!.copyWith(
+          publicPortfolio: updated,
+          isSavingPublicSettings: false,
+        ),
+      );
+      final userId = ref.read(authProvider).valueOrNull?.id ??
+          await TokenStorage.getUserId();
+      if (userId != null && userId.isNotEmpty) {
+        ref.invalidate(publicPortfolioProvider(userId));
+      }
+    } catch (_) {
+      state = AsyncData(
+        state.value!.copyWith(isSavingPublicSettings: false),
+      );
       rethrow;
     }
   }
@@ -98,3 +147,8 @@ final portfolioProvider =
     AsyncNotifierProvider<PortfolioNotifier, PortfolioState>(
   PortfolioNotifier.new,
 );
+
+final publicPortfolioProvider =
+    FutureProvider.family<PublicPortfolioViewData, String>((ref, userId) {
+  return ref.read(portfolioRepositoryProvider).getPublicPortfolioView(userId);
+});

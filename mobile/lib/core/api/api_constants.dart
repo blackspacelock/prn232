@@ -31,6 +31,7 @@ class ApiConstants {
 
   // Portfolio
   static const githubRepositories = '/api/github-repositories';
+  static const publicPortfolios = '/api/public-portfolios';
 
   // Users
   static const users = '/api/users';

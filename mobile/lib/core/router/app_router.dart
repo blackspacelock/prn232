@@ -9,13 +9,15 @@ import '../../features/auth/screens/profile_setup_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/roadmap/screens/career_role_selection_screen.dart';
 import '../../features/roadmap/screens/role_selection_loading_screen.dart';
+import '../../features/roadmap/screens/roadmap_catalog_screen.dart';
+import '../../features/roadmap/screens/roadmaps_manage_screen.dart';
 import '../../features/roadmap/screens/roadmap_viewer_screen.dart';
 import '../../features/roadmap/screens/learning_resources_screen.dart';
-import '../../features/skill_gap/screens/skill_gap_selection_screen.dart';
 import '../../features/skill_gap/screens/skill_input_screen.dart';
 import '../../features/skill_gap/screens/skill_gap_analysis_screen.dart';
 import '../../features/ai_mentor/screens/chat_screen.dart';
 import '../../features/job_trends/screens/market_pulse_screen.dart';
+import '../../features/portfolio/screens/github_portfolio_screen.dart';
 import '../../features/portfolio/screens/portfolio_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../widgets/app_bottom_nav.dart';
@@ -32,12 +34,23 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final isAuthenticated = authState.valueOrNull != null;
       final location = state.matchedLocation;
+      final path = state.uri.path;
 
       final publicRoutes = ['/', '/login', '/register'];
-      final isPublic = publicRoutes.contains(location);
+      final isPublicPortfolio = RegExp(r'^/portfolio/[^/]+$').hasMatch(path);
+      final isPublicCatalog = path == '/explore/roles' ||
+          RegExp(r'^/explore/roles/[^/]+$').hasMatch(path) ||
+          RegExp(r'^/explore/roadmaps/[^/]+$').hasMatch(path);
+      final isPublic = publicRoutes.contains(location) ||
+          isPublicPortfolio ||
+          isPublicCatalog;
 
-      if (!isAuthenticated && !isPublic) return '/login';
-      if (isAuthenticated && isPublic) return '/dashboard';
+      if (!isAuthenticated && !isPublic) {
+        return '/login';
+      }
+      if (isAuthenticated && publicRoutes.contains(location)) {
+        return '/dashboard';
+      }
       return null;
     },
     routes: [
@@ -46,8 +59,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(
+        path: '/portfolio/:userId',
+        builder: (_, state) => GithubPortfolioScreen(
+          userId: state.pathParameters['userId']!,
+        ),
+      ),
+      GoRoute(
         path: '/profile-setup',
         builder: (_, __) => const ProfileSetupScreen(),
+      ),
+      GoRoute(
+        path: '/explore/roles',
+        builder: (_, __) => const RoadmapCatalogScreen(publicCatalog: true),
+      ),
+      GoRoute(
+        path: '/explore/roles/:roleId',
+        builder: (_, state) => RoadmapRoleTemplatesScreen(
+          roleId: state.pathParameters['roleId']!,
+          publicCatalog: true,
+        ),
+      ),
+      GoRoute(
+        path: '/explore/roadmaps/:roadmapId',
+        builder: (_, state) => RoadmapTemplateDetailScreen(
+          roadmapId: state.pathParameters['roadmapId']!,
+          publicCatalog: true,
+        ),
       ),
 
       // Authenticated shell with bottom nav
@@ -61,8 +98,28 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const DashboardScreen(),
           ),
           GoRoute(
+            path: '/roadmaps',
+            builder: (_, __) => const RoadmapsManageScreen(),
+          ),
+          GoRoute(
             path: '/career-roles',
             builder: (_, __) => const CareerRoleSelectionScreen(),
+          ),
+          GoRoute(
+            path: '/catalog',
+            builder: (_, __) => const RoadmapCatalogScreen(),
+          ),
+          GoRoute(
+            path: '/catalog/roles/:roleId',
+            builder: (_, state) => RoadmapRoleTemplatesScreen(
+              roleId: state.pathParameters['roleId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/roadmap-template/:roadmapId',
+            builder: (_, state) => RoadmapTemplateDetailScreen(
+              roadmapId: state.pathParameters['roadmapId']!,
+            ),
           ),
           GoRoute(
             path: '/career-roles/loading',
@@ -87,7 +144,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/skill-gap/select',
-            builder: (_, __) => const SkillGapSelectionScreen(),
+            builder: (_, __) => const SkillGapAnalysisScreen(
+              careerRoadmapId: '',
+            ),
           ),
           GoRoute(
             path: '/skill-gap/input',
