@@ -81,6 +81,7 @@ export function RoadmapsPage() {
   const [sortKey, setSortKey] = useState<RoadmapSort>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [statusFilter, setStatusFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
   const [viewMode, setViewMode] = useState<'mine' | 'shared'>('mine');
 
   const showError = (msg: string) => setSnackbar({ open: true, message: msg });
@@ -101,6 +102,18 @@ export function RoadmapsPage() {
   const personalRoadmapsQueryOptions = { query: GET_PERSONAL_ROADMAPS_BY_PROFILE, variables: { profileId } };
 
   const baseRoadmaps = viewMode === 'mine' ? allRoadmaps : sharedRoadmaps;
+  const tagOptions = [
+    { value: '', label: 'All Tags' },
+    ...Array.from(
+      new Map(
+        baseRoadmaps
+          .flatMap((roadmap) => roadmap.tags ?? [])
+          .map((tag) => [tag.name.toLowerCase(), tag.name] as const),
+      ).values(),
+    )
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ value: name, label: name })),
+  ];
   const statusFilteredRoadmaps = statusFilter
     ? baseRoadmaps.filter((r) => {
         const progress = Math.round(r.progressPercentage);
@@ -111,9 +124,14 @@ export function RoadmapsPage() {
         return true;
       })
     : baseRoadmaps;
+  const filteredRoadmaps = tagFilter
+    ? statusFilteredRoadmaps.filter((roadmap) =>
+        (roadmap.tags ?? []).some((tag) => tag.name.toLowerCase() === tagFilter.toLowerCase()),
+      )
+    : statusFilteredRoadmaps;
 
   const roadmapList = useAdminList<PersonalRoadmap, RoadmapSort>({
-    items: statusFilteredRoadmaps,
+    items: filteredRoadmaps,
     searchText: search,
     sortKey,
     sortDirection,
@@ -121,6 +139,7 @@ export function RoadmapsPage() {
     searchPredicate: (r, term) =>
       (r.careerRoadmapName ?? '').toLowerCase().includes(term) ||
       (r.note ?? '').toLowerCase().includes(term) ||
+      (r.tags ?? []).some((tag) => tag.name.toLowerCase().includes(term)) ||
       new Date(r.createdAt).toLocaleDateString().includes(term),
     getSortValue: (r, key) => {
       if (key === 'name') return r.careerRoadmapName ?? '';
@@ -361,6 +380,13 @@ export function RoadmapsPage() {
             ariaLabel="Filter by status"
             label="Status"
           />
+          <AdminFilterSelect
+            value={tagFilter}
+            onChange={setTagFilter}
+            options={tagOptions}
+            ariaLabel="Filter by tag"
+            label="Tag"
+          />
         </AdminListToolbar>
 
         {roadmapList.pagedItems.length > 0 ? (
@@ -387,8 +413,8 @@ export function RoadmapsPage() {
         ) : (
           <EmptyState
             icon={Rocket}
-            title={search || statusFilter ? 'No roadmaps match your filters' : 'No roadmaps yet'}
-            description={search || statusFilter ? 'Try adjusting your search or filter.' : viewMode === 'shared' ? 'Shared student roadmaps will appear here once learners publish them.' : 'Create your own roadmap or generate one from an available career role to begin tracking progress.'}
+            title={search || statusFilter || tagFilter ? 'No roadmaps match your filters' : 'No roadmaps yet'}
+            description={search || statusFilter || tagFilter ? 'Try adjusting your search or filter.' : viewMode === 'shared' ? 'Shared student roadmaps will appear here once learners publish them.' : 'Create your own roadmap or generate one from an available career role to begin tracking progress.'}
             actionLabel={viewMode === 'shared' ? 'Refresh' : 'Create Personal Roadmap'}
             onAction={viewMode === 'shared' ? refetchSharedRoadmaps : () => setIsCreateModalOpen(true)}
           />
