@@ -11,6 +11,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
   ProfileRepositoryImpl({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
   final Dio _dio;
+  static const _cascadeDeleteQuery = {'delete': true};
 
   @override
   Future<ProfileDto> updateProfile(String userId, UpdateProfileDto dto) async {
@@ -101,7 +102,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<void> deleteSkill(String skillId) async {
     try {
-      await _dio.delete('${ApiConstants.skills}/$skillId');
+      await _dio.delete(
+        '${ApiConstants.skills}/$skillId',
+        queryParameters: _cascadeDeleteQuery,
+      );
     } on DioException {
       return;
     }
@@ -143,7 +147,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<void> deactivateAccount(String userId) async {
     try {
-      await _dio.delete('${ApiConstants.users}/$userId');
+      await _dio.delete(
+        '${ApiConstants.users}/$userId',
+        queryParameters: _cascadeDeleteQuery,
+      );
     } on DioException catch (e) {
       final status = e.response?.statusCode;
       final message = _extractError(e);

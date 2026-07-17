@@ -298,6 +298,71 @@ class RoadmapTemplateNodeDto {
       );
 }
 
+class CreateRoadmapNodeDto {
+  const CreateRoadmapNodeDto({
+    required this.nodeId,
+    required this.order,
+    this.parentRoadmapNodeId,
+    this.nodeType,
+    this.requirementType,
+    this.positionX,
+    this.positionY,
+    this.technicalSkillIds = const [],
+  });
+
+  final String nodeId;
+  final String? parentRoadmapNodeId;
+  final int order;
+  final String? nodeType;
+  final String? requirementType;
+  final int? positionX;
+  final int? positionY;
+  final List<String> technicalSkillIds;
+
+  Map<String, dynamic> toJson() => {
+        'nodeId': nodeId,
+        'order': order,
+        if (parentRoadmapNodeId != null)
+          'parentRoadmapNodeId': parentRoadmapNodeId,
+        if (nodeType != null) 'nodeType': nodeType,
+        if (requirementType != null) 'requirementType': requirementType,
+        if (positionX != null) 'positionX': positionX,
+        if (positionY != null) 'positionY': positionY,
+        'technicalSkillIds': technicalSkillIds,
+      };
+}
+
+class UpdateRoadmapNodeDto {
+  const UpdateRoadmapNodeDto({
+    this.parentRoadmapNodeId,
+    this.order,
+    this.nodeType,
+    this.requirementType,
+    this.positionX,
+    this.positionY,
+    this.technicalSkillIds,
+  });
+
+  final String? parentRoadmapNodeId;
+  final int? order;
+  final String? nodeType;
+  final String? requirementType;
+  final int? positionX;
+  final int? positionY;
+  final List<String>? technicalSkillIds;
+
+  Map<String, dynamic> toJson() => {
+        if (parentRoadmapNodeId != null)
+          'parentRoadmapNodeId': parentRoadmapNodeId,
+        if (order != null) 'order': order,
+        if (nodeType != null) 'nodeType': nodeType,
+        if (requirementType != null) 'requirementType': requirementType,
+        if (positionX != null) 'positionX': positionX,
+        if (positionY != null) 'positionY': positionY,
+        if (technicalSkillIds != null) 'technicalSkillIds': technicalSkillIds,
+      };
+}
+
 class RoadmapTemplateEdgeDto {
   const RoadmapTemplateEdgeDto({
     required this.edgeId,
