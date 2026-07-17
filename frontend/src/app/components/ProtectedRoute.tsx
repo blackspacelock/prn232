@@ -11,7 +11,7 @@ export function ProtectedRoute() {
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
-  if (user?.role === 'Admin' && location.pathname === '/dashboard') {
+  if (user?.role === 'Admin') {
     return <Navigate to={getRoleHomePath(user.role)} replace />;
   }
   return <Outlet />;
