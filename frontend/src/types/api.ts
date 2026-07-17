@@ -321,6 +321,7 @@ export interface PersonalRoadmapDetailDto {
   note?: string;
   progressPercentage: number;
   isActive: boolean;
+  createdAt: string;
   nodeProgresses: NodeProgressDto[];
   tags: RoadmapTagDto[];
 }
