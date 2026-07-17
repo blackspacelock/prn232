@@ -24,8 +24,9 @@ import {
   GET_SHARED_PERSONAL_ROADMAPS,
   GET_CAREER_ROLES,
   GET_CAREER_ROADMAPS_BY_ROLE,
+  GET_TECHNICAL_SKILLS,
 } from '@/graphql/queries';
-import type { AddRoadmapTagDto, CopySharedRoadmapRequestDto, CreatePersonalRoadmapDto, GeneratePersonalRoadmapRequestDto, PersonalRoadmapDetailDto, PersonalRoadmapDto, RoadmapTagDto } from '@/types/api';
+import type { AddRoadmapTagDto, CopySharedRoadmapRequestDto, CreatePersonalRoadmapDto, GeneratePersonalRoadmapRequestDto, PersonalRoadmapDetailDto, PersonalRoadmapDto, RoadmapTagDto, TechnicalSkillDto } from '@/types/api';
 
 interface CareerRole { id: string; name: string; description?: string }
 interface CareerRoadmap { id: string; name: string; description?: string }
@@ -93,11 +94,13 @@ export function RoadmapsPage() {
   const { data: sharedRoadmapsData, loading: sharedRoadmapsLoading, refetch: refetchSharedRoadmaps } = useQuery(GET_SHARED_PERSONAL_ROADMAPS);
 
   const { data: rolesData, loading: rolesLoading } = useQuery(GET_CAREER_ROLES);
+  const { data: technicalSkillsData } = useQuery(GET_TECHNICAL_SKILLS);
   const [loadRoadmapsByRole, { data: roadmapsByRoleData, loading: roadmapsByRoleLoading }] = useLazyQuery(GET_CAREER_ROADMAPS_BY_ROLE);
 
   const allRoadmaps: PersonalRoadmap[] = (roadmapsData as { personalRoadmapsByProfile?: PersonalRoadmap[] })?.personalRoadmapsByProfile ?? [];
   const sharedRoadmaps: PersonalRoadmap[] = (sharedRoadmapsData as { sharedPersonalRoadmaps?: PersonalRoadmap[] })?.sharedPersonalRoadmaps ?? [];
   const careerRoles: CareerRole[] = (rolesData as { careerRoles?: CareerRole[] })?.careerRoles ?? [];
+  const technicalSkills: TechnicalSkillDto[] = (technicalSkillsData as { technicalSkills?: TechnicalSkillDto[] })?.technicalSkills ?? [];
   const careerRoadmaps: CareerRoadmap[] = (roadmapsByRoleData as { careerRoadmapsByRole?: CareerRoadmap[] })?.careerRoadmapsByRole ?? [];
   const personalRoadmapsQueryOptions = { query: GET_PERSONAL_ROADMAPS_BY_PROFILE, variables: { profileId } };
 
@@ -451,6 +454,7 @@ export function RoadmapsPage() {
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
             careerRoles={careerRoles}
+            technicalSkills={technicalSkills}
             rolesLoading={rolesLoading}
             profileId={profileId}
             onCreate={(dto) => createMutation.mutate(dto)}
@@ -728,36 +732,108 @@ interface CreatePersonalRoadmapModalProps {
   isOpen: boolean;
   onClose: () => void;
   careerRoles: CareerRole[];
+  technicalSkills: TechnicalSkillDto[];
   rolesLoading: boolean;
   profileId: string;
   onCreate: (dto: CreatePersonalRoadmapDto) => void;
   creating: boolean;
 }
 
-function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, rolesLoading, profileId, onCreate, creating }: CreatePersonalRoadmapModalProps) {
+interface CreateStepDraft {
+  name: string;
+  description: string;
+  parentStepIndex: string;
+  technicalSkillIds: string[];
+  learningResources: Array<{
+    name: string;
+    resourceUrl: string;
+    resourceType: string;
+    provider: string;
+    isFree: boolean;
+  }>;
+}
+
+function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSkills, rolesLoading, profileId, onCreate, creating }: CreatePersonalRoadmapModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [desire, setDesire] = useState('');
   const [careerRoleId, setCareerRoleId] = useState('');
-  const [steps, setSteps] = useState<Array<{ name: string; description: string }>>([
-    { name: '', description: '' },
-    { name: '', description: '' },
-    { name: '', description: '' },
+  const [steps, setSteps] = useState<CreateStepDraft[]>([
+    { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] },
   ]);
 
   if (!isOpen) return null;
 
   const validSteps = steps
-    .map((step) => ({ name: step.name.trim(), description: step.description.trim() || undefined }))
+    .map((step) => ({
+      name: step.name.trim(),
+      description: step.description.trim() || undefined,
+      parentStepIndex: step.parentStepIndex === '' ? undefined : Number(step.parentStepIndex),
+      technicalSkillIds: step.technicalSkillIds,
+      learningResources: step.learningResources
+        .map((resource) => ({
+          name: resource.name.trim(),
+          resourceUrl: resource.resourceUrl.trim(),
+          resourceType: resource.resourceType.trim() || 'Article',
+          provider: resource.provider.trim() || undefined,
+          isFree: resource.isFree,
+        }))
+        .filter((resource) => resource.name && resource.resourceUrl),
+    }))
     .filter((step) => step.name.length > 0);
   const canCreate = profileId && careerRoleId && name.trim() && validSteps.length > 0 && !creating;
 
-  const updateStep = (index: number, field: 'name' | 'description', value: string) => {
+  const updateStep = <TKey extends keyof CreateStepDraft>(index: number, field: TKey, value: CreateStepDraft[TKey]) => {
     setSteps((current) => current.map((step, i) => i === index ? { ...step, [field]: value } : step));
   };
 
-  const addStep = () => setSteps((current) => [...current, { name: '', description: '' }]);
+  const addStep = () => setSteps((current) => [...current, { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] }]);
   const removeStep = (index: number) => setSteps((current) => current.filter((_, i) => i !== index));
+  const addStepResource = (stepIndex: number) => {
+    setSteps((current) => current.map((step, i) => i === stepIndex
+      ? {
+          ...step,
+          learningResources: [
+            ...step.learningResources,
+            { name: '', resourceUrl: '', resourceType: 'Article', provider: '', isFree: true },
+          ],
+        }
+      : step));
+  };
+  const updateStepResource = <TKey extends keyof CreateStepDraft['learningResources'][number]>(
+    stepIndex: number,
+    resourceIndex: number,
+    field: TKey,
+    value: CreateStepDraft['learningResources'][number][TKey],
+  ) => {
+    setSteps((current) => current.map((step, i) => i === stepIndex
+      ? {
+          ...step,
+          learningResources: step.learningResources.map((resource, rIndex) =>
+            rIndex === resourceIndex ? { ...resource, [field]: value } : resource,
+          ),
+        }
+      : step));
+  };
+  const removeStepResource = (stepIndex: number, resourceIndex: number) => {
+    setSteps((current) => current.map((step, i) => i === stepIndex
+      ? { ...step, learningResources: step.learningResources.filter((_, rIndex) => rIndex !== resourceIndex) }
+      : step));
+  };
+  const toggleStepSkill = (stepIndex: number, skillId: string) => {
+    setSteps((current) => current.map((step, i) => {
+      if (i !== stepIndex) return step;
+      const selected = step.technicalSkillIds.includes(skillId);
+      return {
+        ...step,
+        technicalSkillIds: selected
+          ? step.technicalSkillIds.filter((id) => id !== skillId)
+          : [...step.technicalSkillIds, skillId],
+      };
+    }));
+  };
 
   const handleCreate = () => {
     if (!canCreate) return;
@@ -875,6 +951,98 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, rolesLoading
                     className="h-16 w-full resize-none rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
                     placeholder="Optional step details"
                   />
+                  {index > 0 && (
+                    <label className="mt-2 block">
+                      <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Branch from</span>
+                      <select
+                        value={step.parentStepIndex}
+                        onChange={(e) => updateStep(index, 'parentStepIndex', e.target.value)}
+                        className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                      >
+                        <option value="">Previous step</option>
+                        {steps.slice(0, index).map((candidate, candidateIndex) => (
+                          <option key={candidateIndex} value={candidateIndex}>
+                            Step {candidateIndex + 1}{candidate.name.trim() ? ` - ${candidate.name.trim()}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
+                  {technicalSkills.length > 0 && (
+                    <div className="mt-3">
+                      <p className="mb-2 text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Skills</p>
+                      <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-lg border border-[var(--md3-outline-variant)] p-2">
+                        {technicalSkills.map((skill) => (
+                          <label key={skill.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--md3-outline-variant)] px-2 py-1 text-xs text-[var(--md3-on-surface)]">
+                            <input
+                              type="checkbox"
+                              checked={step.technicalSkillIds.includes(skill.id)}
+                              onChange={() => toggleStepSkill(index, skill.id)}
+                            />
+                            {skill.name}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Learning resources</p>
+                      <ActionButton icon={Plus} label="Add Resource" variant="text" size="sm" onClick={() => addStepResource(index)} />
+                    </div>
+                    <div className="space-y-2">
+                      {step.learningResources.map((resource, resourceIndex) => (
+                        <div key={resourceIndex} className="rounded-lg border border-[var(--md3-outline-variant)] p-2">
+                          <div className="mb-2 flex items-center gap-2">
+                            <input
+                              value={resource.name}
+                              onChange={(e) => updateStepResource(index, resourceIndex, 'name', e.target.value)}
+                              className="min-w-0 flex-1 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                              placeholder="Resource name"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeStepResource(index, resourceIndex)}
+                              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--md3-error)] hover:bg-[var(--md3-error-container)]"
+                              aria-label="Remove resource"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <input
+                            value={resource.resourceUrl}
+                            onChange={(e) => updateStepResource(index, resourceIndex, 'resourceUrl', e.target.value)}
+                            className="mb-2 w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                            placeholder="https://..."
+                          />
+                          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                            <input
+                              value={resource.resourceType}
+                              onChange={(e) => updateStepResource(index, resourceIndex, 'resourceType', e.target.value)}
+                              className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                              placeholder="Article"
+                            />
+                            <input
+                              value={resource.provider}
+                              onChange={(e) => updateStepResource(index, resourceIndex, 'provider', e.target.value)}
+                              className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                              placeholder="Provider"
+                            />
+                            <label className="flex items-center gap-2 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={resource.isFree}
+                                onChange={(e) => updateStepResource(index, resourceIndex, 'isFree', e.target.checked)}
+                              />
+                              Free
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
