@@ -151,6 +151,12 @@ public class CareerRoadmapService : ICareerRoadmapService
             Node = node
         };
 
+        if (dto.TechnicalSkillIds != null)
+        {
+            var syncResult = await SyncNodeTechnicalSkillsAsync(node, dto.TechnicalSkillIds);
+            if (!syncResult.Success) return ServiceResult<RoadmapNodeDto>.Fail(syncResult.Error!);
+        }
+
         await _uow.RoadmapNodes.AddAsync(rn);
         await _uow.SaveChangesAsync();
         return ServiceResult<RoadmapNodeDto>.Ok(_mapper.Map<RoadmapNodeDto>(rn));
@@ -179,10 +185,79 @@ public class CareerRoadmapService : ICareerRoadmapService
         if (dto.PositionX.HasValue) roadmapNode.PositionX = dto.PositionX;
         if (dto.PositionY.HasValue) roadmapNode.PositionY = dto.PositionY;
 
-        roadmapNode.Node = (await _uow.Nodes.GetByIdAsync(roadmapNode.NodeId))!;
+        var node = (await _uow.Nodes.GetByIdAsync(roadmapNode.NodeId))!;
+        if (dto.TechnicalSkillIds != null)
+        {
+            var syncResult = await SyncNodeTechnicalSkillsAsync(node, dto.TechnicalSkillIds);
+            if (!syncResult.Success) return ServiceResult<RoadmapNodeDto>.Fail(syncResult.Error!);
+        }
+
+        roadmapNode.Node = node;
         _uow.RoadmapNodes.Update(roadmapNode);
         await _uow.SaveChangesAsync();
         return ServiceResult<RoadmapNodeDto>.Ok(_mapper.Map<RoadmapNodeDto>(roadmapNode));
+    }
+
+    private async Task<ServiceResult<bool>> SyncNodeTechnicalSkillsAsync(Node node, IEnumerable<Guid> technicalSkillIds)
+    {
+        var requestedSkillIds = technicalSkillIds
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToHashSet();
+
+        if (requestedSkillIds.Count > 0)
+        {
+            var existingSkillIds = (await _uow.TechnicalSkills.FindAsync(skill => requestedSkillIds.Contains(skill.Id)))
+                .Select(skill => skill.Id)
+                .ToHashSet();
+            var missingSkillIds = requestedSkillIds.Except(existingSkillIds).ToList();
+            if (missingSkillIds.Count > 0)
+            {
+                return ServiceResult<bool>.Fail($"Technical skill(s) not found: {string.Join(", ", missingSkillIds)}.");
+            }
+        }
+
+        var currentLinks = (await _uow.NodeTechnicalSkills.FindAsync(link => link.NodeId == node.Id)).ToList();
+        var currentSkillIds = currentLinks.Select(link => link.TechnicalSkillId).ToHashSet();
+
+        foreach (var link in currentLinks.Where(link => !requestedSkillIds.Contains(link.TechnicalSkillId)))
+        {
+            _uow.NodeTechnicalSkills.Delete(link);
+        }
+
+        var addedLinks = requestedSkillIds
+            .Except(currentSkillIds)
+            .Select(skillId => new NodeTechnicalSkill
+            {
+                Id = Guid.NewGuid(),
+                NodeId = node.Id,
+                TechnicalSkillId = skillId
+            })
+            .ToList();
+
+        foreach (var link in addedLinks)
+        {
+            await _uow.NodeTechnicalSkills.AddAsync(link);
+        }
+
+        var syncedLinks = currentLinks
+            .Where(link => requestedSkillIds.Contains(link.TechnicalSkillId))
+            .Concat(addedLinks)
+            .ToList();
+        var syncedSkillIds = syncedLinks.Select(link => link.TechnicalSkillId).ToHashSet();
+        var technicalSkills = (await _uow.TechnicalSkills.FindAsync(skill => syncedSkillIds.Contains(skill.Id)))
+            .ToDictionary(skill => skill.Id);
+
+        foreach (var link in syncedLinks)
+        {
+            if (technicalSkills.TryGetValue(link.TechnicalSkillId, out var technicalSkill))
+            {
+                link.TechnicalSkill = technicalSkill;
+            }
+        }
+
+        node.NodeTechnicalSkills = syncedLinks;
+        return ServiceResult<bool>.Ok(true);
     }
 
     public async Task<ServiceResult<bool>> RemoveRoadmapNodeAsync(Guid roadmapId, Guid roadmapNodeId)

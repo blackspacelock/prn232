@@ -8,4 +8,5 @@ public class UpdateRoadmapNodeDto
     public string? RequirementType { get; set; }
     public int? PositionX { get; set; }
     public int? PositionY { get; set; }
+    public List<Guid>? TechnicalSkillIds { get; set; }
 }
