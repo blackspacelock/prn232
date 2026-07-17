@@ -9,7 +9,7 @@ import { Cell } from 'recharts';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
 import { SkillChip } from '../components/SkillChip';
-import { getSkillColor, hashLabel } from '../components/skillColorUtils';
+import { getSkillColor } from '../components/skillColorUtils';
 import {
   GET_USER_BY_ID,
   GET_PERSONAL_ROADMAPS_BY_PROFILE,
@@ -58,7 +58,11 @@ export function DashboardPage() {
 
   const topSkills: Array<{ techSkill: string; trendScore: number }> =
     (topSkillsData as { topTrendingSkills?: Array<{ techSkill: string; trendScore: number }> })?.topTrendingSkills ?? [];
-  const trendChartData = topSkills.map((s) => ({ name: s.techSkill, score: s.trendScore, color: getSkillColor(hashLabel(s.techSkill)).accent }));
+  const trendChartData = topSkills.map((s, index) => ({
+    name: s.techSkill,
+    score: s.trendScore,
+    color: getSkillColor(index).accent,
+  }));
 
   const githubRepoCount = ((githubData as { gitHubRepositoriesByProfile?: unknown[] })?.gitHubRepositoriesByProfile ?? []).length;
 
@@ -149,8 +153,8 @@ export function DashboardPage() {
                         <YAxis tick={{ fontSize: 12, fill: '#5F6368' }} domain={[0, 100]} />
                         <Tooltip />
                         <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                          {trendChartData.map((entry) => (
-                            <Cell key={entry.name} fill={entry.color} />
+                          {trendChartData.map((entry, index) => (
+                            <Cell key={`${entry.name}-${index}`} fill={entry.color} />
                           ))}
                         </Bar>
                       </BarChart>
