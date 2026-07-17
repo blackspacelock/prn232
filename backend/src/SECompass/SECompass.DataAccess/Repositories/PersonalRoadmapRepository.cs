@@ -23,6 +23,8 @@ public class PersonalRoadmapRepository : GenericRepository<PersonalRoadmap>, IPe
             .Include(pr => pr.NodeProgresses)
                 .ThenInclude(np => np.RoadmapNode)
                     .ThenInclude(rn => rn.Node)
+                        .ThenInclude(n => n.NodeTechnicalSkills)
+                            .ThenInclude(nts => nts.TechnicalSkill)
             .Where(pr => pr.ProfileId == profileId)
             .OrderByDescending(pr => pr.IsActive)
             .ThenByDescending(pr => pr.CreatedAt)
@@ -34,6 +36,8 @@ public class PersonalRoadmapRepository : GenericRepository<PersonalRoadmap>, IPe
             .Include(pr => pr.NodeProgresses)
                 .ThenInclude(np => np.RoadmapNode)
                     .ThenInclude(rn => rn.Node)
+                        .ThenInclude(n => n.NodeTechnicalSkills)
+                            .ThenInclude(nts => nts.TechnicalSkill)
             .Include(pr => pr.CareerRoadmap)
             .FirstOrDefaultAsync(pr => pr.Id == personalRoadmapId);
 }

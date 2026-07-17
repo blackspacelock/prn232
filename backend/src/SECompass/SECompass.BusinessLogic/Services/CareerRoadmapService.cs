@@ -85,10 +85,29 @@ public class CareerRoadmapService : ICareerRoadmapService
         var nodes = await _uow.Nodes.FindAsync(n => nodeIds.Contains(n.Id));
         var nodesById = nodes.ToDictionary(n => n.Id);
 
+        var nodeSkillLinks = (await _uow.NodeTechnicalSkills.FindAsync(nts => nodeIds.Contains(nts.NodeId))).ToList();
+        var technicalSkillIds = nodeSkillLinks.Select(nts => nts.TechnicalSkillId).Distinct().ToHashSet();
+        var technicalSkills = (await _uow.TechnicalSkills.FindAsync(ts => technicalSkillIds.Contains(ts.Id)))
+            .ToDictionary(ts => ts.Id);
+        foreach (var link in nodeSkillLinks)
+        {
+            if (technicalSkills.TryGetValue(link.TechnicalSkillId, out var technicalSkill))
+            {
+                link.TechnicalSkill = technicalSkill;
+            }
+        }
+        var skillsByNodeId = nodeSkillLinks
+            .GroupBy(nts => nts.NodeId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(nts => nts.TechnicalSkill.Name).ToList());
+
         foreach (var roadmapNode in roadmapNodeList)
         {
             if (nodesById.TryGetValue(roadmapNode.NodeId, out var node))
             {
+                if (skillsByNodeId.TryGetValue(node.Id, out var skills))
+                {
+                    node.NodeTechnicalSkills = skills;
+                }
                 roadmapNode.Node = node;
             }
         }

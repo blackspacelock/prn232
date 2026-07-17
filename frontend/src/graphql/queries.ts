@@ -98,6 +98,11 @@ export const GET_CAREER_ROADMAP_WITH_NODES = gql`
           description
           order
           createdAt
+          technicalSkills {
+            id
+            name
+            category
+          }
         }
       }
       edges {
@@ -232,6 +237,11 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
             name
             description
             order
+            technicalSkills {
+              id
+              name
+              category
+            }
           }
         }
         node {
@@ -240,6 +250,11 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
           name
           description
           order
+          technicalSkills {
+            id
+            name
+            category
+          }
         }
       }
     }
@@ -271,6 +286,11 @@ export const GET_NODE_PROGRESS = gql`
           name
           description
           order
+          technicalSkills {
+            id
+            name
+            category
+          }
         }
       }
       node {
@@ -278,6 +298,11 @@ export const GET_NODE_PROGRESS = gql`
         name
         description
         order
+        technicalSkills {
+          id
+          name
+          category
+        }
       }
     }
   }

@@ -50,6 +50,140 @@ VALUES
 ('70000000-0000-0000-0000-000000000031', N'Python', N'Languages'),
 ('70000000-0000-0000-0000-000000000032', N'MongoDB', N'Databases');
 
+INSERT INTO @TechnicalSkills (TechnicalSkillId, Name, Category)
+VALUES
+('70000000-0000-0000-0000-000000000033', N'HTML', N'Frontend'),
+('70000000-0000-0000-0000-000000000034', N'CSS', N'Frontend'),
+('70000000-0000-0000-0000-000000000035', N'Frontend Engineering', N'Frontend'),
+('70000000-0000-0000-0000-000000000036', N'Backend Engineering', N'Backend'),
+('70000000-0000-0000-0000-000000000037', N'Flutter', N'Mobile'),
+('70000000-0000-0000-0000-000000000038', N'React Native', N'Mobile'),
+('70000000-0000-0000-0000-000000000039', N'Android Development', N'Mobile'),
+('70000000-0000-0000-0000-000000000040', N'iOS Development', N'Mobile'),
+('70000000-0000-0000-0000-000000000041', N'UI/UX Implementation', N'Frontend'),
+('70000000-0000-0000-0000-000000000042', N'State Management', N'Frontend'),
+('70000000-0000-0000-0000-000000000043', N'Web Performance', N'Frontend'),
+('70000000-0000-0000-0000-000000000044', N'Unit Testing', N'Testing'),
+('70000000-0000-0000-0000-000000000045', N'Integration Testing', N'Testing'),
+('70000000-0000-0000-0000-000000000046', N'End-to-End Testing', N'Testing'),
+('70000000-0000-0000-0000-000000000047', N'Test Automation', N'Testing'),
+('70000000-0000-0000-0000-000000000048', N'Quality Assurance', N'Testing'),
+('70000000-0000-0000-0000-000000000049', N'Performance Testing', N'Testing'),
+('70000000-0000-0000-0000-000000000050', N'Data Structures and Algorithms', N'Computer Science'),
+('70000000-0000-0000-0000-000000000051', N'Operating Systems', N'Computer Science'),
+('70000000-0000-0000-0000-000000000052', N'Computer Networks', N'Computer Science'),
+('70000000-0000-0000-0000-000000000053', N'Database Design', N'Databases'),
+('70000000-0000-0000-0000-000000000054', N'Redis', N'Databases'),
+('70000000-0000-0000-0000-000000000055', N'PostgreSQL', N'Databases'),
+('70000000-0000-0000-0000-000000000056', N'MySQL', N'Databases'),
+('70000000-0000-0000-0000-000000000057', N'Entity Framework', N'Frameworks'),
+('70000000-0000-0000-0000-000000000058', N'Express.js', N'Frameworks'),
+('70000000-0000-0000-0000-000000000059', N'Next.js', N'Frameworks'),
+('70000000-0000-0000-0000-000000000060', N'Angular', N'Frameworks'),
+('70000000-0000-0000-0000-000000000061', N'Vue.js', N'Frameworks'),
+('70000000-0000-0000-0000-000000000062', N'PHP', N'Languages'),
+('70000000-0000-0000-0000-000000000063', N'Laravel', N'Frameworks'),
+('70000000-0000-0000-0000-000000000064', N'Go', N'Languages'),
+('70000000-0000-0000-0000-000000000065', N'AWS', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000066', N'Azure', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000067', N'Linux', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000068', N'Terraform', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000069', N'Monitoring and Observability', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000070', N'Site Reliability Engineering', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000071', N'Data Analysis', N'Data'),
+('70000000-0000-0000-0000-000000000072', N'Machine Learning', N'Data'),
+('70000000-0000-0000-0000-000000000073', N'Data Engineering', N'Data'),
+('70000000-0000-0000-0000-000000000074', N'ETL Pipelines', N'Data'),
+('70000000-0000-0000-0000-000000000075', N'Power BI', N'Data'),
+('70000000-0000-0000-0000-000000000076', N'Agile / Scrum', N'Tools & Collaboration'),
+('70000000-0000-0000-0000-000000000077', N'Jira', N'Tools & Collaboration'),
+('70000000-0000-0000-0000-000000000078', N'System Design', N'Architecture & Design'),
+('70000000-0000-0000-0000-000000000079', N'Problem Solving', N'Computer Science'),
+('70000000-0000-0000-0000-000000000080', N'Software Engineering Fundamentals', N'Computer Science');
+
+INSERT INTO @TechnicalSkills (TechnicalSkillId, Name, Category)
+VALUES
+('70000000-0000-0000-0000-000000000081', N'Kotlin', N'Languages'),
+('70000000-0000-0000-0000-000000000082', N'Jetpack Compose', N'Mobile'),
+('70000000-0000-0000-0000-000000000083', N'Android Architecture', N'Mobile'),
+('70000000-0000-0000-0000-000000000084', N'Gradle', N'Tools & Collaboration'),
+('70000000-0000-0000-0000-000000000085', N'Retrofit / OkHttp', N'Mobile'),
+('70000000-0000-0000-0000-000000000086', N'Room Database', N'Mobile'),
+('70000000-0000-0000-0000-000000000087', N'Firebase Cloud Messaging', N'Mobile'),
+('70000000-0000-0000-0000-000000000088', N'Swift', N'Languages'),
+('70000000-0000-0000-0000-000000000089', N'SwiftUI', N'Mobile'),
+('70000000-0000-0000-0000-000000000090', N'UIKit', N'Mobile'),
+('70000000-0000-0000-0000-000000000091', N'Core Data', N'Mobile'),
+('70000000-0000-0000-0000-000000000092', N'Xcode', N'Tools & Collaboration'),
+('70000000-0000-0000-0000-000000000093', N'App Store Release', N'Mobile'),
+('70000000-0000-0000-0000-000000000094', N'Solidity', N'Blockchain'),
+('70000000-0000-0000-0000-000000000095', N'Ethereum / EVM', N'Blockchain'),
+('70000000-0000-0000-0000-000000000096', N'Smart Contracts', N'Blockchain'),
+('70000000-0000-0000-0000-000000000097', N'Web3 / Wallet Integration', N'Blockchain'),
+('70000000-0000-0000-0000-000000000098', N'Blockchain Security', N'Blockchain'),
+('70000000-0000-0000-0000-000000000099', N'DeFi and Token Standards', N'Blockchain'),
+('70000000-0000-0000-0000-000000000100', N'IPFS / Decentralized Storage', N'Blockchain'),
+('70000000-0000-0000-0000-000000000101', N'Unity', N'Game Development'),
+('70000000-0000-0000-0000-000000000102', N'Unreal Engine', N'Game Development'),
+('70000000-0000-0000-0000-000000000103', N'Godot', N'Game Development'),
+('70000000-0000-0000-0000-000000000104', N'C++', N'Languages'),
+('70000000-0000-0000-0000-000000000105', N'Game Physics', N'Game Development'),
+('70000000-0000-0000-0000-000000000106', N'Game AI', N'Game Development'),
+('70000000-0000-0000-0000-000000000107', N'Graphics and Shaders', N'Game Development'),
+('70000000-0000-0000-0000-000000000108', N'Game Design', N'Game Development'),
+('70000000-0000-0000-0000-000000000109', N'Figma', N'Design'),
+('70000000-0000-0000-0000-000000000110', N'UX Research', N'Design'),
+('70000000-0000-0000-0000-000000000111', N'Wireframing and Prototyping', N'Design'),
+('70000000-0000-0000-0000-000000000112', N'Information Architecture', N'Design'),
+('70000000-0000-0000-0000-000000000113', N'Design Systems', N'Design'),
+('70000000-0000-0000-0000-000000000114', N'Usability Testing', N'Design'),
+('70000000-0000-0000-0000-000000000115', N'WCAG Accessibility', N'Design'),
+('70000000-0000-0000-0000-000000000116', N'Product Management', N'Product'),
+('70000000-0000-0000-0000-000000000117', N'Product Discovery', N'Product'),
+('70000000-0000-0000-0000-000000000118', N'Product Analytics', N'Product'),
+('70000000-0000-0000-0000-000000000119', N'Roadmapping and Prioritization', N'Product'),
+('70000000-0000-0000-0000-000000000120', N'Requirements Writing', N'Product'),
+('70000000-0000-0000-0000-000000000121', N'Go-to-Market', N'Product'),
+('70000000-0000-0000-0000-000000000122', N'SQL Server Administration', N'Databases'),
+('70000000-0000-0000-0000-000000000123', N'Database Backup and Recovery', N'Databases'),
+('70000000-0000-0000-0000-000000000124', N'Database Performance Tuning', N'Databases'),
+('70000000-0000-0000-0000-000000000125', N'Database Security', N'Databases'),
+('70000000-0000-0000-0000-000000000126', N'PowerShell', N'Tools & Collaboration'),
+('70000000-0000-0000-0000-000000000127', N'Apache Spark', N'Data'),
+('70000000-0000-0000-0000-000000000128', N'Apache Airflow', N'Data'),
+('70000000-0000-0000-0000-000000000129', N'Kafka', N'Data'),
+('70000000-0000-0000-0000-000000000130', N'Data Warehousing', N'Data'),
+('70000000-0000-0000-0000-000000000131', N'dbt', N'Data'),
+('70000000-0000-0000-0000-000000000132', N'Data Quality and Governance', N'Data'),
+('70000000-0000-0000-0000-000000000133', N'Pandas / NumPy', N'Data'),
+('70000000-0000-0000-0000-000000000134', N'Statistics and Probability', N'Data'),
+('70000000-0000-0000-0000-000000000135', N'Data Visualization', N'Data'),
+('70000000-0000-0000-0000-000000000136', N'Scikit-learn', N'Data'),
+('70000000-0000-0000-0000-000000000137', N'PyTorch', N'Data'),
+('70000000-0000-0000-0000-000000000138', N'MLOps', N'Data'),
+('70000000-0000-0000-0000-000000000139', N'ML Model Deployment', N'Data'),
+('70000000-0000-0000-0000-000000000140', N'Playwright', N'Testing'),
+('70000000-0000-0000-0000-000000000141', N'Selenium', N'Testing'),
+('70000000-0000-0000-0000-000000000142', N'Postman', N'Testing'),
+('70000000-0000-0000-0000-000000000143', N'API Testing', N'Testing'),
+('70000000-0000-0000-0000-000000000144', N'Manual Testing', N'Testing'),
+('70000000-0000-0000-0000-000000000145', N'Load Testing', N'Testing'),
+('70000000-0000-0000-0000-000000000146', N'Vulnerability Management', N'Security'),
+('70000000-0000-0000-0000-000000000147', N'SIEM and SOC Monitoring', N'Security'),
+('70000000-0000-0000-0000-000000000148', N'Incident Response', N'Security'),
+('70000000-0000-0000-0000-000000000149', N'Threat Intelligence', N'Security'),
+('70000000-0000-0000-0000-000000000150', N'Digital Forensics', N'Security'),
+('70000000-0000-0000-0000-000000000151', N'IAM / RBAC', N'Security'),
+('70000000-0000-0000-0000-000000000152', N'Prometheus / Grafana', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000153', N'Helm / GitOps', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000154', N'SLI / SLO / SLA', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000155', N'Chaos Engineering', N'DevOps & Cloud'),
+('70000000-0000-0000-0000-000000000156', N'Engineering Management', N'Management'),
+('70000000-0000-0000-0000-000000000157', N'People Management', N'Management'),
+('70000000-0000-0000-0000-000000000158', N'Coaching and Feedback', N'Management'),
+('70000000-0000-0000-0000-000000000159', N'Hiring and Interviewing', N'Management'),
+('70000000-0000-0000-0000-000000000160', N'Delivery Planning', N'Management');
+
 MERGE TechnicalSkills AS target
 USING @TechnicalSkills AS source
 ON target.TechnicalSkillId = source.TechnicalSkillId
@@ -136,6 +270,293 @@ WHEN NOT MATCHED BY TARGET THEN
     INSERT (NodeTechnicalSkillId, NodeId, TechnicalSkillId, CreatedAt)
     VALUES (source.NodeTechnicalSkillId, source.NodeId, source.TechnicalSkillId, @Now);
 
+DECLARE @SkillRules TABLE (
+    Pattern nvarchar(255) NOT NULL,
+    TechnicalSkillId uniqueidentifier NOT NULL,
+    Priority int NOT NULL
+);
+
+INSERT INTO @SkillRules (Pattern, TechnicalSkillId, Priority)
+VALUES
+(N'%architecture%', '70000000-0000-0000-0000-000000000001', 100),
+(N'%system design%', '70000000-0000-0000-0000-000000000078', 100),
+(N'%design pattern%', '70000000-0000-0000-0000-000000000003', 95),
+(N'%solid%', '70000000-0000-0000-0000-000000000004', 95),
+(N'%domain-driven%', '70000000-0000-0000-0000-000000000005', 95),
+(N'%microservice%', '70000000-0000-0000-0000-000000000006', 95),
+(N'%c#%', '70000000-0000-0000-0000-000000000007', 100),
+(N'%.net%', '70000000-0000-0000-0000-000000000008', 100),
+(N'%javascript%', '70000000-0000-0000-0000-000000000009', 100),
+(N'%typescript%', '70000000-0000-0000-0000-000000000010', 100),
+(N'%java %', '70000000-0000-0000-0000-000000000011', 95),
+(N'%spring%', '70000000-0000-0000-0000-000000000012', 100),
+(N'%git%', '70000000-0000-0000-0000-000000000013', 90),
+(N'%documentation%', '70000000-0000-0000-0000-000000000014', 85),
+(N'%communication%', '70000000-0000-0000-0000-000000000015', 85),
+(N'%leadership%', '70000000-0000-0000-0000-000000000016', 85),
+(N'%security%', '70000000-0000-0000-0000-000000000017', 95),
+(N'%oauth%', '70000000-0000-0000-0000-000000000018', 100),
+(N'%openid%', '70000000-0000-0000-0000-000000000018', 100),
+(N'%api security%', '70000000-0000-0000-0000-000000000019', 100),
+(N'%sql%', '70000000-0000-0000-0000-000000000020', 90),
+(N'%nosql%', '70000000-0000-0000-0000-000000000021', 95),
+(N'%rest%', '70000000-0000-0000-0000-000000000022', 95),
+(N'%graphql%', '70000000-0000-0000-0000-000000000023', 95),
+(N'%queue%', '70000000-0000-0000-0000-000000000024', 90),
+(N'%messaging%', '70000000-0000-0000-0000-000000000024', 90),
+(N'%ci/cd%', '70000000-0000-0000-0000-000000000025', 100),
+(N'%pipeline%', '70000000-0000-0000-0000-000000000025', 85),
+(N'%docker%', '70000000-0000-0000-0000-000000000026', 100),
+(N'%container%', '70000000-0000-0000-0000-000000000026', 95),
+(N'%kubernetes%', '70000000-0000-0000-0000-000000000027', 100),
+(N'%cloud%', '70000000-0000-0000-0000-000000000028', 90),
+(N'%react%', '70000000-0000-0000-0000-000000000029', 100),
+(N'%node.js%', '70000000-0000-0000-0000-000000000030', 100),
+(N'%nodejs%', '70000000-0000-0000-0000-000000000030', 100),
+(N'%python%', '70000000-0000-0000-0000-000000000031', 100),
+(N'%mongodb%', '70000000-0000-0000-0000-000000000032', 100),
+(N'%html%', '70000000-0000-0000-0000-000000000033', 100),
+(N'%css%', '70000000-0000-0000-0000-000000000034', 100),
+(N'%frontend%', '70000000-0000-0000-0000-000000000035', 90),
+(N'%front-end%', '70000000-0000-0000-0000-000000000035', 90),
+(N'%backend%', '70000000-0000-0000-0000-000000000036', 90),
+(N'%back-end%', '70000000-0000-0000-0000-000000000036', 90),
+(N'%flutter%', '70000000-0000-0000-0000-000000000037', 100),
+(N'%react native%', '70000000-0000-0000-0000-000000000038', 100),
+(N'%android%', '70000000-0000-0000-0000-000000000039', 95),
+(N'%ios%', '70000000-0000-0000-0000-000000000040', 95),
+(N'%ui%', '70000000-0000-0000-0000-000000000041', 80),
+(N'%ux%', '70000000-0000-0000-0000-000000000041', 80),
+(N'%state management%', '70000000-0000-0000-0000-000000000042', 95),
+(N'%performance%', '70000000-0000-0000-0000-000000000043', 80),
+(N'%unit test%', '70000000-0000-0000-0000-000000000044', 95),
+(N'%integration test%', '70000000-0000-0000-0000-000000000045', 95),
+(N'%end-to-end%', '70000000-0000-0000-0000-000000000046', 95),
+(N'%e2e%', '70000000-0000-0000-0000-000000000046', 95),
+(N'%automation%', '70000000-0000-0000-0000-000000000047', 90),
+(N'%quality assurance%', '70000000-0000-0000-0000-000000000048', 95),
+(N'%qa%', '70000000-0000-0000-0000-000000000048', 90),
+(N'%testing%', '70000000-0000-0000-0000-000000000048', 80),
+(N'%data structure%', '70000000-0000-0000-0000-000000000050', 95),
+(N'%algorithm%', '70000000-0000-0000-0000-000000000050', 95),
+(N'%operating system%', '70000000-0000-0000-0000-000000000051', 95),
+(N'%network%', '70000000-0000-0000-0000-000000000052', 90),
+(N'%database design%', '70000000-0000-0000-0000-000000000053', 95),
+(N'%database%', '70000000-0000-0000-0000-000000000053', 80),
+(N'%redis%', '70000000-0000-0000-0000-000000000054', 95),
+(N'%postgres%', '70000000-0000-0000-0000-000000000055', 95),
+(N'%mysql%', '70000000-0000-0000-0000-000000000056', 95),
+(N'%entity framework%', '70000000-0000-0000-0000-000000000057', 95),
+(N'%express%', '70000000-0000-0000-0000-000000000058', 90),
+(N'%next.js%', '70000000-0000-0000-0000-000000000059', 95),
+(N'%angular%', '70000000-0000-0000-0000-000000000060', 95),
+(N'%vue%', '70000000-0000-0000-0000-000000000061', 95),
+(N'%php%', '70000000-0000-0000-0000-000000000062', 95),
+(N'%laravel%', '70000000-0000-0000-0000-000000000063', 95),
+(N'%golang%', '70000000-0000-0000-0000-000000000064', 95),
+(N'% go %', '70000000-0000-0000-0000-000000000064', 80),
+(N'%aws%', '70000000-0000-0000-0000-000000000065', 95),
+(N'%azure%', '70000000-0000-0000-0000-000000000066', 95),
+(N'%linux%', '70000000-0000-0000-0000-000000000067', 95),
+(N'%terraform%', '70000000-0000-0000-0000-000000000068', 95),
+(N'%observability%', '70000000-0000-0000-0000-000000000069', 95),
+(N'%monitoring%', '70000000-0000-0000-0000-000000000069', 90),
+(N'%sre%', '70000000-0000-0000-0000-000000000070', 95),
+(N'%site reliability%', '70000000-0000-0000-0000-000000000070', 95),
+(N'%data analysis%', '70000000-0000-0000-0000-000000000071', 95),
+(N'%machine learning%', '70000000-0000-0000-0000-000000000072', 95),
+(N'%data engineering%', '70000000-0000-0000-0000-000000000073', 95),
+(N'%etl%', '70000000-0000-0000-0000-000000000074', 95),
+(N'%power bi%', '70000000-0000-0000-0000-000000000075', 95),
+(N'%scrum%', '70000000-0000-0000-0000-000000000076', 90),
+(N'%agile%', '70000000-0000-0000-0000-000000000076', 90),
+(N'%jira%', '70000000-0000-0000-0000-000000000077', 90),
+(N'%problem solving%', '70000000-0000-0000-0000-000000000079', 90);
+
+INSERT INTO @SkillRules (Pattern, TechnicalSkillId, Priority)
+VALUES
+(N'%android%', '70000000-0000-0000-0000-000000000039', 100),
+(N'%kotlin%', '70000000-0000-0000-0000-000000000081', 100),
+(N'%compose%', '70000000-0000-0000-0000-000000000082', 100),
+(N'%gradle%', '70000000-0000-0000-0000-000000000084', 95),
+(N'%retrofit%', '70000000-0000-0000-0000-000000000085', 100),
+(N'%okhttp%', '70000000-0000-0000-0000-000000000085', 100),
+(N'%room database%', '70000000-0000-0000-0000-000000000086', 100),
+(N'%firebase cloud messaging%', '70000000-0000-0000-0000-000000000087', 100),
+(N'%push notification%', '70000000-0000-0000-0000-000000000087', 90),
+(N'%swift%', '70000000-0000-0000-0000-000000000088', 100),
+(N'%swiftui%', '70000000-0000-0000-0000-000000000089', 100),
+(N'%uikit%', '70000000-0000-0000-0000-000000000090', 100),
+(N'%core data%', '70000000-0000-0000-0000-000000000091', 100),
+(N'%xcode%', '70000000-0000-0000-0000-000000000092', 95),
+(N'%app store%', '70000000-0000-0000-0000-000000000093', 95),
+(N'%storekit%', '70000000-0000-0000-0000-000000000093', 90),
+(N'%blockchain%', '70000000-0000-0000-0000-000000000095', 95),
+(N'%solidity%', '70000000-0000-0000-0000-000000000094', 100),
+(N'%ethereum%', '70000000-0000-0000-0000-000000000095', 100),
+(N'%evm%', '70000000-0000-0000-0000-000000000095', 100),
+(N'%smart contract%', '70000000-0000-0000-0000-000000000096', 100),
+(N'%web3%', '70000000-0000-0000-0000-000000000097', 100),
+(N'%wallet%', '70000000-0000-0000-0000-000000000097', 90),
+(N'%defi%', '70000000-0000-0000-0000-000000000099', 95),
+(N'%erc-20%', '70000000-0000-0000-0000-000000000099', 95),
+(N'%erc-721%', '70000000-0000-0000-0000-000000000099', 95),
+(N'%nft%', '70000000-0000-0000-0000-000000000099', 90),
+(N'%ipfs%', '70000000-0000-0000-0000-000000000100', 95),
+(N'%unity%', '70000000-0000-0000-0000-000000000101', 100),
+(N'%unreal%', '70000000-0000-0000-0000-000000000102', 100),
+(N'%godot%', '70000000-0000-0000-0000-000000000103', 100),
+(N'%c++%', '70000000-0000-0000-0000-000000000104', 100),
+(N'%game%', '70000000-0000-0000-0000-000000000108', 80),
+(N'%rigidbody%', '70000000-0000-0000-0000-000000000105', 95),
+(N'%physics%', '70000000-0000-0000-0000-000000000105', 85),
+(N'%pathfinding%', '70000000-0000-0000-0000-000000000106', 95),
+(N'%shader%', '70000000-0000-0000-0000-000000000107', 95),
+(N'%figma%', '70000000-0000-0000-0000-000000000109', 100),
+(N'%user research%', '70000000-0000-0000-0000-000000000110', 100),
+(N'%customer interview%', '70000000-0000-0000-0000-000000000110', 90),
+(N'%wirefram%', '70000000-0000-0000-0000-000000000111', 100),
+(N'%prototype%', '70000000-0000-0000-0000-000000000111', 95),
+(N'%information architecture%', '70000000-0000-0000-0000-000000000112', 100),
+(N'%design system%', '70000000-0000-0000-0000-000000000113', 100),
+(N'%usability%', '70000000-0000-0000-0000-000000000114', 95),
+(N'%wcag%', '70000000-0000-0000-0000-000000000115', 100),
+(N'%accessibility%', '70000000-0000-0000-0000-000000000115', 90),
+(N'%product manager%', '70000000-0000-0000-0000-000000000116', 100),
+(N'%product management%', '70000000-0000-0000-0000-000000000116', 100),
+(N'%discovery%', '70000000-0000-0000-0000-000000000117', 90),
+(N'%market research%', '70000000-0000-0000-0000-000000000117', 85),
+(N'%product metric%', '70000000-0000-0000-0000-000000000118', 95),
+(N'%analytics%', '70000000-0000-0000-0000-000000000118', 85),
+(N'%roadmapping%', '70000000-0000-0000-0000-000000000119', 95),
+(N'%prioritization%', '70000000-0000-0000-0000-000000000119', 95),
+(N'%requirements%', '70000000-0000-0000-0000-000000000120', 95),
+(N'%go to market%', '70000000-0000-0000-0000-000000000121', 95),
+(N'%go-to-market%', '70000000-0000-0000-0000-000000000121', 95),
+(N'%sql server administration%', '70000000-0000-0000-0000-000000000122', 100),
+(N'%sql server%', '70000000-0000-0000-0000-000000000122', 85),
+(N'%backup%', '70000000-0000-0000-0000-000000000123', 90),
+(N'%restore%', '70000000-0000-0000-0000-000000000123', 90),
+(N'%performance tuning%', '70000000-0000-0000-0000-000000000124', 95),
+(N'%query execution%', '70000000-0000-0000-0000-000000000124', 90),
+(N'%index%', '70000000-0000-0000-0000-000000000124', 80),
+(N'%database security%', '70000000-0000-0000-0000-000000000125', 95),
+(N'%encryption%', '70000000-0000-0000-0000-000000000125', 85),
+(N'%powershell%', '70000000-0000-0000-0000-000000000126', 95),
+(N'%spark%', '70000000-0000-0000-0000-000000000127', 95),
+(N'%airflow%', '70000000-0000-0000-0000-000000000128', 95),
+(N'%kafka%', '70000000-0000-0000-0000-000000000129', 95),
+(N'%warehouse%', '70000000-0000-0000-0000-000000000130', 90),
+(N'%lakehouse%', '70000000-0000-0000-0000-000000000130', 85),
+(N'%dbt%', '70000000-0000-0000-0000-000000000131', 95),
+(N'%data quality%', '70000000-0000-0000-0000-000000000132', 95),
+(N'%governance%', '70000000-0000-0000-0000-000000000132', 85),
+(N'%pandas%', '70000000-0000-0000-0000-000000000133', 95),
+(N'%numpy%', '70000000-0000-0000-0000-000000000133', 95),
+(N'%statistics%', '70000000-0000-0000-0000-000000000134', 90),
+(N'%probability%', '70000000-0000-0000-0000-000000000134', 90),
+(N'%visualization%', '70000000-0000-0000-0000-000000000135', 90),
+(N'%dashboard%', '70000000-0000-0000-0000-000000000135', 85),
+(N'%scikit%', '70000000-0000-0000-0000-000000000136', 95),
+(N'%pytorch%', '70000000-0000-0000-0000-000000000137', 95),
+(N'%mlops%', '70000000-0000-0000-0000-000000000138', 95),
+(N'%ml pipeline%', '70000000-0000-0000-0000-000000000138', 90),
+(N'%model deployment%', '70000000-0000-0000-0000-000000000139', 95),
+(N'%playwright%', '70000000-0000-0000-0000-000000000140', 100),
+(N'%selenium%', '70000000-0000-0000-0000-000000000141', 100),
+(N'%postman%', '70000000-0000-0000-0000-000000000142', 100),
+(N'%api testing%', '70000000-0000-0000-0000-000000000143', 100),
+(N'%manual testing%', '70000000-0000-0000-0000-000000000144', 100),
+(N'%load testing%', '70000000-0000-0000-0000-000000000145', 100),
+(N'%vulnerability%', '70000000-0000-0000-0000-000000000146', 95),
+(N'%siem%', '70000000-0000-0000-0000-000000000147', 95),
+(N'%soc%', '70000000-0000-0000-0000-000000000147', 85),
+(N'%incident response%', '70000000-0000-0000-0000-000000000148', 95),
+(N'%threat intelligence%', '70000000-0000-0000-0000-000000000149', 95),
+(N'%forensics%', '70000000-0000-0000-0000-000000000150', 95),
+(N'%iam%', '70000000-0000-0000-0000-000000000151', 95),
+(N'%rbac%', '70000000-0000-0000-0000-000000000151', 95),
+(N'%prometheus%', '70000000-0000-0000-0000-000000000152', 95),
+(N'%grafana%', '70000000-0000-0000-0000-000000000152', 95),
+(N'%helm%', '70000000-0000-0000-0000-000000000153', 95),
+(N'%gitops%', '70000000-0000-0000-0000-000000000153', 95),
+(N'%sli%', '70000000-0000-0000-0000-000000000154', 95),
+(N'%slo%', '70000000-0000-0000-0000-000000000154', 95),
+(N'%sla%', '70000000-0000-0000-0000-000000000154', 95),
+(N'%chaos engineering%', '70000000-0000-0000-0000-000000000155', 95),
+(N'%engineering manager%', '70000000-0000-0000-0000-000000000156', 100),
+(N'%engineering leadership%', '70000000-0000-0000-0000-000000000156', 95),
+(N'%people management%', '70000000-0000-0000-0000-000000000157', 95),
+(N'%coaching%', '70000000-0000-0000-0000-000000000158', 95),
+(N'%feedback%', '70000000-0000-0000-0000-000000000158', 85),
+(N'%hiring%', '70000000-0000-0000-0000-000000000159', 95),
+(N'%interview%', '70000000-0000-0000-0000-000000000159', 90),
+(N'%planning%', '70000000-0000-0000-0000-000000000160', 85),
+(N'%delivery%', '70000000-0000-0000-0000-000000000160', 85);
+
+;WITH Matches AS (
+    SELECT DISTINCT
+        rn.NodeId,
+        sr.TechnicalSkillId
+    FROM RoadmapNodes rn
+    INNER JOIN Nodes n ON n.NodeId = rn.NodeId
+    INNER JOIN CareerRoadmaps cr ON cr.CareerRoadmapId = rn.CareerRoadmapId
+    INNER JOIN CareerRoles careerRole ON careerRole.CareerRoleId = cr.CareerRoleId
+    CROSS APPLY (
+        SELECT TOP (4) skillRule.TechnicalSkillId
+        FROM @SkillRules skillRule
+        WHERE LOWER(CONCAT(N' ', n.Name, N' ', ISNULL(n.Description, N''), N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE LOWER(skillRule.Pattern)
+        ORDER BY skillRule.Priority DESC, skillRule.TechnicalSkillId
+    ) sr
+),
+FallbackMatches AS (
+    SELECT DISTINCT
+        rn.NodeId,
+        CASE
+            WHEN LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%frontend%' OR LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%front-end%' THEN CAST('70000000-0000-0000-0000-000000000035' AS uniqueidentifier)
+            WHEN LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%backend%' OR LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%back-end%' THEN CAST('70000000-0000-0000-0000-000000000036' AS uniqueidentifier)
+            WHEN LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%mobile%' THEN CAST('70000000-0000-0000-0000-000000000037' AS uniqueidentifier)
+            WHEN LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%qa%' OR LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%test%' THEN CAST('70000000-0000-0000-0000-000000000048' AS uniqueidentifier)
+            WHEN LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%devops%' OR LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%cloud%' THEN CAST('70000000-0000-0000-0000-000000000028' AS uniqueidentifier)
+            WHEN LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%data%' THEN CAST('70000000-0000-0000-0000-000000000071' AS uniqueidentifier)
+            WHEN LOWER(CONCAT(N' ', cr.Name, N' ', careerRole.Name, N' ')) LIKE N'%security%' THEN CAST('70000000-0000-0000-0000-000000000017' AS uniqueidentifier)
+            ELSE CAST('70000000-0000-0000-0000-000000000080' AS uniqueidentifier)
+        END AS TechnicalSkillId
+    FROM RoadmapNodes rn
+    INNER JOIN Nodes n ON n.NodeId = rn.NodeId
+    INNER JOIN CareerRoadmaps cr ON cr.CareerRoadmapId = rn.CareerRoadmapId
+    INNER JOIN CareerRoles careerRole ON careerRole.CareerRoleId = cr.CareerRoleId
+    WHERE NOT EXISTS (
+          SELECT 1 FROM NodeTechnicalSkills nts WHERE nts.NodeId = rn.NodeId
+      )
+      AND NOT EXISTS (
+          SELECT 1 FROM Matches m WHERE m.NodeId = rn.NodeId
+      )
+),
+AllGeneratedMatches AS (
+    SELECT NodeId, TechnicalSkillId FROM Matches
+    UNION
+    SELECT NodeId, TechnicalSkillId FROM FallbackMatches
+)
+MERGE NodeTechnicalSkills AS target
+USING AllGeneratedMatches AS source
+ON target.NodeId = source.NodeId
+   AND target.TechnicalSkillId = source.TechnicalSkillId
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (NodeTechnicalSkillId, NodeId, TechnicalSkillId, CreatedAt)
+    VALUES (NEWID(), source.NodeId, source.TechnicalSkillId, @Now)
+WHEN MATCHED THEN
+    UPDATE SET target.UpdatedAt = @Now;
+
 SELECT
     (SELECT COUNT(*) FROM TechnicalSkills) AS TechnicalSkillCount,
-    (SELECT COUNT(*) FROM NodeTechnicalSkills) AS NodeTechnicalSkillCount;
+    (SELECT COUNT(*) FROM NodeTechnicalSkills) AS NodeTechnicalSkillCount,
+    (
+        SELECT COUNT(*)
+        FROM RoadmapNodes rn
+        WHERE NOT EXISTS (
+              SELECT 1
+              FROM NodeTechnicalSkills nts
+              WHERE nts.NodeId = rn.NodeId
+          )
+    ) AS RoadmapNodesWithoutTechnicalSkills;

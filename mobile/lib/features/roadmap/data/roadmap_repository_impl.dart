@@ -312,6 +312,11 @@ query MobileCareerRoadmapWithNodes($roadmapId: UUID!) {
         name
         description
         order
+        technicalSkills {
+          id
+          name
+          category
+        }
       }
     }
     edges {
@@ -383,6 +388,11 @@ query MobilePersonalRoadmapWithProgress($personalRoadmapId: UUID!) {
         name
         description
         order
+        technicalSkills {
+          id
+          name
+          category
+        }
       }
     }
   }

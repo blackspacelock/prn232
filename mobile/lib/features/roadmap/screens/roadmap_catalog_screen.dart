@@ -705,6 +705,8 @@ class _TemplateNodeCard extends StatelessWidget {
                     children: [
                       _SmallBadge(label: node.nodeType),
                       _SmallBadge(label: node.requirementType),
+                      if (node.node?.technicalSkills.isNotEmpty ?? false)
+                        _SmallBadge(label: '${node.node!.technicalSkills.length} skills'),
                     ],
                   ),
                 ],
@@ -754,6 +756,24 @@ class _TemplateNodeSheet extends ConsumerWidget {
             _SmallBadge(label: 'Order ${node.order}'),
           ],
         ),
+        const SizedBox(height: 24),
+        Text('Technical Skills', style: AppTextStyles.titleSmall),
+        const SizedBox(height: 12),
+        if (node.node?.technicalSkills.isEmpty ?? true)
+          Text(
+            'No technical skills are attached to this topic yet.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: node.node!.technicalSkills
+                .map((skill) => _SmallBadge(label: skill.skillName))
+                .toList(),
+          ),
         const SizedBox(height: 24),
         Text('Learning Resources', style: AppTextStyles.titleSmall),
         const SizedBox(height: 12),
