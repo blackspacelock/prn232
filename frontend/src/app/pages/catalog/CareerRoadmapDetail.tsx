@@ -70,6 +70,9 @@ function toPersonalRoadmapListItem(roadmap: PersonalRoadmapDetailDto): PersonalR
     progressPercentage: roadmap.progressPercentage,
     inProgressCount: roadmap.nodeProgresses.filter((node) => node.status === 1).length,
     isActive: roadmap.isActive,
+    isShared: roadmap.isShared,
+    sharedAt: roadmap.sharedAt,
+    ownerName: roadmap.ownerName,
     createdAt: roadmap.createdAt,
     tags: roadmap.tags ?? [],
   };

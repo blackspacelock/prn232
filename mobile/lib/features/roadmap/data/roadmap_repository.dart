@@ -7,13 +7,27 @@ abstract class RoadmapRepository {
     String careerRoadmapId,
   );
   Future<List<PersonalRoadmapDto>> getPersonalRoadmaps(String profileId);
+  Future<List<PersonalRoadmapDto>> getSharedRoadmaps();
   Future<PersonalRoadmapDto> getPersonalRoadmapWithProgress(String id);
   Future<PersonalRoadmapDto> generateRoadmap(
     String profileId,
     String careerRoadmapId,
   );
+  Future<PersonalRoadmapDto> copySharedRoadmap(
+    String profileId,
+    String sharedPersonalRoadmapId,
+  );
+  Future<PersonalRoadmapDto> createPersonalRoadmap({
+    required String profileId,
+    required String careerRoleId,
+    required String name,
+    String? description,
+    String? desire,
+    required List<Map<String, String>> steps,
+  });
   Future<void> deleteRoadmap(String personalRoadmapId);
   Future<void> toggleActiveRoadmap(String personalRoadmapId);
+  Future<void> toggleSharedRoadmap(String personalRoadmapId);
   Future<RoadmapTagDto> addTag(
     String personalRoadmapId,
     String name, {

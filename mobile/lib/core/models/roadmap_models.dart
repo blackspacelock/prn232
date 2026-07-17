@@ -126,6 +126,9 @@ class PersonalRoadmapDto {
     required this.progressPercentage,
     required this.isActive,
     required this.createdAt,
+    this.isShared = false,
+    this.sharedAt,
+    this.ownerName,
     this.careerRoadmapName,
     this.careerRoadmapDescription,
     this.note,
@@ -144,6 +147,9 @@ class PersonalRoadmapDto {
   final double progressPercentage;
   final int inProgressCount;
   final bool isActive;
+  final bool isShared;
+  final String? sharedAt;
+  final String? ownerName;
   final String createdAt;
   final CareerRoadmapDto? careerRoadmap;
   final List<NodeProgressDto> nodeProgresses;
@@ -168,6 +174,9 @@ class PersonalRoadmapDto {
       progressPercentage: (json['progressPercentage'] as num?)?.toDouble() ?? 0,
       inProgressCount: json['inProgressCount'] as int? ?? 0,
       isActive: json['isActive'] as bool? ?? false,
+      isShared: json['isShared'] as bool? ?? false,
+      sharedAt: json['sharedAt']?.toString(),
+      ownerName: json['ownerName'] as String?,
       createdAt: (json['createdAt'] ?? '').toString(),
       careerRoadmap: json['careerRoadmap'] is Map<String, dynamic>
           ? CareerRoadmapDto.fromJson(
@@ -191,6 +200,9 @@ class PersonalRoadmapDto {
 
   PersonalRoadmapDto copyWith({
     bool? isActive,
+    bool? isShared,
+    String? sharedAt,
+    String? ownerName,
     List<RoadmapTagDto>? tags,
   }) {
     return PersonalRoadmapDto(
@@ -203,6 +215,9 @@ class PersonalRoadmapDto {
       progressPercentage: progressPercentage,
       inProgressCount: inProgressCount,
       isActive: isActive ?? this.isActive,
+      isShared: isShared ?? this.isShared,
+      sharedAt: sharedAt ?? this.sharedAt,
+      ownerName: ownerName ?? this.ownerName,
       createdAt: createdAt,
       careerRoadmap: careerRoadmap,
       nodeProgresses: nodeProgresses,
