@@ -309,6 +309,9 @@ export interface PersonalRoadmapDto {
   progressPercentage: number;
   inProgressCount: number;
   isActive: boolean;
+  isShared: boolean;
+  sharedAt?: string;
+  ownerName?: string;
   createdAt: string;
   tags: RoadmapTagDto[];
 }
@@ -322,6 +325,9 @@ export interface PersonalRoadmapDetailDto {
   note?: string;
   progressPercentage: number;
   isActive: boolean;
+  isShared: boolean;
+  sharedAt?: string;
+  ownerName?: string;
   createdAt: string;
   nodeProgresses: NodeProgressDto[];
   tags: RoadmapTagDto[];
@@ -351,6 +357,24 @@ export interface UpdateRoadmapTagDto {
 export interface GeneratePersonalRoadmapRequestDto {
   profileId: string;
   careerRoadmapId: string;
+}
+
+export interface CopySharedRoadmapRequestDto {
+  profileId: string;
+}
+
+export interface CreatePersonalRoadmapStepDto {
+  name: string;
+  description?: string;
+}
+
+export interface CreatePersonalRoadmapDto {
+  profileId: string;
+  careerRoleId: string;
+  name: string;
+  description?: string;
+  desire?: string;
+  steps: CreatePersonalRoadmapStepDto[];
 }
 
 export interface RoadmapNodeData {

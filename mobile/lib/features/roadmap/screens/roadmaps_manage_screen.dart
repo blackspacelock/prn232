@@ -17,6 +17,8 @@ enum _RoadmapSort { createdAt, name, progress }
 
 enum _RoadmapStatusFilter { all, active, completed, inProgress, notStarted }
 
+enum _RoadmapView { mine, shared }
+
 class RoadmapsManageScreen extends ConsumerStatefulWidget {
   const RoadmapsManageScreen({super.key});
 
@@ -31,6 +33,7 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
   _RoadmapSort _sort = _RoadmapSort.createdAt;
   bool _sortDescending = true;
   _RoadmapStatusFilter _filter = _RoadmapStatusFilter.all;
+  _RoadmapView _view = _RoadmapView.mine;
   final Set<String> _busyRoadmaps = {};
 
   @override
@@ -41,7 +44,9 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roadmaps = ref.watch(personalRoadmapsProvider);
+    final roadmaps = _view == _RoadmapView.mine
+        ? ref.watch(personalRoadmapsProvider)
+        : ref.watch(sharedRoadmapsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -55,15 +60,31 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
           ),
           IconButton(
             tooltip: 'Refresh',
-            onPressed: () => ref.invalidate(personalRoadmapsProvider),
+            onPressed: () => _view == _RoadmapView.mine
+                ? ref.invalidate(personalRoadmapsProvider)
+                : ref.invalidate(sharedRoadmapsProvider),
             icon: const Icon(Icons.refresh),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showGenerateSheet,
-        icon: const Icon(Icons.rocket_launch_outlined),
-        label: const Text('Generate'),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'create-personal-roadmap',
+            onPressed: _showCreateSheet,
+            icon: const Icon(Icons.add),
+            label: const Text('Create'),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'generate-roadmap',
+            onPressed: _showGenerateSheet,
+            icon: const Icon(Icons.rocket_launch_outlined),
+            label: const Text('Generate'),
+          ),
+        ],
       ),
       body: roadmaps.when(
         loading: () => const _RoadmapListSkeleton(),
@@ -72,14 +93,21 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
           title: 'Could not load roadmaps',
           subtitle: 'Pull the latest roadmap data and try again.',
           actionLabel: 'Retry',
-          onAction: () => ref.invalidate(personalRoadmapsProvider),
+          onAction: () => _view == _RoadmapView.mine
+              ? ref.invalidate(personalRoadmapsProvider)
+              : ref.invalidate(sharedRoadmapsProvider),
         ),
         data: (items) {
           final visibleRoadmaps = _visibleRoadmaps(items);
           return RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(personalRoadmapsProvider);
-              await ref.read(personalRoadmapsProvider.future);
+              if (_view == _RoadmapView.mine) {
+                ref.invalidate(personalRoadmapsProvider);
+                await ref.read(personalRoadmapsProvider.future);
+              } else {
+                ref.invalidate(sharedRoadmapsProvider);
+                await ref.read(sharedRoadmapsProvider.future);
+              }
             },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -88,6 +116,7 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
                   child: _RoadmapToolbar(
                     searchController: _searchController,
                     search: _search,
+                    view: _view,
                     sort: _sort,
                     sortDescending: _sortDescending,
                     filter: _filter,
@@ -96,6 +125,7 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
                       _searchController.clear();
                       setState(() => _search = '');
                     },
+                    onViewChanged: (value) => setState(() => _view = value),
                     onSortChanged: (value) => setState(() => _sort = value),
                     onToggleDirection: () =>
                         setState(() => _sortDescending = !_sortDescending),
@@ -136,8 +166,11 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
                             '/roadmap/${roadmap.personalRoadmapId}',
                           ),
                           onToggleActive: () => _toggleActive(roadmap),
+                          onToggleShared: () => _toggleShared(roadmap),
+                          onCopy: () => _copyShared(roadmap),
                           onManageTags: () => _showTagSheet(roadmap),
                           onDelete: () => _confirmDelete(roadmap),
+                          readOnly: _view == _RoadmapView.shared,
                         );
                       },
                     ),
@@ -196,6 +229,15 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
     );
   }
 
+  Future<void> _showCreateSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const _CreatePersonalRoadmapSheet(),
+    );
+  }
+
   Future<void> _toggleActive(PersonalRoadmapDto roadmap) async {
     final id = roadmap.personalRoadmapId;
     setState(() => _busyRoadmaps.add(id));
@@ -210,6 +252,47 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
           roadmap.isActive ? 'Roadmap deactivated' : 'Roadmap activated',
         );
       }
+    } finally {
+      if (mounted) setState(() => _busyRoadmaps.remove(id));
+    }
+  }
+
+  Future<void> _toggleShared(PersonalRoadmapDto roadmap) async {
+    final id = roadmap.personalRoadmapId;
+    setState(() => _busyRoadmaps.add(id));
+    try {
+      await ref.read(roadmapRepositoryProvider).toggleSharedRoadmap(id);
+      ref
+        ..invalidate(personalRoadmapsProvider)
+        ..invalidate(sharedRoadmapsProvider)
+        ..invalidate(dashboardDataProvider);
+      if (mounted) {
+        AppSnackbar.showSuccess(
+          context,
+          roadmap.isShared ? 'Roadmap unshared' : 'Roadmap shared',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busyRoadmaps.remove(id));
+    }
+  }
+
+  Future<void> _copyShared(PersonalRoadmapDto roadmap) async {
+    final id = roadmap.personalRoadmapId;
+    setState(() => _busyRoadmaps.add(id));
+    try {
+      final profileId = await ref.read(profileIdProvider.future);
+      final copied =
+          await ref.read(roadmapRepositoryProvider).copySharedRoadmap(
+                profileId,
+                id,
+              );
+      ref
+        ..invalidate(personalRoadmapsProvider)
+        ..invalidate(dashboardDataProvider);
+      if (!mounted) return;
+      AppSnackbar.showSuccess(context, 'Roadmap copied');
+      context.go('/roadmap/${copied.personalRoadmapId}');
     } finally {
       if (mounted) setState(() => _busyRoadmaps.remove(id));
     }
@@ -250,26 +333,30 @@ class _RoadmapsManageScreenState extends ConsumerState<RoadmapsManageScreen> {
 }
 
 class _RoadmapToolbar extends StatelessWidget {
-  const _RoadmapToolbar({
-    required this.searchController,
-    required this.search,
-    required this.sort,
+	  const _RoadmapToolbar({
+	    required this.searchController,
+	    required this.search,
+	    required this.view,
+	    required this.sort,
     required this.sortDescending,
     required this.filter,
-    required this.onSearchChanged,
-    required this.onClearSearch,
+	    required this.onSearchChanged,
+	    required this.onClearSearch,
+	    required this.onViewChanged,
     required this.onSortChanged,
     required this.onToggleDirection,
     required this.onFilterChanged,
   });
 
-  final TextEditingController searchController;
-  final String search;
+	  final TextEditingController searchController;
+	  final String search;
+	  final _RoadmapView view;
   final _RoadmapSort sort;
   final bool sortDescending;
   final _RoadmapStatusFilter filter;
-  final ValueChanged<String> onSearchChanged;
-  final VoidCallback onClearSearch;
+	  final ValueChanged<String> onSearchChanged;
+	  final VoidCallback onClearSearch;
+	  final ValueChanged<_RoadmapView> onViewChanged;
   final ValueChanged<_RoadmapSort> onSortChanged;
   final VoidCallback onToggleDirection;
   final ValueChanged<_RoadmapStatusFilter> onFilterChanged;
@@ -286,9 +373,26 @@ class _RoadmapToolbar extends StatelessWidget {
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.onSurfaceVariant,
             ),
-          ),
-          const SizedBox(height: 16),
-          SearchBar(
+	          ),
+	          const SizedBox(height: 16),
+	          SegmentedButton<_RoadmapView>(
+	            segments: const [
+	              ButtonSegment(
+	                value: _RoadmapView.mine,
+	                icon: Icon(Icons.map_outlined),
+	                label: Text('Mine'),
+	              ),
+	              ButtonSegment(
+	                value: _RoadmapView.shared,
+	                icon: Icon(Icons.public),
+	                label: Text('Shared'),
+	              ),
+	            ],
+	            selected: {view},
+	            onSelectionChanged: (values) => onViewChanged(values.first),
+	          ),
+	          const SizedBox(height: 12),
+	          SearchBar(
             controller: searchController,
             hintText: 'Search roadmaps...',
             leading: const Icon(Icons.search),
@@ -412,17 +516,23 @@ class _RoadmapManageCard extends StatelessWidget {
     required this.roadmap,
     required this.isBusy,
     required this.onOpen,
-    required this.onToggleActive,
-    required this.onManageTags,
-    required this.onDelete,
-  });
+	    required this.onToggleActive,
+	    required this.onToggleShared,
+	    required this.onCopy,
+	    required this.onManageTags,
+	    required this.onDelete,
+	    this.readOnly = false,
+	  });
 
   final PersonalRoadmapDto roadmap;
   final bool isBusy;
   final VoidCallback onOpen;
-  final VoidCallback onToggleActive;
-  final VoidCallback onManageTags;
-  final VoidCallback onDelete;
+	  final VoidCallback onToggleActive;
+	  final VoidCallback onToggleShared;
+	  final VoidCallback onCopy;
+	  final VoidCallback onManageTags;
+	  final VoidCallback onDelete;
+	  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -469,38 +579,50 @@ class _RoadmapManageCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  PopupMenuButton<_RoadmapAction>(
-                    enabled: !isBusy,
-                    onSelected: (action) {
-                      switch (action) {
-                        case _RoadmapAction.tags:
-                          onManageTags();
-                        case _RoadmapAction.delete:
-                          onDelete();
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(
-                        value: _RoadmapAction.tags,
-                        child: ListTile(
-                          dense: true,
-                          leading: Icon(Icons.sell_outlined),
-                          title: Text('Manage Tags'),
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: _RoadmapAction.delete,
-                        child: ListTile(
-                          dense: true,
-                          leading: Icon(
-                            Icons.delete_outline,
-                            color: AppColors.error,
-                          ),
-                          title: Text('Delete'),
-                        ),
-                      ),
-                    ],
-                  ),
+	                  if (!readOnly)
+	                    PopupMenuButton<_RoadmapAction>(
+	                      enabled: !isBusy,
+	                      onSelected: (action) {
+	                        switch (action) {
+	                          case _RoadmapAction.tags:
+	                            onManageTags();
+	                          case _RoadmapAction.share:
+	                            onToggleShared();
+	                          case _RoadmapAction.delete:
+	                            onDelete();
+	                        }
+	                      },
+	                      itemBuilder: (_) => [
+	                        PopupMenuItem(
+	                          value: _RoadmapAction.share,
+	                          child: ListTile(
+	                            dense: true,
+	                            leading: const Icon(Icons.ios_share_outlined),
+	                            title:
+	                                Text(roadmap.isShared ? 'Unshare' : 'Share'),
+	                          ),
+	                        ),
+	                        const PopupMenuItem(
+	                          value: _RoadmapAction.tags,
+	                          child: ListTile(
+	                            dense: true,
+	                            leading: Icon(Icons.sell_outlined),
+	                            title: Text('Manage Tags'),
+	                          ),
+	                        ),
+	                        const PopupMenuItem(
+	                          value: _RoadmapAction.delete,
+	                          child: ListTile(
+	                            dense: true,
+	                            leading: Icon(
+	                              Icons.delete_outline,
+	                              color: AppColors.error,
+	                            ),
+	                            title: Text('Delete'),
+	                          ),
+	                        ),
+	                      ],
+	                    ),
                 ],
               ),
               if (roadmap.tags.isNotEmpty) ...[
@@ -545,9 +667,15 @@ class _RoadmapManageCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     const _ActiveBadge(),
                   ],
+                  if (roadmap.isShared) ...[
+                    const SizedBox(width: 8),
+                    const _SharedBadge(),
+                  ],
                   const Spacer(),
                   Text(
-                    _formatDate(roadmap.createdAt),
+	                    readOnly && roadmap.ownerName != null
+	                        ? 'By ${roadmap.ownerName}'
+	                        : _formatDate(roadmap.createdAt),
                     style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.onSurfaceVariant,
                     ),
@@ -557,17 +685,27 @@ class _RoadmapManageCard extends StatelessWidget {
               const Divider(height: 24),
               Row(
                 children: [
-                  Expanded(
-                    child: SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      title: const Text('Active'),
-                      value: roadmap.isActive,
-                      onChanged: isBusy ? null : (_) => onToggleActive(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
+	                  if (!readOnly) ...[
+	                    Expanded(
+	                      child: SwitchListTile.adaptive(
+	                        contentPadding: EdgeInsets.zero,
+	                        dense: true,
+	                        title: const Text('Active'),
+	                        value: roadmap.isActive,
+	                        onChanged: isBusy ? null : (_) => onToggleActive(),
+	                      ),
+	                    ),
+	                    const SizedBox(width: 8),
+	                  ] else
+	                    Expanded(
+	                      child: OutlinedButton.icon(
+	                        onPressed: isBusy ? null : onCopy,
+	                        icon: const Icon(Icons.copy_outlined),
+	                        label: Text(isBusy ? 'Copying...' : 'Copy'),
+	                      ),
+	                    ),
+	                  if (readOnly) const SizedBox(width: 8),
+	                  FilledButton.icon(
                     onPressed: onOpen,
                     icon: const Icon(Icons.folder_open_outlined),
                     label: const Text('Open'),
@@ -582,7 +720,304 @@ class _RoadmapManageCard extends StatelessWidget {
   }
 }
 
-enum _RoadmapAction { tags, delete }
+enum _RoadmapAction { tags, share, delete }
+
+class _CreatePersonalRoadmapSheet extends ConsumerStatefulWidget {
+  const _CreatePersonalRoadmapSheet();
+
+  @override
+  ConsumerState<_CreatePersonalRoadmapSheet> createState() =>
+      _CreatePersonalRoadmapSheetState();
+}
+
+class _CreatePersonalRoadmapSheetState
+    extends ConsumerState<_CreatePersonalRoadmapSheet> {
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _desireController = TextEditingController();
+  final List<TextEditingController> _stepNames = [
+    TextEditingController(),
+    TextEditingController(),
+    TextEditingController(),
+  ];
+  final List<TextEditingController> _stepDescriptions = [
+    TextEditingController(),
+    TextEditingController(),
+    TextEditingController(),
+  ];
+  CareerRoleDto? _selectedRole;
+  bool _creating = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _desireController.dispose();
+    for (final controller in [..._stepNames, ..._stepDescriptions]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = ref.watch(careerRolesProvider);
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.86,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Create Personal Roadmap',
+                  style: AppTextStyles.headlineMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Build a path from your own goal and learning steps.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: [
+                    TextField(
+                      controller: _nameController,
+                      maxLength: 160,
+                      decoration: const InputDecoration(
+                        labelText: 'Roadmap name',
+                        prefixIcon: Icon(Icons.map_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    roles.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (_, __) => OutlinedButton.icon(
+                        onPressed: () => ref.invalidate(careerRolesProvider),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reload roles'),
+                      ),
+                      data: (items) => DropdownButtonFormField<CareerRoleDto>(
+                        initialValue: _selectedRole,
+                        decoration: const InputDecoration(
+                          labelText: 'Related role',
+                          prefixIcon: Icon(Icons.work_outline),
+                        ),
+                        items: items
+                            .map(
+                              (role) => DropdownMenuItem(
+                                value: role,
+                                child: Text(role.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: _creating
+                            ? null
+                            : (value) => setState(() => _selectedRole = value),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _descriptionController,
+                      maxLength: 240,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        prefixIcon: Icon(Icons.short_text),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _desireController,
+                      maxLength: 1000,
+                      minLines: 3,
+                      maxLines: 5,
+                      decoration: const InputDecoration(
+                        labelText: 'Your desire or goal',
+                        prefixIcon: Icon(Icons.flag_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Text('Learning steps', style: AppTextStyles.titleSmall),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: _creating ? null : _addStep,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add Step'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    for (var i = 0; i < _stepNames.length; i++)
+                      _StepEditor(
+                        index: i,
+                        nameController: _stepNames[i],
+                        descriptionController: _stepDescriptions[i],
+                        canRemove: _stepNames.length > 1,
+                        onRemove: _creating ? null : () => _removeStep(i),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _creating ? null : _create,
+                  icon: _creating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add),
+                  label: Text(_creating ? 'Creating...' : 'Create Roadmap'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addStep() {
+    setState(() {
+      _stepNames.add(TextEditingController());
+      _stepDescriptions.add(TextEditingController());
+    });
+  }
+
+  void _removeStep(int index) {
+    final name = _stepNames.removeAt(index);
+    final description = _stepDescriptions.removeAt(index);
+    name.dispose();
+    description.dispose();
+    setState(() {});
+  }
+
+  Future<void> _create() async {
+    final name = _nameController.text.trim();
+    final role = _selectedRole;
+    final steps = <Map<String, String>>[];
+    for (var i = 0; i < _stepNames.length; i++) {
+      final stepName = _stepNames[i].text.trim();
+      if (stepName.isEmpty) continue;
+      final description = _stepDescriptions[i].text.trim();
+      steps.add({
+        'name': stepName,
+        if (description.isNotEmpty) 'description': description,
+      });
+    }
+    if (name.isEmpty || role == null || steps.isEmpty) {
+      AppSnackbar.showError(
+        context,
+        'Add a name, related role, and at least one step.',
+      );
+      return;
+    }
+
+    setState(() => _creating = true);
+    try {
+      final profileId = await ref.read(profileIdProvider.future);
+      final roadmap =
+          await ref.read(roadmapRepositoryProvider).createPersonalRoadmap(
+                profileId: profileId,
+                careerRoleId: role.careerRoleId,
+                name: name,
+                description: _descriptionController.text.trim(),
+                desire: _desireController.text.trim(),
+                steps: steps,
+              );
+      ref
+        ..invalidate(personalRoadmapsProvider)
+        ..invalidate(dashboardDataProvider);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      context.go('/roadmap/${roadmap.personalRoadmapId}');
+    } finally {
+      if (mounted) setState(() => _creating = false);
+    }
+  }
+}
+
+class _StepEditor extends StatelessWidget {
+  const _StepEditor({
+    required this.index,
+    required this.nameController,
+    required this.descriptionController,
+    required this.canRemove,
+    required this.onRemove,
+  });
+
+  final int index;
+  final TextEditingController nameController;
+  final TextEditingController descriptionController;
+  final bool canRemove;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: AppColors.surfaceContainerLowest,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: AppColors.primaryContainer,
+                  child: Text('${index + 1}', style: AppTextStyles.labelSmall),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: nameController,
+                    maxLength: 140,
+                    decoration: const InputDecoration(
+                      counterText: '',
+                      hintText: 'Step title',
+                    ),
+                  ),
+                ),
+                if (canRemove)
+                  IconButton(
+                    tooltip: 'Remove step',
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.close),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: descriptionController,
+              maxLength: 500,
+              minLines: 2,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                counterText: '',
+                hintText: 'Optional step details',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _GenerateRoadmapSheet extends ConsumerStatefulWidget {
   const _GenerateRoadmapSheet();
@@ -1156,6 +1591,25 @@ class _ActiveBadge extends StatelessWidget {
       child: Text(
         'Active',
         style: AppTextStyles.labelSmall.copyWith(color: AppColors.success),
+      ),
+    );
+  }
+}
+
+class _SharedBadge extends StatelessWidget {
+  const _SharedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Shared',
+        style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
       ),
     );
   }

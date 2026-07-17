@@ -30,6 +30,50 @@ public class PersonalRoadmapsController : ControllerBase
         return CreatedAtAction(nameof(Generate), result.Data);
     }
 
+    [HttpPost("shared/{id:guid}/copy")]
+    [ProducesResponseType(typeof(PersonalRoadmapDetailDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CopyShared(Guid id, [FromBody] CopySharedRoadmapRequestDto dto)
+    {
+        var result = await _service.CopySharedAsync(dto.ProfileId, id);
+        if (!result.Success)
+        {
+            return result.Error == "Shared roadmap not found." ? NotFound(result.Error) : BadRequest(result.Error);
+        }
+        return CreatedAtAction(nameof(CopyShared), result.Data);
+    }
+
+    [HttpPost]
+    [ProducesResponseType(typeof(PersonalRoadmapDetailDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Create([FromBody] CreatePersonalRoadmapDto dto)
+    {
+        var result = await _service.CreateAsync(dto);
+        if (!result.Success) return BadRequest(result.Error);
+        return CreatedAtAction(nameof(Create), result.Data);
+    }
+
+    [HttpGet("shared")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(List<PersonalRoadmapDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetShared()
+    {
+        var result = await _service.GetSharedAsync();
+        return Ok(result.Data);
+    }
+
+    [HttpGet("shared/{id:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PersonalRoadmapDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSharedDetail(Guid id)
+    {
+        var result = await _service.GetSharedWithProgressAsync(id);
+        if (!result.Success) return NotFound(result.Error);
+        return Ok(result.Data);
+    }
+
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -46,6 +90,16 @@ public class PersonalRoadmapsController : ControllerBase
     public async Task<IActionResult> ToggleActive(Guid id)
     {
         var result = await _service.ToggleActiveAsync(id);
+        if (!result.Success) return NotFound(result.Error);
+        return Ok();
+    }
+
+    [HttpPut("{id:guid}/toggle-shared")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ToggleShared(Guid id)
+    {
+        var result = await _service.ToggleSharedAsync(id);
         if (!result.Success) return NotFound(result.Error);
         return Ok();
     }

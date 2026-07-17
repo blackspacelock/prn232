@@ -54,6 +54,17 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   }
 
   @override
+  Future<List<PersonalRoadmapDto>> getSharedRoadmaps() async {
+    final response = await _dio.get('${ApiConstants.personalRoadmaps}/shared');
+    final data = response.data;
+    if (data is! List) return const [];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(PersonalRoadmapDto.fromJson)
+        .toList();
+  }
+
+  @override
   Future<PersonalRoadmapDto> getPersonalRoadmapWithProgress(String id) async {
     final data = await _query(
       _personalRoadmapWithProgressQuery,
@@ -86,6 +97,42 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   }
 
   @override
+  Future<PersonalRoadmapDto> copySharedRoadmap(
+    String profileId,
+    String sharedPersonalRoadmapId,
+  ) async {
+    final response = await _dio.post(
+      '${ApiConstants.personalRoadmaps}/shared/$sharedPersonalRoadmapId/copy',
+      data: {'profileId': profileId},
+    );
+    return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<PersonalRoadmapDto> createPersonalRoadmap({
+    required String profileId,
+    required String careerRoleId,
+    required String name,
+    String? description,
+    String? desire,
+    required List<Map<String, String>> steps,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.personalRoadmaps,
+      data: {
+        'profileId': profileId,
+        'careerRoleId': careerRoleId,
+        'name': name,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+        if (desire != null && desire.isNotEmpty) 'desire': desire,
+        'steps': steps,
+      },
+    );
+    return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
   Future<void> deleteRoadmap(String personalRoadmapId) async {
     try {
       await _dio.delete('${ApiConstants.personalRoadmaps}/$personalRoadmapId');
@@ -103,6 +150,13 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     } on DioException {
       return;
     }
+  }
+
+  @override
+  Future<void> toggleSharedRoadmap(String personalRoadmapId) async {
+    await _dio.put(
+      '${ApiConstants.personalRoadmaps}/$personalRoadmapId/toggle-shared',
+    );
   }
 
   @override
@@ -343,6 +397,9 @@ query MobilePersonalRoadmapsByProfile($profileId: UUID!) {
     progressPercentage
     inProgressCount
     isActive
+    isShared
+    sharedAt
+    ownerName
     createdAt
     tags {
       id
@@ -366,6 +423,9 @@ query MobilePersonalRoadmapWithProgress($personalRoadmapId: UUID!) {
     note
     progressPercentage
     isActive
+    isShared
+    sharedAt
+    ownerName
     createdAt
     tags {
       id

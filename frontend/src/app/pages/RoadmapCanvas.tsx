@@ -1,12 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { AppShell } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { Snackbar } from '../components/Snackbar';
 import { ActionButton } from '../components/ActionButton';
 import { NodeStatusPicker } from '../components/NodeStatusPicker';
-import { X, Save } from 'lucide-react';
+import { Copy, X, Save } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { apolloClient } from '@/lib/apollo';
@@ -19,6 +19,7 @@ import { RoadmapResourceCard } from '../components/roadmap/RoadmapResourceCard';
 import {
   GET_CAREER_ROADMAP_WITH_NODES,
   GET_PERSONAL_ROADMAP_WITH_PROGRESS,
+  GET_SHARED_PERSONAL_ROADMAP_WITH_PROGRESS,
   GET_NODE_PROGRESS,
   GET_PERSONAL_ROADMAPS_BY_PROFILE,
   GET_LEARNING_RESOURCES_BY_NODE,
@@ -29,6 +30,7 @@ import type {
   NodeProgressDto,
   PersonalRoadmapDto,
   UpdateNodeProgressStatusDto,
+  PersonalRoadmapDetailDto,
 } from '@/types/api';
 
 type ProgressNode = NodeProgressDto;
@@ -45,7 +47,16 @@ interface LearningResource {
 }
 
 export function RoadmapCanvasPage() {
+  return <RoadmapCanvasView shared={false} />;
+}
+
+export function SharedRoadmapCanvasPage() {
+  return <RoadmapCanvasView shared />;
+}
+
+function RoadmapCanvasView({ shared }: { shared: boolean }) {
   const { id: personalRoadmapId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const profileId = user?.profileId ?? '';
 
@@ -55,28 +66,31 @@ export function RoadmapCanvasPage() {
   const [note, setNote] = useState('');
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
-  const { data, loading, error, refetch } = useQuery(GET_PERSONAL_ROADMAP_WITH_PROGRESS, {
+  const detailQuery = shared ? GET_SHARED_PERSONAL_ROADMAP_WITH_PROGRESS : GET_PERSONAL_ROADMAP_WITH_PROGRESS;
+  const detailKey = shared ? 'sharedPersonalRoadmapWithProgress' : 'personalRoadmapWithProgress';
+
+  const { data, loading, error, refetch } = useQuery(detailQuery, {
     variables: { personalRoadmapId },
     skip: !personalRoadmapId,
   });
 
   const { data: progressData } = useQuery(GET_NODE_PROGRESS, {
     variables: { personalRoadmapId },
-    skip: !personalRoadmapId,
+    skip: !personalRoadmapId || shared,
   });
 
   const [loadResources, { data: resourcesData, loading: resourcesLoading }] = useLazyQuery(GET_LEARNING_RESOURCES_BY_NODE);
   const [loadRecommended, { data: recommendedData }] = useLazyQuery(GET_RECOMMENDED_RESOURCES);
 
   const personalRoadmapProgressNodes: ProgressNode[] =
-    (data as { personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } })
-      ?.personalRoadmapWithProgress?.nodeProgresses ?? [];
+    (data as Record<string, { nodeProgresses?: ProgressNode[] } | undefined>)
+      ?.[detailKey]?.nodeProgresses ?? [];
   const refreshedProgressNodes: ProgressNode[] =
     (progressData as { nodeProgress?: ProgressNode[] })?.nodeProgress ?? [];
   const progressNodes: ProgressNode[] =
     refreshedProgressNodes.length > 0 ? refreshedProgressNodes : personalRoadmapProgressNodes;
-  const personalRoadmap = (data as { personalRoadmapWithProgress?: { careerRoadmapId?: string; isActive?: boolean } })
-    ?.personalRoadmapWithProgress;
+  const personalRoadmap = (data as Record<string, { careerRoadmapId?: string; isActive?: boolean; ownerName?: string; note?: string } | undefined>)
+    ?.[detailKey];
   const careerRoadmapId = personalRoadmap?.careerRoadmapId ?? '';
 
   const { data: templateData } = useQuery(GET_CAREER_ROADMAP_WITH_NODES, {
@@ -215,6 +229,18 @@ export function RoadmapCanvasPage() {
     },
   });
 
+  const copySharedMutation = useMutation({
+    mutationFn: () =>
+      apiClient.post<PersonalRoadmapDetailDto>(`/api/personal-roadmaps/shared/${personalRoadmapId}/copy`, { profileId }).then((r) => r.data),
+    onSuccess: (copied) => {
+      navigate(`/roadmap/${copied.id}`);
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: string | { message?: string } } })?.response?.data;
+      setSnackbar({ open: true, message: typeof msg === 'string' ? msg : (msg?.message ?? 'Failed to copy shared roadmap.') });
+    },
+  });
+
   const handleNodeSelect = useCallback((node: RoadmapGraphNode) => {
     const np = progressNodes.find((p) => p.roadmapNodeId === node.id);
     if (np) {
@@ -223,9 +249,11 @@ export function RoadmapCanvasPage() {
       setPreviousStatus(np.status as NodeStatusInt);
       setNote(np.note ?? '');
       loadResources({ variables: { nodeId: np.nodeId } });
-      loadRecommended({ variables: { profileId, nodeId: np.nodeId } });
+      if (!shared && profileId) {
+        loadRecommended({ variables: { profileId, nodeId: np.nodeId } });
+      }
     }
-  }, [progressNodes, profileId, loadResources, loadRecommended]);
+  }, [progressNodes, profileId, loadResources, loadRecommended, shared]);
 
   const handleStatusChange = (newStatus: NodeStatusInt) => {
     setPreviousStatus(optimisticStatus);
@@ -266,7 +294,7 @@ export function RoadmapCanvasPage() {
     <AppShell
       breadcrumb="Roadmaps / Canvas"
       breadcrumbs={[
-        { label: 'Roadmaps', to: '/roadmaps' },
+        { label: shared ? 'Shared Roadmaps' : 'Roadmaps', to: '/roadmaps' },
         { label: roadmapTitle },
       ]}
       showProgress={totalCount > 0 ? { current: completedCount, total: totalCount, percentage: Math.round((completedCount / totalCount) * 100) } : undefined}
@@ -274,12 +302,12 @@ export function RoadmapCanvasPage() {
     >
       <div className="flex h-[calc(100vh-64px)] flex-col md:flex-row">
         <div className="relative min-h-[520px] flex-1 overflow-hidden bg-[#fafafa]">
-          <RoadmapCanvasHeader
-            title={roadmapTitle}
-            nodeCount={graphNodes.length}
-            isActive={personalRoadmap?.isActive}
-            progress={{ completed: completedCount, total: totalCount }}
-          />
+            <RoadmapCanvasHeader
+              title={roadmapTitle}
+              nodeCount={graphNodes.length}
+              isActive={shared ? undefined : personalRoadmap?.isActive}
+              progress={{ completed: completedCount, total: totalCount }}
+            />
           <RoadmapGraphCanvas
             graphNodes={graphNodes}
             graphEdges={template?.edges}
@@ -309,26 +337,45 @@ export function RoadmapCanvasPage() {
             </div>
 
             <div className="flex-1 space-y-4 overflow-y-auto p-5">
-              <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
-                <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Progress Status</p>
-                <NodeStatusPicker
-                  value={optimisticStatus ?? selectedNodeProgress.status}
-                  onChange={handleStatusChange}
-                  disabled={updateStatusMutation.isPending}
-                />
-              </div>
+              {shared ? (
+                <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
+                  <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Shared by</p>
+                  <p className="text-sm text-[var(--md3-on-surface)]">{personalRoadmap?.ownerName ?? 'SE Compass learner'}</p>
+                  {personalRoadmap?.note && <p className="mt-2 text-sm text-[var(--md3-on-surface-variant)]">{personalRoadmap.note}</p>}
+                  <ActionButton
+                    icon={Copy}
+                    label={copySharedMutation.isPending ? 'Copying...' : 'Copy to my roadmaps'}
+                    variant="primary"
+                    size="md"
+                    onClick={() => copySharedMutation.mutate()}
+                    disabled={copySharedMutation.isPending || !profileId}
+                    className="mt-4 w-full"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
+                    <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Progress Status</p>
+                    <NodeStatusPicker
+                      value={optimisticStatus ?? selectedNodeProgress.status}
+                      onChange={handleStatusChange}
+                      disabled={updateStatusMutation.isPending}
+                    />
+                  </div>
 
-              <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
-                <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Note</p>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Optional note..."
-                  className="w-full h-24 px-4 py-3 bg-white border-2 border-[var(--md3-outline)] rounded-lg focus:border-[var(--md3-primary)] focus:outline-none resize-none text-sm"
-                />
-              </div>
+                  <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
+                    <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Note</p>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="Optional note..."
+                      className="w-full h-24 px-4 py-3 bg-white border-2 border-[var(--md3-outline)] rounded-lg focus:border-[var(--md3-primary)] focus:outline-none resize-none text-sm"
+                    />
+                  </div>
 
-              <ActionButton icon={Save} label={updateStatusMutation.isPending ? 'Saving...' : 'Save progress'} variant="primary" size="lg" onClick={handleSave} disabled={updateStatusMutation.isPending} className="w-full" />
+                  <ActionButton icon={Save} label={updateStatusMutation.isPending ? 'Saving...' : 'Save progress'} variant="primary" size="lg" onClick={handleSave} disabled={updateStatusMutation.isPending} className="w-full" />
+                </>
+              )}
 
               <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
                 <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Learning Resources</p>
