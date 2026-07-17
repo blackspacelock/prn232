@@ -5,7 +5,7 @@ import { EmptyState } from '../components/EmptyState';
 import { RepoCard } from '../components/RepoCard';
 import { SkillChip } from '../components/SkillChip';
 import { getSkillCategoryColorIndex } from '../components/skillColorUtils';
-import { Compass, User } from 'lucide-react';
+import { Compass, FileText, Phone, User } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { GET_PROFILE_WITH_SKILLS, GET_GITHUB_REPOS_BY_PROFILE, GET_PUBLIC_PORTFOLIO_BY_PROFILE } from '@/graphql/queries';
 import { PublicLayout } from '../components/PublicLayout';
@@ -52,6 +52,7 @@ export function PublicPortfolioPage() {
   const publicPortfolio: PublicPortfolioDto | null = (portfolioData as { publicPortfolioByProfile?: PublicPortfolioDto })?.publicPortfolioByProfile ?? null;
   const headline = publicPortfolio?.headline?.trim();
   const publicBio = publicPortfolio?.publicBio?.trim() || profile?.bioDescription;
+  const phoneNumber = profile?.phoneNumber?.trim();
   const analysis = publicPortfolio?.cachedPortfolioAnalysis;
 
   if (profileLoading) {
@@ -119,8 +120,27 @@ export function PublicPortfolioPage() {
               {profile.university && (
                 <p className="text-sm text-[var(--md3-on-surface-variant)] mb-1">{profile.university} {profile.major && `· ${profile.major}`}</p>
               )}
-              {publicBio && (
-                <p className="text-sm text-[var(--md3-on-surface-variant)]">{publicBio}</p>
+              {(publicBio || phoneNumber) && (
+                <div className="mt-4 grid gap-3 rounded-xl border border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container)] p-4">
+                  {publicBio && (
+                    <div className="flex items-start gap-3">
+                      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[var(--md3-primary)]" />
+                      <div>
+                        <p className="text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Bio</p>
+                        <p className="mt-1 text-sm leading-6 text-[var(--md3-on-surface)]">{publicBio}</p>
+                      </div>
+                    </div>
+                  )}
+                  {phoneNumber && (
+                    <div className="flex items-start gap-3">
+                      <Phone className="mt-0.5 h-4 w-4 shrink-0 text-[var(--md3-primary)]" />
+                      <div>
+                        <p className="text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Phone</p>
+                        <p className="mt-1 text-sm leading-6 text-[var(--md3-on-surface)]">{phoneNumber}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
