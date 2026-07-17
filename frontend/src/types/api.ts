@@ -368,6 +368,15 @@ export interface CopySharedRoadmapRequestDto {
 export interface CreatePersonalRoadmapStepDto {
   name: string;
   description?: string;
+  parentStepIndex?: number;
+  technicalSkillIds?: string[];
+  learningResources?: Array<{
+    name: string;
+    resourceUrl: string;
+    resourceType: string;
+    provider?: string;
+    isFree: boolean;
+  }>;
 }
 
 export interface CreatePersonalRoadmapDto {

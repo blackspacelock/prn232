@@ -2,10 +2,9 @@ import { useNavigate, useParams } from 'react-router';
 import { ActionButton } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
-import { RepoCard } from '../components/RepoCard';
 import { SkillChip } from '../components/SkillChip';
 import { getSkillCategoryColorIndex } from '../components/skillColorUtils';
-import { Compass, User } from 'lucide-react';
+import { Compass, ExternalLink, FileText, Lock, Phone, User } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { GET_PROFILE_WITH_SKILLS, GET_GITHUB_REPOS_BY_PROFILE, GET_PUBLIC_PORTFOLIO_BY_PROFILE } from '@/graphql/queries';
 import { PublicLayout } from '../components/PublicLayout';
@@ -51,8 +50,15 @@ export function PublicPortfolioPage() {
 
   const publicPortfolio: PublicPortfolioDto | null = (portfolioData as { publicPortfolioByProfile?: PublicPortfolioDto })?.publicPortfolioByProfile ?? null;
   const headline = publicPortfolio?.headline?.trim();
-  const publicBio = publicPortfolio?.publicBio?.trim() || profile?.bioDescription;
+  const userBio = profile?.bioDescription?.trim();
+  const phoneNumber = profile?.phoneNumber?.trim();
   const analysis = publicPortfolio?.cachedPortfolioAnalysis;
+  const repositoryAnalyses = analysis?.repositoryAnalyses ?? [];
+  const getRepositoryAnalysis = (repo: GitHubRepositoryDto) =>
+    repositoryAnalyses.find((item) =>
+      item.repositoryId === repo.id ||
+      item.repositoryName.toLowerCase() === repo.repositoryName.toLowerCase()
+    );
 
   if (profileLoading) {
     return (
@@ -119,8 +125,27 @@ export function PublicPortfolioPage() {
               {profile.university && (
                 <p className="text-sm text-[var(--md3-on-surface-variant)] mb-1">{profile.university} {profile.major && `· ${profile.major}`}</p>
               )}
-              {publicBio && (
-                <p className="text-sm text-[var(--md3-on-surface-variant)]">{publicBio}</p>
+              {(userBio || phoneNumber) && (
+                <div className="mt-4 grid gap-3 rounded-xl border border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container)] p-4">
+                  {userBio && (
+                    <div className="flex items-start gap-3">
+                      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[var(--md3-primary)]" />
+                      <div>
+                        <p className="text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Bio</p>
+                        <p className="mt-1 text-sm leading-6 text-[var(--md3-on-surface)]">{userBio}</p>
+                      </div>
+                    </div>
+                  )}
+                  {phoneNumber && (
+                    <div className="flex items-start gap-3">
+                      <Phone className="mt-0.5 h-4 w-4 shrink-0 text-[var(--md3-primary)]" />
+                      <div>
+                        <p className="text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Phone</p>
+                        <p className="mt-1 text-sm leading-6 text-[var(--md3-on-surface)]">{phoneNumber}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -141,46 +166,76 @@ export function PublicPortfolioPage() {
           )}
         </div>
 
-        {analysis && (
-          <div className="bg-white rounded-2xl p-8 shadow-sm">
-            <h2 className="text-xl font-semibold text-[var(--md3-on-surface)] mb-4">Portfolio Analysis</h2>
-            <p className="text-sm text-[var(--md3-on-surface-variant)] mb-5">{analysis.overallSummary}</p>
-            <div className="space-y-4">
-              {analysis.repositoryAnalyses.map((repo) => (
-                <div key={repo.repositoryId} className="rounded-xl border border-[var(--md3-outline-variant)] p-4">
-                  <h3 className="text-base font-medium text-[var(--md3-on-surface)]">{repo.repositoryName}</h3>
-                  <p className="mt-2 text-sm text-[var(--md3-on-surface-variant)]">
-                    <span className="font-medium text-[var(--md3-on-surface)]">Objective: </span>
-                    {repo.objective}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {repo.techStacks.length > 0 ? repo.techStacks.map((stack) => (
-                      <span key={stack} className="rounded-lg bg-[var(--md3-primary-container)] px-2 py-1 text-xs font-medium text-[var(--md3-on-primary-container)]">
-                        {stack}
-                      </span>
-                    )) : (
-                      <span className="text-xs text-[var(--md3-on-surface-variant)]">Tech stack not specified</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="bg-white rounded-2xl p-8 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--md3-on-surface)] mb-4">GitHub Projects</h2>
-          {reposLoading ? (
-            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
-          ) : publicRepos.length === 0 ? (
-            <p className="text-sm text-[var(--md3-on-surface-variant)]">No public repositories.</p>
-          ) : (
-            <div className="space-y-4">
-              {publicRepos.map((repo) => (
-                <RepoCard key={repo.id} repo={repo} variant="public" />
-              ))}
+          <h2 className="text-xl font-semibold text-[var(--md3-on-surface)] mb-5">Portfolio</h2>
+
+          {analysis && (
+            <div className="mb-5 rounded-xl bg-[var(--md3-surface-container)] px-4 py-3">
+              <p className="text-sm text-[var(--md3-on-surface-variant)]">{analysis.overallSummary}</p>
             </div>
           )}
+
+          <div>
+            <h3 className="text-base font-semibold text-[var(--md3-on-surface)] mb-4">GitHub Projects</h3>
+            {reposLoading ? (
+              <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+            ) : publicRepos.length === 0 ? (
+              <p className="text-sm text-[var(--md3-on-surface-variant)]">No public repositories.</p>
+            ) : (
+              <div className="space-y-4">
+                {publicRepos.map((repo) => {
+                  const repoAnalysis = getRepositoryAnalysis(repo);
+                  return (
+                    <div key={repo.id} className="rounded-xl border border-[var(--md3-outline-variant)] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          {repo.isPrivate && <Lock className="h-4 w-4 shrink-0 text-[var(--md3-on-surface-variant)]" />}
+                          <h4 className="truncate text-base font-medium text-[var(--md3-on-surface)]">
+                            {repo.repositoryName || repo.repoUrl}
+                          </h4>
+                        </div>
+                        <a
+                          href={repo.repoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Open ${repo.repositoryName || 'repository'} on GitHub`}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)]"
+                        >
+                          <ExternalLink className="h-4 w-4 text-[var(--md3-on-surface-variant)]" />
+                        </a>
+                      </div>
+
+                      {repo.description && (
+                        <p className="mt-2 text-sm text-[var(--md3-on-surface-variant)]">{repo.description}</p>
+                      )}
+
+                      {repoAnalysis && (
+                        <div className="mt-3 rounded-lg bg-[var(--md3-surface-container)] px-3 py-3">
+                          <p className="text-sm text-[var(--md3-on-surface-variant)]">
+                            <span className="font-medium text-[var(--md3-on-surface)]">Objective: </span>
+                            {repoAnalysis.objective}
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {repoAnalysis.techStacks.length > 0 ? repoAnalysis.techStacks.map((stack) => (
+                              <span key={stack} className="rounded-lg bg-[var(--md3-primary-container)] px-2 py-1 text-xs font-medium text-[var(--md3-on-primary-container)]">
+                                {stack}
+                              </span>
+                            )) : (
+                              <span className="text-xs text-[var(--md3-on-surface-variant)]">Tech stack not specified</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {repo.createdAt && (
+                        <p className="mt-3 text-xs text-[var(--md3-on-surface-variant)]">{new Date(repo.createdAt).toLocaleDateString()}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="text-center">

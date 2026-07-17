@@ -14,4 +14,16 @@ public class CreatePersonalRoadmapStepDto
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public int? ParentStepIndex { get; set; }
+    public List<Guid> TechnicalSkillIds { get; set; } = new();
+    public List<CreatePersonalRoadmapLearningResourceDto> LearningResources { get; set; } = new();
+}
+
+public class CreatePersonalRoadmapLearningResourceDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string ResourceUrl { get; set; } = string.Empty;
+    public string ResourceType { get; set; } = "Article";
+    public string? Provider { get; set; }
+    public bool IsFree { get; set; } = true;
 }

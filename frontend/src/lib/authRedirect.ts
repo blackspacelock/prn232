@@ -5,12 +5,16 @@ export function getRoleHomePath(role?: AuthUser['role'] | string | null) {
 }
 
 export function getPostAuthRedirect(role: AuthUser['role'], from?: string) {
-  if (!from || from === '/login' || from === '/register') {
+  if (!from || from === '/login' || from === '/register' || !from.startsWith('/')) {
     return getRoleHomePath(role);
   }
 
-  if (role === 'Admin' && from === '/dashboard') {
-    return '/admin';
+  if (role === 'Admin') {
+    return from.startsWith('/admin') ? from : '/admin';
+  }
+
+  if (from.startsWith('/admin')) {
+    return getRoleHomePath(role);
   }
 
   return from;
