@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Download, SlidersHorizontal } from 'lucide-react';
 import { ActionButton } from '../components/ActionButton';
 import { SkillChip, getSkillCategoryColorIndex } from '../components/SkillChip';
@@ -20,6 +22,7 @@ export function SkillGapPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const profileId = user?.profileId ?? '';
+  const [showNoActiveRoadmapDialog, setShowNoActiveRoadmapDialog] = useState(false);
 
   const {
     data: skillGapData,
@@ -44,10 +47,22 @@ export function SkillGapPage() {
     (skillGapData as { skillGapAnalysis?: SkillGapAnalysisDto })?.skillGapAnalysis ?? null;
   const trendingSkills: string[] =
     (trendingData as { trendingSkillRecommendations?: string[] })?.trendingSkillRecommendations ?? [];
+  const hasNoActiveRoadmap = Boolean(profileId && !skillGapLoading && !skillGapError && !skillGap);
+
+  useEffect(() => {
+    if (hasNoActiveRoadmap) {
+      setShowNoActiveRoadmapDialog(true);
+    }
+  }, [hasNoActiveRoadmap]);
 
   const handleAnalyse = () => {
     refetchSkillGap({ profileId });
     refetchTrending({ profileId });
+  };
+
+  const goToRoadmaps = () => {
+    setShowNoActiveRoadmapDialog(false);
+    navigate('/roadmaps');
   };
 
   const radarData = skillGap?.categoryBreakdown.map((c) => ({
@@ -209,6 +224,15 @@ export function SkillGapPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        isOpen={showNoActiveRoadmapDialog && hasNoActiveRoadmap}
+        title="No active roadmap"
+        message="You need to activate at least one roadmap before running skill gap analysis."
+        confirmLabel="Go to Roadmaps"
+        cancelLabel="Later"
+        onConfirm={goToRoadmaps}
+        onCancel={() => setShowNoActiveRoadmapDialog(false)}
+      />
     </AppShell>
   );
 }
