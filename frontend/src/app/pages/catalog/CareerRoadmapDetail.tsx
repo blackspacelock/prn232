@@ -6,6 +6,7 @@ import { AlertCircle, ChevronLeft } from 'lucide-react';
 import {
   GET_CAREER_ROADMAP_WITH_NODES,
   GET_LEARNING_RESOURCES_BY_NODE,
+  GET_PERSONAL_ROADMAPS_BY_PROFILE,
 } from '@/graphql/queries';
 import { useAuthStore } from '@/store/authStore';
 import { AppShell } from '../../components/AppShell';
@@ -18,9 +19,12 @@ import { RoadmapCanvasHeader } from '../../components/roadmap/RoadmapCanvasHeade
 import { RoadmapGraphCanvas, type RoadmapGraphNode } from '../../components/roadmap/RoadmapGraphCanvas';
 import { RoadmapTemplateInspector } from '../../components/roadmap/RoadmapTemplateInspector';
 import { apiClient } from '@/lib/axios';
+import { apolloClient } from '@/lib/apollo';
 import type {
   CareerRoadmapWithNodesDto,
   LearningResourceDto,
+  PersonalRoadmapDetailDto,
+  PersonalRoadmapDto,
   RoadmapNodeDto,
 } from '@/types/api';
 import type { NodeStatusInt } from '@/constants/nodeStatus';
@@ -55,6 +59,22 @@ function getTemplatePreviewStatus(depth: number): NodeStatusInt {
   return 0;
 }
 
+function toPersonalRoadmapListItem(roadmap: PersonalRoadmapDetailDto): PersonalRoadmapDto {
+  return {
+    id: roadmap.id,
+    profileId: roadmap.profileId,
+    careerRoadmapId: roadmap.careerRoadmapId,
+    careerRoadmapName: roadmap.careerRoadmapName,
+    careerRoadmapDescription: roadmap.careerRoadmapDescription,
+    note: roadmap.note,
+    progressPercentage: roadmap.progressPercentage,
+    inProgressCount: roadmap.nodeProgresses.filter((node) => node.status === 1).length,
+    isActive: roadmap.isActive,
+    createdAt: roadmap.createdAt,
+    tags: roadmap.tags ?? [],
+  };
+}
+
 export function CareerRoadmapDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -85,12 +105,28 @@ export function CareerRoadmapDetailPage() {
   const generateMutation = useMutation({
     mutationFn: () =>
       apiClient
-        .post<{ id: string }>('/api/personal-roadmaps/generate', {
+        .post<PersonalRoadmapDetailDto>('/api/personal-roadmaps/generate', {
           profileId: user?.profileId,
           careerRoadmapId: id,
         })
         .then((r) => r.data),
     onSuccess: (result) => {
+      if (user?.profileId) {
+        const newRoadmap = toPersonalRoadmapListItem(result);
+        apolloClient.cache.updateQuery<{ personalRoadmapsByProfile?: PersonalRoadmapDto[] }>(
+          { query: GET_PERSONAL_ROADMAPS_BY_PROFILE, variables: { profileId: user.profileId } },
+          (current) => {
+            if (!current?.personalRoadmapsByProfile) return current;
+            const withoutDuplicate = current.personalRoadmapsByProfile.filter((roadmap) => roadmap.id !== newRoadmap.id);
+            return {
+              personalRoadmapsByProfile: [
+                newRoadmap,
+                ...withoutDuplicate,
+              ],
+            };
+          },
+        );
+      }
       navigate(`/roadmap/${result.id}`);
     },
     onError: (err: unknown) => {

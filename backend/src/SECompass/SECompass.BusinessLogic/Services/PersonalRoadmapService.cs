@@ -29,13 +29,16 @@ public class PersonalRoadmapService : IPersonalRoadmapService
 
         var roadmapNodeIds = await GetRoadmapNodeIdsAsync(careerRoadmapId);
 
+        var existingRoadmaps = await _uow.PersonalRoadmaps.FindAsync(pr => pr.ProfileId == profileId);
+        var hasActiveRoadmap = existingRoadmaps.Any(pr => pr.IsActive);
+
         var personalRoadmap = new PersonalRoadmap
         {
             Id = Guid.NewGuid(),
             ProfileId = profileId,
             CareerRoadmapId = careerRoadmapId,
             ProgressPercentage = 0,
-            IsActive = false
+            IsActive = !hasActiveRoadmap
         };
         await _uow.PersonalRoadmaps.AddAsync(personalRoadmap);
 
