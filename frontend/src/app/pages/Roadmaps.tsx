@@ -506,9 +506,9 @@ function RoadmapCard({ roadmap, onDelete, onActivate, activating, onManageTags, 
   };
 
   return (
-    <div className="md3-card relative p-5 transition-shadow hover:shadow-md">
+    <div className="md3-card relative flex h-full min-h-[300px] flex-col p-5 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between mb-3">
-        <div className="min-w-0 pr-3">
+        <div className="min-h-[64px] min-w-0 pr-3">
           <h3 className="truncate text-base font-medium text-[var(--md3-on-surface)]">
             {roadmap.careerRoadmapName || 'Roadmap'}
           </h3>
@@ -532,53 +532,35 @@ function RoadmapCard({ roadmap, onDelete, onActivate, activating, onManageTags, 
         )}
       </div>
 
-      {/* Tags */}
-      {roadmap.tags && roadmap.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {roadmap.tags.map((tag) => (
-            <span
-              key={tag.id}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-              style={{
-                backgroundColor: tag.color ? `${tag.color}22` : 'var(--md3-surface-variant)',
-                color: tag.color ?? 'var(--md3-on-surface-variant)',
-                border: `1px solid ${tag.color ? `${tag.color}55` : 'var(--md3-outline-variant)'}`,
-              }}
-            >
-              <Tag className="h-3 w-3" />
-              {tag.name}
-            </span>
-          ))}
+      <div className="flex-1">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-[var(--md3-on-surface-variant)]">Progress</span>
+          <span className="text-base font-medium" style={{ color: getProgressColor() }}>{progress}%</span>
         </div>
-      )}
 
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-[var(--md3-on-surface-variant)]">Progress</span>
-        <span className="text-base font-medium" style={{ color: getProgressColor() }}>{progress}%</span>
+        <div className="mb-4">
+          <LinearProgress value={progress} color={getProgressColor()} />
+        </div>
+
+        <div className="flex min-h-[30px] flex-wrap gap-2 mb-4">
+          {roadmap.isActive && <ActiveBadge />}
+          {roadmap.isShared && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-[var(--md3-primary-container)] px-2 py-1 text-xs font-medium text-[var(--md3-primary)]">
+              <Globe2 className="h-3 w-3" />
+              Shared
+            </span>
+          )}
+          {progress === 100 ? (
+            <StatusChip status="completed" count={0} label="Completed" />
+          ) : progress > 0 || hasInProgress ? (
+            <StatusChip status="in-progress" count={roadmap.inProgressCount} label="In Progress" />
+          ) : (
+            <StatusChip status="not-started" count={0} label="Not Started" />
+          )}
+        </div>
       </div>
 
-      <div className="mb-4">
-        <LinearProgress value={progress} color={getProgressColor()} />
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-4">
-        {roadmap.isActive && <ActiveBadge />}
-        {roadmap.isShared && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-[var(--md3-primary-container)] px-2 py-1 text-xs font-medium text-[var(--md3-primary)]">
-            <Globe2 className="h-3 w-3" />
-            Shared
-          </span>
-        )}
-        {progress === 100 ? (
-          <StatusChip status="completed" count={0} label="Completed" />
-        ) : progress > 0 || hasInProgress ? (
-          <StatusChip status="in-progress" count={roadmap.inProgressCount} label="In Progress" />
-        ) : (
-          <StatusChip status="not-started" count={0} label="Not Started" />
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[var(--md3-outline-variant)]">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[var(--md3-outline-variant)]">
         <span className="text-xs text-[var(--md3-on-surface-variant)]">
           {readonly && roadmap.ownerName ? `By ${roadmap.ownerName}` : new Date(roadmap.createdAt).toLocaleDateString()}
         </span>
@@ -600,6 +582,25 @@ function RoadmapCard({ roadmap, onDelete, onActivate, activating, onManageTags, 
           )}
           <ActionLink icon={FolderOpen} label="Open" to={readonly ? `/shared-roadmap/${roadmap.id}` : `/roadmap/${roadmap.id}`} />
         </div>
+      </div>
+
+      <div className="mt-3 flex min-h-[26px] flex-wrap gap-1">
+        {roadmap.tags && roadmap.tags.length > 0 ? roadmap.tags.map((tag) => (
+          <span
+            key={tag.id}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+            style={{
+              backgroundColor: tag.color ? `${tag.color}22` : 'var(--md3-surface-variant)',
+              color: tag.color ?? 'var(--md3-on-surface-variant)',
+              border: `1px solid ${tag.color ? `${tag.color}55` : 'var(--md3-outline-variant)'}`,
+            }}
+          >
+            <Tag className="h-3 w-3" />
+            {tag.name}
+          </span>
+        )) : (
+          <span className="text-xs text-transparent">No tags</span>
+        )}
       </div>
     </div>
   );
