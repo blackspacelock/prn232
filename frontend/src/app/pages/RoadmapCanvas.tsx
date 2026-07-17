@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { AppShell } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
@@ -6,10 +6,9 @@ import { EmptyState } from '../components/EmptyState';
 import { Snackbar } from '../components/Snackbar';
 import { ActionButton } from '../components/ActionButton';
 import { NodeStatusPicker } from '../components/NodeStatusPicker';
-import { Copy, X, Save } from 'lucide-react';
+import { Copy, Plus, Trash2, X, Save } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
-import { apolloClient } from '@/lib/apollo';
 import { apiClient } from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
 import { NODE_STATUS_COLORS, type NodeStatusInt } from '@/constants/nodeStatus';
@@ -21,19 +20,25 @@ import {
   GET_PERSONAL_ROADMAP_WITH_PROGRESS,
   GET_SHARED_PERSONAL_ROADMAP_WITH_PROGRESS,
   GET_NODE_PROGRESS,
-  GET_PERSONAL_ROADMAPS_BY_PROFILE,
   GET_LEARNING_RESOURCES_BY_NODE,
   GET_RECOMMENDED_RESOURCES,
 } from '@/graphql/queries';
 import type {
   CareerRoadmapWithNodesDto,
   NodeProgressDto,
-  PersonalRoadmapDto,
-  UpdateNodeProgressStatusDto,
   PersonalRoadmapDetailDto,
 } from '@/types/api';
 
 type ProgressNode = NodeProgressDto;
+
+interface ResourceDraft {
+  id?: string;
+  name: string;
+  resourceUrl: string;
+  resourceType: string;
+  provider: string;
+  isFree: boolean;
+}
 
 interface LearningResource {
   id: string;
@@ -62,8 +67,11 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
 
   const [selectedNodeProgress, setSelectedNodeProgress] = useState<ProgressNode | null>(null);
   const [optimisticStatus, setOptimisticStatus] = useState<NodeStatusInt | null>(null);
-  const [previousStatus, setPreviousStatus] = useState<NodeStatusInt | null>(null);
+  const [stepName, setStepName] = useState('');
+  const [stepDescription, setStepDescription] = useState('');
   const [note, setNote] = useState('');
+  const [resourceDrafts, setResourceDrafts] = useState<ResourceDraft[]>([]);
+  const [deletedResourceIds, setDeletedResourceIds] = useState<string[]>([]);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const detailQuery = shared ? GET_SHARED_PERSONAL_ROADMAP_WITH_PROGRESS : GET_PERSONAL_ROADMAP_WITH_PROGRESS;
@@ -107,11 +115,6 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
   const resources: LearningResource[] = (resourcesData as { learningResourcesByNode?: LearningResource[] })?.learningResourcesByNode ?? [];
   const recommended: LearningResource[] = (recommendedData as { recommendedResources?: LearningResource[] })?.recommendedResources ?? [];
 
-  const calculateProgressPercentage = (nodes: ProgressNode[]) =>
-    nodes.length === 0
-      ? 0
-      : Math.round((nodes.filter((node) => node.status === 4).length / nodes.length) * 100);
-
   const graphNodes: RoadmapGraphNode[] = useMemo(
     () =>
       progressNodes.map((np) => ({
@@ -133,80 +136,65 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
     [progressNodes, selectedNodeProgress?.roadmapNodeId, optimisticStatus],
   );
 
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ nodeProgressId, dto }: { nodeProgressId: string; dto: UpdateNodeProgressStatusDto }) =>
-      apiClient.put<ProgressNode>(`/api/node-progress/${nodeProgressId}/status`, dto).then((r) => r.data),
+  const saveStepMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedNodeProgress || optimisticStatus === null) {
+        throw new Error('Select a roadmap step first.');
+      }
+
+      const incompleteResource = resourceDrafts.some((resource) => {
+        const hasAnyValue = resource.name.trim() || resource.resourceUrl.trim() || resource.provider.trim();
+        return hasAnyValue && (!resource.name.trim() || !resource.resourceUrl.trim());
+      });
+      if (incompleteResource) {
+        throw new Error('Each learning resource needs at least a name and URL.');
+      }
+
+      await apiClient.put<ProgressNode>(`/api/node-progress/${selectedNodeProgress.id}/details`, {
+        name: stepName,
+        description: stepDescription,
+        note,
+      });
+
+      const updatedProgress = await apiClient
+        .put<ProgressNode>(`/api/node-progress/${selectedNodeProgress.id}/status`, {
+          status: optimisticStatus,
+          note: note || undefined,
+        })
+        .then((r) => r.data);
+
+      await Promise.all(deletedResourceIds.map((resourceId) => apiClient.delete(`/api/learning-resources/${resourceId}`)));
+
+      const resourcesToSave = resourceDrafts
+        .map((resource) => ({
+          ...resource,
+          name: resource.name.trim(),
+          resourceUrl: resource.resourceUrl.trim(),
+          resourceType: resource.resourceType.trim() || 'Article',
+          provider: resource.provider.trim() || undefined,
+        }))
+        .filter((resource) => resource.name && resource.resourceUrl);
+
+      await Promise.all(resourcesToSave.map((resource) => {
+        const dto = {
+          name: resource.name,
+          resourceUrl: resource.resourceUrl,
+          resourceType: resource.resourceType,
+          provider: resource.provider,
+          isFree: resource.isFree,
+        };
+
+        return resource.id
+          ? apiClient.put(`/api/learning-resources/${resource.id}`, dto)
+          : apiClient.post(`/api/nodes/${selectedNodeProgress.nodeId}/learning-resources`, dto);
+      }));
+
+      await refetch();
+      await loadResources({ variables: { nodeId: selectedNodeProgress.nodeId } });
+      return updatedProgress;
+    },
     onSuccess: (updatedProgress) => {
-      const updateProgressNode = (node: ProgressNode) =>
-        node.id === updatedProgress.id
-          ? {
-              ...node,
-              ...updatedProgress,
-              roadmapNode: updatedProgress.roadmapNode ?? node.roadmapNode,
-              node: updatedProgress.node ?? node.node,
-            }
-          : node;
-
-      apolloClient.cache.updateQuery<{ nodeProgress?: ProgressNode[] }>(
-        { query: GET_NODE_PROGRESS, variables: { personalRoadmapId } },
-        (current) => current?.nodeProgress
-          ? { nodeProgress: current.nodeProgress.map(updateProgressNode) }
-          : current,
-      );
-
-      // Update the detailed progress query
-      apolloClient.cache.updateQuery<{ personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } }>(
-        { query: GET_PERSONAL_ROADMAP_WITH_PROGRESS, variables: { personalRoadmapId } },
-        (current) => current?.personalRoadmapWithProgress?.nodeProgresses
-          ? {
-              personalRoadmapWithProgress: {
-                ...current.personalRoadmapWithProgress,
-                nodeProgresses: current.personalRoadmapWithProgress.nodeProgresses.map(updateProgressNode),
-                progressPercentage: calculateProgressPercentage(
-                  current.personalRoadmapWithProgress.nodeProgresses.map(updateProgressNode),
-                ),
-              },
-            }
-          : current,
-      );
-
-      const updatedNodes =
-        apolloClient.cache.readQuery<{ nodeProgress?: ProgressNode[] }>(
-          { query: GET_NODE_PROGRESS, variables: { personalRoadmapId } },
-        )?.nodeProgress ??
-        apolloClient.cache.readQuery<{ personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } }>(
-          { query: GET_PERSONAL_ROADMAP_WITH_PROGRESS, variables: { personalRoadmapId } },
-        )?.personalRoadmapWithProgress?.nodeProgresses ??
-        progressNodes.map(updateProgressNode);
-      const inProgressCount = updatedNodes.filter((node) => node.status === 1).length;
-      const progressPercentage = calculateProgressPercentage(updatedNodes);
-
-      apolloClient.cache.updateQuery<{ personalRoadmapWithProgress?: { progressPercentage?: number } }>(
-        { query: GET_PERSONAL_ROADMAP_WITH_PROGRESS, variables: { personalRoadmapId } },
-        (current) => current?.personalRoadmapWithProgress
-          ? {
-              personalRoadmapWithProgress: {
-                ...current.personalRoadmapWithProgress,
-                progressPercentage,
-              },
-            }
-          : current,
-      );
-
-      // Sync list card data so /roadmaps reflects progress without a page refresh.
-      apolloClient.cache.updateQuery<{ personalRoadmapsByProfile?: PersonalRoadmapDto[] }>(
-        { query: GET_PERSONAL_ROADMAPS_BY_PROFILE, variables: { profileId } },
-        (current) => {
-          if (!current?.personalRoadmapsByProfile) return current;
-          return {
-            personalRoadmapsByProfile: current.personalRoadmapsByProfile.map((r) => {
-              if (r.id !== personalRoadmapId) return r;
-              return { ...r, inProgressCount, progressPercentage };
-            }),
-          };
-        },
-      );
-
+      setDeletedResourceIds([]);
       setSelectedNodeProgress((current) =>
         current && current.id === updatedProgress.id
           ? {
@@ -218,14 +206,14 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
           : current,
       );
       setOptimisticStatus(updatedProgress.status as NodeStatusInt);
-      setPreviousStatus(updatedProgress.status as NodeStatusInt);
+      setSnackbar({ open: true, message: 'Roadmap step updated.' });
     },
     onError: (error: unknown) => {
-      if (previousStatus !== null) {
-        setOptimisticStatus(previousStatus);
-      }
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update status.';
-      setSnackbar({ open: true, message: msg });
+      const msg =
+        error instanceof Error
+          ? error.message
+          : (error as { response?: { data?: string | { message?: string } } })?.response?.data;
+      setSnackbar({ open: true, message: typeof msg === 'string' ? msg : (msg?.message ?? 'Failed to update roadmap step.') });
     },
   });
 
@@ -246,8 +234,11 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
     if (np) {
       setSelectedNodeProgress(np);
       setOptimisticStatus(np.status as NodeStatusInt);
-      setPreviousStatus(np.status as NodeStatusInt);
+      setStepName(np.node.name);
+      setStepDescription(np.node.description ?? '');
       setNote(np.note ?? '');
+      setResourceDrafts([]);
+      setDeletedResourceIds([]);
       loadResources({ variables: { nodeId: np.nodeId } });
       if (!shared && profileId) {
         loadRecommended({ variables: { profileId, nodeId: np.nodeId } });
@@ -256,17 +247,47 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
   }, [progressNodes, profileId, loadResources, loadRecommended, shared]);
 
   const handleStatusChange = (newStatus: NodeStatusInt) => {
-    setPreviousStatus(optimisticStatus);
     setOptimisticStatus(newStatus);
   };
 
   const handleSave = () => {
     if (!selectedNodeProgress || optimisticStatus === null) return;
-    updateStatusMutation.mutate({
-      nodeProgressId: selectedNodeProgress.id,
-      dto: { status: optimisticStatus, note: note || undefined },
+    saveStepMutation.mutate();
+  };
+
+  const addResourceDraft = () => {
+    setResourceDrafts((current) => [
+      ...current,
+      { name: '', resourceUrl: '', resourceType: 'Article', provider: '', isFree: true },
+    ]);
+  };
+
+  const updateResourceDraft = <TKey extends keyof ResourceDraft>(index: number, field: TKey, value: ResourceDraft[TKey]) => {
+    setResourceDrafts((current) => current.map((resource, i) => i === index ? { ...resource, [field]: value } : resource));
+  };
+
+  const removeResourceDraft = (index: number) => {
+    setResourceDrafts((current) => {
+      const resource = current[index];
+      if (resource?.id) {
+        setDeletedResourceIds((ids) => [...ids, resource.id!]);
+      }
+      return current.filter((_, i) => i !== index);
     });
   };
+
+  useEffect(() => {
+    if (!selectedNodeProgress) return;
+    setResourceDrafts(resources.map((resource) => ({
+      id: resource.id,
+      name: resource.name,
+      resourceUrl: resource.resourceUrl,
+      resourceType: resource.resourceType || 'Article',
+      provider: resource.provider ?? '',
+      isFree: resource.isFree,
+    })));
+    setDeletedResourceIds([]);
+  }, [resourcesData, selectedNodeProgress?.nodeId]);
 
   const summaryNodes = summary.length > 0 ? summary : progressNodes;
   const completedCount = summaryNodes.filter((n: { status: number }) => n.status === 4).length;
@@ -322,7 +343,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
             <div className="border-b border-[var(--md3-outline-variant)] bg-white p-6">
               <div className="flex items-start justify-between">
                 <div className="min-w-0">
-                  <h2 className="line-clamp-2 text-xl font-semibold leading-tight text-[var(--md3-on-surface)]">{selectedNodeProgress.node.name}</h2>
+                  <h2 className="line-clamp-2 text-xl font-semibold leading-tight text-[var(--md3-on-surface)]">{stepName || selectedNodeProgress.node.name}</h2>
                   <span
                     className="mt-3 inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
                     style={{ background: currentColors.fill, color: currentColors.text, border: `1px solid ${currentColors.stroke}` }}
@@ -355,11 +376,31 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
               ) : (
                 <>
                   <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
+                    <p className="mb-3 text-xs font-medium uppercase tracking-wider text-[var(--md3-on-surface-variant)]">Step Details</p>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium text-[var(--md3-on-surface)]">Step name</span>
+                      <input
+                        value={stepName}
+                        onChange={(event) => setStepName(event.target.value)}
+                        className="w-full rounded-lg border-2 border-[var(--md3-outline)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--md3-primary)]"
+                      />
+                    </label>
+                    <label className="mt-3 block">
+                      <span className="mb-1 block text-sm font-medium text-[var(--md3-on-surface)]">Description</span>
+                      <textarea
+                        value={stepDescription}
+                        onChange={(event) => setStepDescription(event.target.value)}
+                        className="h-20 w-full resize-none rounded-lg border-2 border-[var(--md3-outline)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--md3-primary)]"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
                     <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Progress Status</p>
                     <NodeStatusPicker
                       value={optimisticStatus ?? selectedNodeProgress.status}
                       onChange={handleStatusChange}
-                      disabled={updateStatusMutation.isPending}
+                      disabled={saveStepMutation.isPending}
                     />
                   </div>
 
@@ -373,14 +414,70 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
                     />
                   </div>
 
-                  <ActionButton icon={Save} label={updateStatusMutation.isPending ? 'Saving...' : 'Save progress'} variant="primary" size="lg" onClick={handleSave} disabled={updateStatusMutation.isPending} className="w-full" />
+                  <ActionButton icon={Save} label={saveStepMutation.isPending ? 'Saving...' : 'Save'} variant="primary" size="lg" onClick={handleSave} disabled={saveStepMutation.isPending || !stepName.trim()} className="w-full" />
                 </>
               )}
 
               <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
-                <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Learning Resources</p>
-                {resourcesLoading ? (
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--md3-on-surface-variant)]">Learning Resources</p>
+                  {!shared && <ActionButton icon={Plus} label="Add" variant="text" onClick={addResourceDraft} />}
+                </div>
+                {resourcesLoading && shared ? (
                   <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
+                ) : !shared ? (
+                  <div className="space-y-3">
+                    {resourceDrafts.length === 0 ? (
+                      <p className="text-sm text-[var(--md3-on-surface-variant)]">No resources for this node.</p>
+                    ) : resourceDrafts.map((resource, index) => (
+                      <div key={resource.id ?? index} className="rounded-lg border border-[var(--md3-outline-variant)] p-3">
+                        <div className="mb-2 flex items-center gap-2">
+                          <input
+                            value={resource.name}
+                            onChange={(event) => updateResourceDraft(index, 'name', event.target.value)}
+                            className="min-w-0 flex-1 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                            placeholder="Resource name"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeResourceDraft(index)}
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--md3-error)] hover:bg-[var(--md3-error-container)]"
+                            aria-label="Remove resource"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <input
+                          value={resource.resourceUrl}
+                          onChange={(event) => updateResourceDraft(index, 'resourceUrl', event.target.value)}
+                          className="mb-2 w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                          placeholder="https://..."
+                        />
+                        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                          <input
+                            value={resource.resourceType}
+                            onChange={(event) => updateResourceDraft(index, 'resourceType', event.target.value)}
+                            className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                            placeholder="Article"
+                          />
+                          <input
+                            value={resource.provider}
+                            onChange={(event) => updateResourceDraft(index, 'provider', event.target.value)}
+                            className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                            placeholder="Provider"
+                          />
+                          <label className="flex items-center gap-2 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm text-[var(--md3-on-surface)]">
+                            <input
+                              type="checkbox"
+                              checked={resource.isFree}
+                              onChange={(event) => updateResourceDraft(index, 'isFree', event.target.checked)}
+                            />
+                            Free
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : resources.length === 0 ? (
                   <p className="text-sm text-[var(--md3-on-surface-variant)]">No resources for this node.</p>
                 ) : (
