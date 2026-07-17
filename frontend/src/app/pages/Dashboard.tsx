@@ -8,7 +8,8 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChar
 import { Cell } from 'recharts';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
-import { getSkillColor, hashLabel, SkillChip } from '../components/SkillChip';
+import { SkillChip } from '../components/SkillChip';
+import { getSkillColor, hashLabel } from '../components/skillColorUtils';
 import {
   GET_USER_BY_ID,
   GET_PERSONAL_ROADMAPS_BY_PROFILE,

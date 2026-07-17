@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, Check, Clock4, Save, SlidersHorizontal } from 'lucide-react';
 import { AppShell, PageHeader } from '../../components/AppShell';
@@ -35,16 +35,15 @@ export function AdminSystemConfigPage() {
     queryFn: () => apiClient.get<JobScrapingSettingDto>('/api/job-trends/scraping-settings').then((r) => r.data),
   });
 
-  useEffect(() => {
-    if (settings && !settingsForm) {
-      setSettingsForm({
-        enabled: settings.enabled,
-        frequency: settings.frequency,
-        timeOfDay: settings.timeOfDay,
-        dayOfWeek: settings.dayOfWeek,
-      });
-    }
-  }, [settings, settingsForm]);
+  const activeSettingsForm = settingsForm ??
+    (settings
+      ? {
+          enabled: settings.enabled,
+          frequency: settings.frequency,
+          timeOfDay: settings.timeOfDay,
+          dayOfWeek: settings.dayOfWeek,
+        }
+      : null);
 
   const updateSettingsMutation = useMutation({
     mutationFn: (dto: UpdateJobScrapingSettingDto) => apiClient.put<JobScrapingSettingDto>('/api/job-trends/scraping-settings', dto).then((r) => r.data),
@@ -81,7 +80,7 @@ export function AdminSystemConfigPage() {
             </div>
           </div>
 
-          {settingsLoading || !settingsForm ? (
+          {settingsLoading || !activeSettingsForm ? (
             <div className="p-5">
               <Skeleton className="h-44 rounded-xl" />
             </div>
@@ -93,19 +92,19 @@ export function AdminSystemConfigPage() {
             <div className="grid gap-0 xl:grid-cols-[320px_1fr]">
               <div className="border-b border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container-low)] p-5 xl:border-b-0 xl:border-r">
                 <div className={`mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                  settingsForm.enabled
+                    activeSettingsForm.enabled
                     ? 'bg-[var(--md3-secondary-container)] text-[var(--md3-on-secondary-container)]'
                     : 'bg-white text-[var(--md3-on-surface-variant)]'
                 }`}>
-                  <span className={`h-2 w-2 rounded-full ${settingsForm.enabled ? 'bg-green-500' : 'bg-[var(--md3-outline)]'}`} />
-                  {settingsForm.enabled ? 'Active' : 'Paused'}
+                  <span className={`h-2 w-2 rounded-full ${activeSettingsForm.enabled ? 'bg-green-500' : 'bg-[var(--md3-outline)]'}`} />
+                  {activeSettingsForm.enabled ? 'Active' : 'Paused'}
                 </div>
 
                 <p className="text-2xl font-semibold leading-tight text-[var(--md3-on-surface)]">
-                  {settingsForm.frequency === 'Weekly' ? settingsForm.dayOfWeek : 'Daily'}
+                  {activeSettingsForm.frequency === 'Weekly' ? activeSettingsForm.dayOfWeek : 'Daily'}
                 </p>
                 <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">
-                  {formatTime(settingsForm.timeOfDay)}
+                  {formatTime(activeSettingsForm.timeOfDay)}
                 </p>
 
                 <div className="mt-5 space-y-3 rounded-lg border border-[var(--md3-outline-variant)] bg-white p-3">
@@ -122,16 +121,16 @@ export function AdminSystemConfigPage() {
               <div className="space-y-5 p-5">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <ToggleSwitch
-                    checked={settingsForm.enabled}
-                    label={settingsForm.enabled ? 'Enabled' : 'Disabled'}
+                    checked={activeSettingsForm.enabled}
+                    label={activeSettingsForm.enabled ? 'Enabled' : 'Disabled'}
                     activeTone="success"
-                    onChange={() => setSettingsForm({ ...settingsForm, enabled: !settingsForm.enabled })}
+                    onChange={() => setSettingsForm({ ...activeSettingsForm, enabled: !activeSettingsForm.enabled })}
                   />
 
                   <AdminActionButton
                     icon={Save}
                     label={updateSettingsMutation.isPending ? 'Saving...' : 'Save schedule'}
-                    onClick={() => updateSettingsMutation.mutate(settingsForm)}
+                    onClick={() => updateSettingsMutation.mutate(activeSettingsForm)}
                     disabled={updateSettingsMutation.isPending}
                   />
                 </div>
@@ -140,12 +139,12 @@ export function AdminSystemConfigPage() {
                   <p className="mb-2 text-xs font-semibold uppercase text-[var(--md3-on-surface-variant)]">Frequency</p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {(['Daily', 'Weekly'] as const).map((frequency) => {
-                      const active = settingsForm.frequency === frequency;
+                      const active = activeSettingsForm.frequency === frequency;
                       return (
                         <button
                           key={frequency}
                           type="button"
-                          onClick={() => setSettingsForm({ ...settingsForm, frequency })}
+                          onClick={() => setSettingsForm({ ...activeSettingsForm, frequency })}
                           className={`flex min-h-14 items-center justify-between rounded-lg border px-4 text-left transition-colors ${
                             active
                               ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
@@ -164,15 +163,15 @@ export function AdminSystemConfigPage() {
                   <p className="mb-2 text-xs font-semibold uppercase text-[var(--md3-on-surface-variant)]">Day</p>
                   <div className="flex flex-wrap gap-2">
                     {DAYS_OF_WEEK.map((day) => {
-                      const active = settingsForm.dayOfWeek === day;
+                      const active = activeSettingsForm.dayOfWeek === day;
                       return (
                         <button
                           key={day}
                           type="button"
-                          disabled={settingsForm.frequency !== 'Weekly'}
-                          onClick={() => setSettingsForm({ ...settingsForm, dayOfWeek: day })}
+                          disabled={activeSettingsForm.frequency !== 'Weekly'}
+                          onClick={() => setSettingsForm({ ...activeSettingsForm, dayOfWeek: day })}
                           className={`h-9 rounded-full border px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                            active && settingsForm.frequency === 'Weekly'
+                            active && activeSettingsForm.frequency === 'Weekly'
                               ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-primary)]'
                               : 'border-[var(--md3-outline-variant)] bg-white text-[var(--md3-on-surface-variant)] hover:bg-[var(--md3-surface-container)]'
                           }`}
@@ -188,8 +187,8 @@ export function AdminSystemConfigPage() {
                   <span className="mb-2 block text-xs font-semibold uppercase text-[var(--md3-on-surface-variant)]">Time</span>
                   <input
                     type="time"
-                    value={settingsForm.timeOfDay.slice(0, 5)}
-                    onChange={(event) => setSettingsForm({ ...settingsForm, timeOfDay: `${event.target.value}:00` })}
+                    value={activeSettingsForm.timeOfDay.slice(0, 5)}
+                    onChange={(event) => setSettingsForm({ ...activeSettingsForm, timeOfDay: `${event.target.value}:00` })}
                     className="md3-field w-full px-4"
                   />
                 </label>

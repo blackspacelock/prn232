@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
-import { AdminListToolbar, AdminPagination, AdminFilterSelect, useAdminList, type AdminSortOption } from '../components/admin/AdminListControls';
+import { AdminListToolbar, AdminPagination, AdminFilterSelect } from '../components/admin/AdminListControls';
+import { useAdminList, type AdminSortOption } from '../components/admin/useAdminList';
 import { Search, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { GET_JOB_TRENDS_BY_REGION, GET_TOP_TRENDING_SKILLS } from '@/graphql/queries';
-import { getSkillColor, hashLabel, SkillChip } from '../components/SkillChip';
+import { SkillChip } from '../components/SkillChip';
+import { getSkillColor, hashLabel } from '../components/skillColorUtils';
 
 interface JobTrend {
   id: string;
