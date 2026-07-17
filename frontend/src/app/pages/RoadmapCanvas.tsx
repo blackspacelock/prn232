@@ -93,6 +93,11 @@ export function RoadmapCanvasPage() {
   const resources: LearningResource[] = (resourcesData as { learningResourcesByNode?: LearningResource[] })?.learningResourcesByNode ?? [];
   const recommended: LearningResource[] = (recommendedData as { recommendedResources?: LearningResource[] })?.recommendedResources ?? [];
 
+  const calculateProgressPercentage = (nodes: ProgressNode[]) =>
+    nodes.length === 0
+      ? 0
+      : Math.round((nodes.filter((node) => node.status === 4).length / nodes.length) * 100);
+
   const graphNodes: RoadmapGraphNode[] = useMemo(
     () =>
       progressNodes.map((np) => ({
@@ -143,12 +148,38 @@ export function RoadmapCanvasPage() {
               personalRoadmapWithProgress: {
                 ...current.personalRoadmapWithProgress,
                 nodeProgresses: current.personalRoadmapWithProgress.nodeProgresses.map(updateProgressNode),
+                progressPercentage: calculateProgressPercentage(
+                  current.personalRoadmapWithProgress.nodeProgresses.map(updateProgressNode),
+                ),
               },
             }
           : current,
       );
 
-      // Sync inProgressCount in the roadmaps list cache so the card badge stays accurate
+      const updatedNodes =
+        apolloClient.cache.readQuery<{ nodeProgress?: ProgressNode[] }>(
+          { query: GET_NODE_PROGRESS, variables: { personalRoadmapId } },
+        )?.nodeProgress ??
+        apolloClient.cache.readQuery<{ personalRoadmapWithProgress?: { nodeProgresses?: ProgressNode[] } }>(
+          { query: GET_PERSONAL_ROADMAP_WITH_PROGRESS, variables: { personalRoadmapId } },
+        )?.personalRoadmapWithProgress?.nodeProgresses ??
+        progressNodes.map(updateProgressNode);
+      const inProgressCount = updatedNodes.filter((node) => node.status === 1).length;
+      const progressPercentage = calculateProgressPercentage(updatedNodes);
+
+      apolloClient.cache.updateQuery<{ personalRoadmapWithProgress?: { progressPercentage?: number } }>(
+        { query: GET_PERSONAL_ROADMAP_WITH_PROGRESS, variables: { personalRoadmapId } },
+        (current) => current?.personalRoadmapWithProgress
+          ? {
+              personalRoadmapWithProgress: {
+                ...current.personalRoadmapWithProgress,
+                progressPercentage,
+              },
+            }
+          : current,
+      );
+
+      // Sync list card data so /roadmaps reflects progress without a page refresh.
       apolloClient.cache.updateQuery<{ personalRoadmapsByProfile?: PersonalRoadmapDto[] }>(
         { query: GET_PERSONAL_ROADMAPS_BY_PROFILE, variables: { profileId } },
         (current) => {
@@ -156,27 +187,24 @@ export function RoadmapCanvasPage() {
           return {
             personalRoadmapsByProfile: current.personalRoadmapsByProfile.map((r) => {
               if (r.id !== personalRoadmapId) return r;
-              // Re-derive inProgressCount from the updated node progress list
-              const updatedNodes = (apolloClient.cache.readQuery<{ nodeProgress?: ProgressNode[] }>(
-                { query: GET_NODE_PROGRESS, variables: { personalRoadmapId } },
-              ) as { nodeProgress?: ProgressNode[] } | null)?.nodeProgress ?? [];
-              const inProgressCount = updatedNodes.filter((n) => n.status === 1).length;
-              return { ...r, inProgressCount };
+              return { ...r, inProgressCount, progressPercentage };
             }),
           };
         },
       );
 
       setSelectedNodeProgress((current) =>
-        current && optimisticStatus !== null
+        current && current.id === updatedProgress.id
           ? {
               ...current,
-              status: optimisticStatus,
-              note,
+              ...updatedProgress,
+              roadmapNode: updatedProgress.roadmapNode ?? current.roadmapNode,
+              node: updatedProgress.node ?? current.node,
             }
           : current,
       );
-      setPreviousStatus(optimisticStatus);
+      setOptimisticStatus(updatedProgress.status as NodeStatusInt);
+      setPreviousStatus(updatedProgress.status as NodeStatusInt);
     },
     onError: (error: unknown) => {
       if (previousStatus !== null) {
@@ -212,8 +240,9 @@ export function RoadmapCanvasPage() {
     });
   };
 
-  const completedCount = summary.filter((n: { status: number }) => n.status === 4).length;
-  const totalCount = summary.length;
+  const summaryNodes = summary.length > 0 ? summary : progressNodes;
+  const completedCount = summaryNodes.filter((n: { status: number }) => n.status === 4).length;
+  const totalCount = summaryNodes.length;
 
   if (loading) {
     return (

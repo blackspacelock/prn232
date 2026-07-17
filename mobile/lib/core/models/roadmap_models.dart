@@ -1,3 +1,5 @@
+import 'profile_models.dart';
+
 class CareerRoleDto {
   const CareerRoleDto({
     required this.careerRoleId,
@@ -54,6 +56,7 @@ class NodeDto {
     required this.order,
     this.description,
     this.parentNodeId,
+    this.technicalSkills = const [],
   });
 
   final String nodeId;
@@ -61,14 +64,24 @@ class NodeDto {
   final int order;
   final String? description;
   final String? parentNodeId;
+  final List<TechnicalSkillDto> technicalSkills;
 
-  factory NodeDto.fromJson(Map<String, dynamic> json) => NodeDto(
-        nodeId: (json['nodeId'] ?? json['id']).toString(),
-        name: (json['name'] ?? json['title'] ?? 'Roadmap Node').toString(),
-        order: json['order'] as int? ?? 0,
-        description: json['description'] as String?,
-        parentNodeId: json['parentNodeId'] as String?,
-      );
+  factory NodeDto.fromJson(Map<String, dynamic> json) {
+    final skills = json['technicalSkills'];
+    return NodeDto(
+      nodeId: (json['nodeId'] ?? json['id']).toString(),
+      name: (json['name'] ?? json['title'] ?? 'Roadmap Node').toString(),
+      order: json['order'] as int? ?? 0,
+      description: json['description'] as String?,
+      parentNodeId: json['parentNodeId'] as String?,
+      technicalSkills: skills is List
+          ? skills
+              .whereType<Map<String, dynamic>>()
+              .map(TechnicalSkillDto.fromJson)
+              .toList()
+          : const [],
+    );
+  }
 }
 
 class NodeProgressDto {
