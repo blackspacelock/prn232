@@ -13,6 +13,9 @@ public class PersonalRoadmapDto
     public decimal ProgressPercentage { get; set; }
     public int InProgressCount { get; set; }
     public bool IsActive { get; set; }
+    public bool IsShared { get; set; }
+    public DateTime? SharedAt { get; set; }
+    public string? OwnerName { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<RoadmapTagDto> Tags { get; set; } = new();
 }

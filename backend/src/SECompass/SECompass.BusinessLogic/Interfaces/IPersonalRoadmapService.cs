@@ -5,10 +5,14 @@ namespace SECompass.BusinessLogic.Interfaces;
 
 public interface IPersonalRoadmapService
 {
+    Task<ServiceResult<PersonalRoadmapDetailDto>> CreateAsync(CreatePersonalRoadmapDto dto);
     Task<ServiceResult<PersonalRoadmapDetailDto>> GenerateAsync(Guid profileId, Guid careerRoadmapId);
     Task<ServiceResult<List<PersonalRoadmapDto>>> GetByProfileAsync(Guid profileId);
+    Task<ServiceResult<List<PersonalRoadmapDto>>> GetSharedAsync();
     Task<ServiceResult<PersonalRoadmapDetailDto>> GetWithProgressAsync(Guid personalRoadmapId);
+    Task<ServiceResult<PersonalRoadmapDetailDto>> GetSharedWithProgressAsync(Guid personalRoadmapId);
     Task<ServiceResult<decimal>> RecalculateProgressAsync(Guid personalRoadmapId);
     Task<ServiceResult<bool>> DeleteAsync(Guid personalRoadmapId);
     Task<ServiceResult<bool>> ToggleActiveAsync(Guid personalRoadmapId);
+    Task<ServiceResult<bool>> ToggleSharedAsync(Guid personalRoadmapId);
 }
