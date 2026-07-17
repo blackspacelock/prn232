@@ -64,7 +64,11 @@ public class MappingProfile : AutoMapper.Profile
             .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
 
         // Node
-        CreateMap<Node, NodeDto>();
+        CreateMap<Node, NodeDto>()
+            .ForMember(d => d.TechnicalSkills, o => o.MapFrom(s =>
+                s.NodeTechnicalSkills
+                    .Where(nts => nts.TechnicalSkill != null)
+                    .Select(nts => nts.TechnicalSkill)));
         CreateMap<Node, NodeHierarchyDto>()
             .ForMember(d => d.Children, o => o.MapFrom(s => s.Children));
         CreateMap<CreateNodeDto, Node>();

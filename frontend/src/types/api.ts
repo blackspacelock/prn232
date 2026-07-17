@@ -241,6 +241,7 @@ export interface NodeDto {
   description?: string;
   order: number;
   createdAt?: string;
+  technicalSkills: TechnicalSkillDto[];
 }
 
 export interface RoadmapNodeDto {
