@@ -81,6 +81,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
   const [showRoadmapSettings, setShowRoadmapSettings] = useState(false);
   const [showAddStep, setShowAddStep] = useState(false);
   const [deleteStepId, setDeleteStepId] = useState<string | null>(null);
+  const [localNodePositions, setLocalNodePositions] = useState<Record<string, { x: number; y: number }>>({});
   const [resourceDrafts, setResourceDrafts] = useState<ResourceDraft[]>([]);
   const [deletedResourceIds, setDeletedResourceIds] = useState<string[]>([]);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({
@@ -153,23 +154,26 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
 
   const graphNodes: RoadmapGraphNode[] = useMemo(
     () =>
-      progressNodes.map((np) => ({
-        id: np.roadmapNodeId,
-        nodeId: np.nodeId,
-        parentRoadmapNodeId: np.roadmapNode.parentRoadmapNodeId,
-        name: np.node.name,
-        description: np.node.description,
-        order: np.roadmapNode.order,
-        nodeType: np.roadmapNode.nodeType,
-        requirementType: np.roadmapNode.requirementType,
-        positionX: np.roadmapNode.positionX,
-        positionY: np.roadmapNode.positionY,
-        status:
-          selectedNodeProgress?.roadmapNodeId === np.roadmapNodeId && optimisticStatus !== null
-            ? optimisticStatus
-            : (np.status as NodeStatusInt),
-      })),
-    [progressNodes, selectedNodeProgress?.roadmapNodeId, optimisticStatus],
+      progressNodes.map((np) => {
+        const localPosition = localNodePositions[np.roadmapNodeId];
+        return {
+          id: np.roadmapNodeId,
+          nodeId: np.nodeId,
+          parentRoadmapNodeId: np.roadmapNode.parentRoadmapNodeId,
+          name: np.node.name,
+          description: np.node.description,
+          order: np.roadmapNode.order,
+          nodeType: np.roadmapNode.nodeType,
+          requirementType: np.roadmapNode.requirementType,
+          positionX: localPosition?.x ?? np.roadmapNode.positionX,
+          positionY: localPosition?.y ?? np.roadmapNode.positionY,
+          status:
+            selectedNodeProgress?.roadmapNodeId === np.roadmapNodeId && optimisticStatus !== null
+              ? optimisticStatus
+              : (np.status as NodeStatusInt),
+        };
+      }),
+    [progressNodes, localNodePositions, selectedNodeProgress?.roadmapNodeId, optimisticStatus],
   );
 
   const saveStepMutation = useMutation({
@@ -341,16 +345,24 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
   });
 
   const updateStepPositionMutation = useMutation({
-    mutationFn: ({ roadmapNodeId, x, y }: { roadmapNodeId: string; x: number; y: number }) =>
+    mutationFn: ({ roadmapNodeId, x, y }: { roadmapNodeId: string; x: number; y: number; previous?: { x?: number; y?: number } }) =>
       apiClient.put(`/api/personal-roadmaps/${personalRoadmapId}/steps/${roadmapNodeId}/position`, {
         positionX: x,
         positionY: y,
       }),
-    onSuccess: async () => {
-      await refetch();
-      await refetchProgress();
-    },
-    onError: (error: unknown) => {
+    onError: (error: unknown, variables) => {
+      setLocalNodePositions((current) => {
+        const next = { ...current };
+        if (typeof variables.previous?.x === 'number' && typeof variables.previous?.y === 'number') {
+          next[variables.roadmapNodeId] = {
+            x: variables.previous.x,
+            y: variables.previous.y,
+          };
+        } else {
+          delete next[variables.roadmapNodeId];
+        }
+        return next;
+      });
       const msg = (error as { response?: { data?: string | { message?: string } } })?.response?.data;
       setSnackbar({
         open: true,
@@ -508,13 +520,27 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
             useStatusColors
             onNodeSelect={handleNodeSelect}
             onNodePositionChange={(roadmapNodeId, position) => {
-              if (!shared) {
-                updateStepPositionMutation.mutate({
-                  roadmapNodeId,
+              if (shared) return;
+              const graphNode = graphNodes.find((node) => node.id === roadmapNodeId);
+              const previous = {
+                x: graphNode?.positionX,
+                y: graphNode?.positionY,
+              };
+              if (previous.x === position.x && previous.y === position.y) return;
+
+              setLocalNodePositions((current) => ({
+                ...current,
+                [roadmapNodeId]: {
                   x: position.x,
                   y: position.y,
-                });
-              }
+                },
+              }));
+              updateStepPositionMutation.mutate({
+                roadmapNodeId,
+                x: position.x,
+                y: position.y,
+                previous,
+              });
             }}
           />
         </div>
