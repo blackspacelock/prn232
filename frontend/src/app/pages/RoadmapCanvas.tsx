@@ -19,6 +19,7 @@ import { RoadmapGraphCanvas, type RoadmapGraphNode } from '../components/roadmap
 import { RoadmapResourceCard } from '../components/roadmap/RoadmapResourceCard';
 import {
   GET_CAREER_ROADMAP_WITH_NODES,
+  GET_PERSONAL_ROADMAPS_BY_PROFILE,
   GET_PERSONAL_ROADMAP_WITH_PROGRESS,
   GET_SHARED_PERSONAL_ROADMAP_WITH_PROGRESS,
   GET_NODE_PROGRESS,
@@ -26,6 +27,7 @@ import {
   GET_RECOMMENDED_RESOURCES,
   GET_TECHNICAL_SKILLS,
 } from '@/graphql/queries';
+import { apolloClient } from '@/lib/apollo';
 import type {
   CareerRoadmapWithNodesDto,
   NodeProgressDto,
@@ -186,6 +188,16 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
     [progressNodes, localNodePositions, selectedNodeProgress?.roadmapNodeId, optimisticStatus],
   );
 
+  const refreshRoadmapListCache = useCallback(async () => {
+    if (shared || !profileId) return;
+
+    await apolloClient.query({
+      query: GET_PERSONAL_ROADMAPS_BY_PROFILE,
+      variables: { profileId },
+      fetchPolicy: 'network-only',
+    });
+  }, [profileId, shared]);
+
   const saveStepMutation = useMutation({
     mutationFn: async () => {
       if (!selectedNodeProgress || optimisticStatus === null) {
@@ -253,6 +265,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
       if (careerRoadmapId) {
         await refetchTemplate();
       }
+      await refreshRoadmapListCache();
       await loadResources({ variables: { nodeId: selectedNodeProgress.nodeId } });
       return updatedProgress;
     },
@@ -313,6 +326,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
       setRoadmapNote(updated.note ?? '');
       setShowRoadmapSettings(false);
       await refetch();
+      await refreshRoadmapListCache();
       setSnackbar({ open: true, message: 'Roadmap details updated.', variant: 'success' });
     },
     onError: (error: unknown) => {
@@ -335,6 +349,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
       if (careerRoadmapId) {
         await refetchTemplate();
       }
+      await refreshRoadmapListCache();
       setSnackbar({ open: true, message: 'Roadmap step added.', variant: 'success' });
     },
     onError: (error: unknown) => {
@@ -355,6 +370,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
       setDeleteStepId(null);
       await refetch();
       await refetchProgress();
+      await refreshRoadmapListCache();
       setSnackbar({ open: true, message: 'Roadmap step deleted.', variant: 'success' });
     },
     onError: (error: unknown) => {
