@@ -627,12 +627,6 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
               isActive={shared ? undefined : personalRoadmap?.isActive}
               progress={{ completed: completedCount, total: totalCount }}
             />
-          {!shared && (
-            <div className="absolute right-5 top-5 z-10 flex gap-2">
-              <ActionButton icon={Settings} label="Roadmap Details" variant="neutral" size="sm" onClick={() => setShowRoadmapSettings(true)} />
-              <ActionButton icon={Plus} label="Add Step" variant="primary" size="sm" onClick={() => setShowAddStep(true)} />
-            </div>
-          )}
           <RoadmapGraphCanvas
             graphNodes={graphNodes}
             graphEdges={template?.edges}
@@ -663,6 +657,12 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
               });
             }}
           />
+          {!shared && (
+            <div className="absolute bottom-5 right-5 z-10 flex flex-col gap-2 sm:flex-row">
+              <ActionButton icon={Settings} label="Roadmap Details" variant="neutral" size="sm" onClick={() => setShowRoadmapSettings(true)} />
+              <ActionButton icon={Plus} label="Add Step" variant="primary" size="sm" onClick={() => setShowAddStep(true)} />
+            </div>
+          )}
         </div>
 
         {selectedNodeProgress && (
