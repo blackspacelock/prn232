@@ -260,6 +260,7 @@ export interface RoadmapNodeDto {
 
 export interface CreateRoadmapNodeDto {
   nodeId: string;
+  previousRoadmapNodeId?: string;
   parentRoadmapNodeId?: string;
   branchRoadmapNodeId?: string;
   order: number;
@@ -271,6 +272,7 @@ export interface CreateRoadmapNodeDto {
 }
 
 export interface UpdateRoadmapNodeDto {
+  previousRoadmapNodeId?: string;
   parentRoadmapNodeId?: string;
   branchRoadmapNodeId?: string;
   order?: number;
@@ -370,6 +372,7 @@ export interface CopySharedRoadmapRequestDto {
 export interface CreatePersonalRoadmapStepDto {
   name: string;
   description?: string;
+  previousStepIndex?: number;
   parentStepIndex?: number;
   branchStepIndex?: number;
   positionX?: number;

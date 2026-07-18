@@ -74,7 +74,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
   const [stepName, setStepName] = useState('');
   const [stepDescription, setStepDescription] = useState('');
   const [stepConnectionType, setStepConnectionType] = useState<'learning' | 'branch'>('learning');
-  const [stepLearningParentId, setStepLearningParentId] = useState('');
+  const [stepLearningPreviousId, setStepLearningPreviousId] = useState('');
   const [stepBranchSourceId, setStepBranchSourceId] = useState('');
   const [note, setNote] = useState('');
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
@@ -138,7 +138,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
   const template: CareerRoadmapWithNodesDto | null =
     (templateData as { careerRoadmapWithNodes?: CareerRoadmapWithNodesDto })
       ?.careerRoadmapWithNodes ?? null;
-  const branchSourceByNodeId = useMemo(() => {
+  const learningSourceByNodeId = useMemo(() => {
     const map = new Map<string, string>();
     template?.edges?.forEach((edge) => {
       map.set(edge.toRoadmapNodeId, edge.fromRoadmapNodeId);
@@ -218,7 +218,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
         .then((r) => r.data);
 
       await apiClient.put(`/api/personal-roadmaps/${personalRoadmapId}/steps/${selectedNodeProgress.roadmapNodeId}/connection`, {
-        parentRoadmapNodeId: stepConnectionType === 'learning' ? (stepLearningParentId || undefined) : undefined,
+        previousRoadmapNodeId: stepConnectionType === 'learning' ? (stepLearningPreviousId || undefined) : undefined,
         branchRoadmapNodeId: stepConnectionType === 'branch' ? stepBranchSourceId : undefined,
       });
 
@@ -403,9 +403,10 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
       setOptimisticStatus(np.status as NodeStatusInt);
       setStepName(np.node.name);
       setStepDescription(np.node.description ?? '');
-      const branchSourceId = branchSourceByNodeId.get(np.roadmapNodeId) ?? '';
+      const branchSourceId = np.roadmapNode.parentRoadmapNodeId ?? '';
+      const learningSourceId = learningSourceByNodeId.get(np.roadmapNodeId) ?? '';
       setStepConnectionType(branchSourceId ? 'branch' : 'learning');
-      setStepLearningParentId(np.roadmapNode.parentRoadmapNodeId ?? '');
+      setStepLearningPreviousId(learningSourceId);
       setStepBranchSourceId(branchSourceId);
       setNote(np.note ?? '');
       setSelectedSkillIds(np.node.technicalSkills.map((skill) => skill.id));
@@ -416,7 +417,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
         loadRecommended({ variables: { profileId, nodeId: np.nodeId } });
       }
     }
-  }, [progressNodes, profileId, loadResources, loadRecommended, shared, branchSourceByNodeId]);
+  }, [progressNodes, profileId, loadResources, loadRecommended, shared, learningSourceByNodeId]);
 
   const handleStatusChange = (newStatus: NodeStatusInt) => {
     setOptimisticStatus(newStatus);
@@ -658,8 +659,8 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
                         <label className="mt-2 block">
                           <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Arrow from</span>
                           <select
-                            value={stepLearningParentId}
-                            onChange={(event) => setStepLearningParentId(event.target.value)}
+                            value={stepLearningPreviousId}
+                            onChange={(event) => setStepLearningPreviousId(event.target.value)}
                             className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
                           >
                             <option value="">Root learning step</option>
@@ -852,7 +853,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
 interface AddStepDraft {
   name: string;
   description?: string;
-  parentRoadmapNodeId?: string;
+  previousRoadmapNodeId?: string;
   branchRoadmapNodeId?: string;
   positionX?: number;
   positionY?: number;
@@ -951,7 +952,7 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [connectionType, setConnectionType] = useState<'learning' | 'branch'>('learning');
-  const [parentRoadmapNodeId, setParentRoadmapNodeId] = useState('');
+  const [previousRoadmapNodeId, setPreviousRoadmapNodeId] = useState('');
   const [branchRoadmapNodeId, setBranchRoadmapNodeId] = useState('');
   const [positionX, setPositionX] = useState('');
   const [positionY, setPositionY] = useState('');
@@ -994,7 +995,7 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
     onAdd({
       name: name.trim(),
       description: description.trim() || undefined,
-      parentRoadmapNodeId: connectionType === 'learning' ? (parentRoadmapNodeId || undefined) : undefined,
+      previousRoadmapNodeId: connectionType === 'learning' ? (previousRoadmapNodeId || undefined) : undefined,
       branchRoadmapNodeId: connectionType === 'branch' ? branchRoadmapNodeId : undefined,
       positionX: positionX.trim() === '' ? undefined : Number(positionX),
       positionY: positionY.trim() === '' ? undefined : Number(positionY),
@@ -1079,8 +1080,8 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--md3-on-surface)]">Arrow from</span>
               <select
-                value={parentRoadmapNodeId}
-                onChange={(event) => setParentRoadmapNodeId(event.target.value)}
+                value={previousRoadmapNodeId}
+                onChange={(event) => setPreviousRoadmapNodeId(event.target.value)}
                 className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
               >
                 <option value="">Current last learning step</option>

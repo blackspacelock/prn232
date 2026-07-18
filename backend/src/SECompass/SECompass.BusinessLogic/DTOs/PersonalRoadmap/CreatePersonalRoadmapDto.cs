@@ -14,6 +14,7 @@ public class CreatePersonalRoadmapStepDto
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public int? PreviousStepIndex { get; set; }
     public int? ParentStepIndex { get; set; }
     public int? BranchStepIndex { get; set; }
     public int? PositionX { get; set; }

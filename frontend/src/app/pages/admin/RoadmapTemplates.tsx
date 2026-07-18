@@ -71,6 +71,7 @@ export function AdminRoadmapTemplatesPage() {
   const [selectedRoadmapNode, setSelectedRoadmapNode] = useState<RoadmapNodeDto | null>(null);
   const [roadmapNodeForm, setRoadmapNodeForm] = useState<RoadmapNodeForm>({
     nodeId: '',
+    previousRoadmapNodeId: undefined,
     parentRoadmapNodeId: undefined,
     branchRoadmapNodeId: undefined,
     order: 1,
@@ -124,7 +125,7 @@ export function AdminRoadmapTemplatesPage() {
         ?.careerRoadmapWithNodes?.edges ?? [],
     [roadmapNodesData],
   );
-  const branchSourceByRoadmapNodeId = useMemo(() => {
+  const learningSourceByRoadmapNodeId = useMemo(() => {
     const map = new Map<string, string>();
     roadmapEdges.forEach((edge) => {
       map.set(edge.toRoadmapNodeId, edge.fromRoadmapNodeId);
@@ -222,6 +223,7 @@ export function AdminRoadmapTemplatesPage() {
       loadRoadmapNodes({ variables: { roadmapId } });
       setRoadmapNodeForm({
         nodeId: '',
+        previousRoadmapNodeId: undefined,
         parentRoadmapNodeId: undefined,
         branchRoadmapNodeId: undefined,
         order: roadmapNodeForm.order + 1,
@@ -263,6 +265,7 @@ export function AdminRoadmapTemplatesPage() {
     setSelectedRoadmapNode(null);
     setRoadmapNodeForm({
       nodeId: '',
+      previousRoadmapNodeId: undefined,
       parentRoadmapNodeId: undefined,
       branchRoadmapNodeId: undefined,
       order: 1,
@@ -283,6 +286,7 @@ export function AdminRoadmapTemplatesPage() {
     setForm({ name: '', description: '', careerRoleId: selectedRoleId === 'All' ? '' : selectedRoleId });
     setRoadmapNodeForm({
       nodeId: '',
+      previousRoadmapNodeId: undefined,
       parentRoadmapNodeId: undefined,
       branchRoadmapNodeId: undefined,
       order: 1,
@@ -310,8 +314,9 @@ export function AdminRoadmapTemplatesPage() {
     setSelectedRoadmapNode(roadmapNode);
     setRoadmapNodeForm({
       nodeId: roadmapNode.nodeId,
+      previousRoadmapNodeId: learningSourceByRoadmapNodeId.get(roadmapNode.id),
       parentRoadmapNodeId: roadmapNode.parentRoadmapNodeId,
-      branchRoadmapNodeId: branchSourceByRoadmapNodeId.get(roadmapNode.id),
+      branchRoadmapNodeId: roadmapNode.parentRoadmapNodeId ? roadmapNode.parentRoadmapNodeId : undefined,
       order: roadmapNode.order,
       nodeType: roadmapNode.nodeType,
       requirementType: roadmapNode.requirementType,
@@ -325,6 +330,7 @@ export function AdminRoadmapTemplatesPage() {
     setSelectedRoadmapNode(null);
     setRoadmapNodeForm({
       nodeId: '',
+      previousRoadmapNodeId: undefined,
       parentRoadmapNodeId: undefined,
       branchRoadmapNodeId: undefined,
       order: roadmapNodes.length + 1,
@@ -337,7 +343,8 @@ export function AdminRoadmapTemplatesPage() {
   };
 
   const buildRoadmapNodePayload = () => ({
-    parentRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId !== undefined ? undefined : roadmapNodeForm.parentRoadmapNodeId,
+    previousRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId !== undefined ? undefined : roadmapNodeForm.previousRoadmapNodeId,
+    parentRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId || undefined,
     branchRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId || undefined,
     order: roadmapNodeForm.order,
     nodeType: roadmapNodeForm.nodeType,
@@ -592,7 +599,7 @@ export function AdminRoadmapTemplatesPage() {
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          onClick={() => setRoadmapNodeForm({ ...roadmapNodeForm, branchRoadmapNodeId: undefined })}
+                          onClick={() => setRoadmapNodeForm({ ...roadmapNodeForm, branchRoadmapNodeId: undefined, parentRoadmapNodeId: undefined })}
                           className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
                             roadmapNodeForm.branchRoadmapNodeId === undefined
                               ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
@@ -603,7 +610,7 @@ export function AdminRoadmapTemplatesPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setRoadmapNodeForm({ ...roadmapNodeForm, parentRoadmapNodeId: undefined, branchRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId ?? '' })}
+                          onClick={() => setRoadmapNodeForm({ ...roadmapNodeForm, previousRoadmapNodeId: undefined, branchRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId ?? '' })}
                           className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
                             roadmapNodeForm.branchRoadmapNodeId !== undefined
                               ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
@@ -615,8 +622,8 @@ export function AdminRoadmapTemplatesPage() {
                       </div>
                       {roadmapNodeForm.branchRoadmapNodeId === undefined ? (
                         <select
-                          value={roadmapNodeForm.parentRoadmapNodeId ?? ''}
-                          onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, parentRoadmapNodeId: event.target.value || undefined })}
+                          value={roadmapNodeForm.previousRoadmapNodeId ?? ''}
+                          onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, previousRoadmapNodeId: event.target.value || undefined })}
                           className="md3-field h-10 w-full px-3 text-sm"
                         >
                           <option value="">Root learning step</option>
@@ -629,7 +636,7 @@ export function AdminRoadmapTemplatesPage() {
                       ) : (
                         <select
                           value={roadmapNodeForm.branchRoadmapNodeId}
-                          onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, parentRoadmapNodeId: undefined, branchRoadmapNodeId: event.target.value || '' })}
+                          onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, previousRoadmapNodeId: undefined, branchRoadmapNodeId: event.target.value || '' })}
                           className="md3-field h-10 w-full px-3 text-sm"
                         >
                           <option value="">Select dashed branch source</option>

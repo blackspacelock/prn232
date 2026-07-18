@@ -744,7 +744,7 @@ interface CreateStepDraft {
   name: string;
   description: string;
   connectionType: 'learning' | 'branch';
-  parentStepIndex: string;
+  previousStepIndex: string;
   branchStepIndex: string;
   positionX: string;
   positionY: string;
@@ -764,9 +764,9 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
   const [desire, setDesire] = useState('');
   const [careerRoleId, setCareerRoleId] = useState('');
   const [steps, setSteps] = useState<CreateStepDraft[]>([
-    { name: '', description: '', connectionType: 'learning', parentStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
-    { name: '', description: '', connectionType: 'learning', parentStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
-    { name: '', description: '', connectionType: 'learning', parentStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', connectionType: 'learning', previousStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', connectionType: 'learning', previousStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', connectionType: 'learning', previousStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
   ]);
 
   if (!isOpen) return null;
@@ -775,7 +775,7 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
     .map((step) => ({
       name: step.name.trim(),
       description: step.description.trim() || undefined,
-      parentStepIndex: step.connectionType === 'learning' && step.parentStepIndex !== '' ? Number(step.parentStepIndex) : undefined,
+      previousStepIndex: step.connectionType === 'learning' && step.previousStepIndex !== '' ? Number(step.previousStepIndex) : undefined,
       branchStepIndex: step.connectionType === 'branch' && step.branchStepIndex !== '' ? Number(step.branchStepIndex) : undefined,
       positionX: step.positionX.trim() === '' ? undefined : Number(step.positionX),
       positionY: step.positionY.trim() === '' ? undefined : Number(step.positionY),
@@ -800,7 +800,7 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
     setSteps((current) => current.map((step, i) => i === index ? { ...step, [field]: value } : step));
   };
 
-  const addStep = () => setSteps((current) => [...current, { name: '', description: '', connectionType: 'learning', parentStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] }]);
+  const addStep = () => setSteps((current) => [...current, { name: '', description: '', connectionType: 'learning', previousStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] }]);
   const removeStep = (index: number) => setSteps((current) => current.filter((_, i) => i !== index));
   const addStepResource = (stepIndex: number) => {
     setSteps((current) => current.map((step, i) => i === stepIndex
@@ -1020,8 +1020,8 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
                         <label className="block">
                           <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Arrow from</span>
                           <select
-                            value={step.parentStepIndex}
-                            onChange={(e) => updateStep(index, 'parentStepIndex', e.target.value)}
+                            value={step.previousStepIndex}
+                            onChange={(e) => updateStep(index, 'previousStepIndex', e.target.value)}
                             className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
                           >
                             <option value="">Previous learning step</option>
