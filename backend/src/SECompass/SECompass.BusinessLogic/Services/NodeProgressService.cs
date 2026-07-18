@@ -2,6 +2,7 @@ using AutoMapper;
 using SECompass.BusinessLogic.Common;
 using SECompass.BusinessLogic.DTOs.NodeProgress;
 using SECompass.BusinessLogic.Interfaces;
+using SECompass.DataAccess.Entities;
 using SECompass.DataAccess.Enums;
 using SECompass.DataAccess.UnitOfWork;
 
@@ -71,6 +72,27 @@ public class NodeProgressService : INodeProgressService
         if (dto.Note != null)
         {
             np.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
+        }
+
+        if (dto.TechnicalSkillIds != null)
+        {
+            var existingSkills = await _uow.NodeTechnicalSkills.FindAsync(nts => nts.NodeId == node.Id);
+            foreach (var existingSkill in existingSkills)
+            {
+                _uow.NodeTechnicalSkills.Delete(existingSkill);
+            }
+
+            foreach (var skillId in dto.TechnicalSkillIds.Distinct())
+            {
+                if (!await _uow.TechnicalSkills.ExistsAsync(skill => skill.Id == skillId)) continue;
+                await _uow.NodeTechnicalSkills.AddAsync(new NodeTechnicalSkill
+                {
+                    Id = Guid.NewGuid(),
+                    NodeId = node.Id,
+                    TechnicalSkillId = skillId,
+                    CreatedAt = DateTime.Now
+                });
+            }
         }
 
         node.UpdatedAt = DateTime.Now;
