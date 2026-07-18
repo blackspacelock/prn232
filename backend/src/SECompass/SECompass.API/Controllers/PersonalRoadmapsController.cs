@@ -54,6 +54,50 @@ public class PersonalRoadmapsController : ControllerBase
         return CreatedAtAction(nameof(Create), result.Data);
     }
 
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(PersonalRoadmapDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePersonalRoadmapDto dto)
+    {
+        var result = await _service.UpdateAsync(id, dto);
+        if (!result.Success)
+        {
+            return result.Error == "Personal roadmap not found." ? NotFound(result.Error) : BadRequest(result.Error);
+        }
+        return Ok(result.Data);
+    }
+
+    [HttpPost("{id:guid}/steps")]
+    [ProducesResponseType(typeof(PersonalRoadmapDetailDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddStep(Guid id, [FromBody] AddPersonalRoadmapStepDto dto)
+    {
+        var result = await _service.AddStepAsync(id, dto);
+        if (!result.Success)
+        {
+            return result.Error == "Personal roadmap not found." ? NotFound(result.Error) : BadRequest(result.Error);
+        }
+        return CreatedAtAction(nameof(GetSharedDetail), new { id }, result.Data);
+    }
+
+    [HttpDelete("{id:guid}/steps/{roadmapNodeId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteStep(Guid id, Guid roadmapNodeId)
+    {
+        var result = await _service.DeleteStepAsync(id, roadmapNodeId);
+        if (!result.Success)
+        {
+            return result.Error == "Personal roadmap not found." || result.Error == "Roadmap step not found."
+                ? NotFound(result.Error)
+                : BadRequest(result.Error);
+        }
+        return Ok();
+    }
+
     [HttpGet("shared")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(List<PersonalRoadmapDto>), StatusCodes.Status200OK)]
