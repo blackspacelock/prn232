@@ -1099,6 +1099,7 @@ interface SkillSearchPickerProps {
 function SkillSearchPicker({ skills, selectedSkillIds, onToggle }: SkillSearchPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const pickerRef = useRef<HTMLDivElement>(null);
   const selectedSkills = skills.filter((skill) => selectedSkillIds.includes(skill.id));
   const visibleSkills = skills
     .filter((skill) => {
@@ -1107,8 +1108,21 @@ function SkillSearchPicker({ skills, selectedSkillIds, onToggle }: SkillSearchPi
     })
     .slice(0, 40);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!pickerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div ref={pickerRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
