@@ -712,6 +712,8 @@ interface AddStepDraft {
   name: string;
   description?: string;
   parentRoadmapNodeId?: string;
+  positionX?: number;
+  positionY?: number;
   technicalSkillIds: string[];
   learningResources: ResourceDraft[];
 }
@@ -807,6 +809,8 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [parentRoadmapNodeId, setParentRoadmapNodeId] = useState('');
+  const [positionX, setPositionX] = useState('');
+  const [positionY, setPositionY] = useState('');
   const [technicalSkillIds, setTechnicalSkillIds] = useState<string[]>([]);
 
   const toggleSkill = (skillId: string) => {
@@ -823,6 +827,8 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
       name: name.trim(),
       description: description.trim() || undefined,
       parentRoadmapNodeId: parentRoadmapNodeId || undefined,
+      positionX: positionX.trim() === '' ? undefined : Number(positionX),
+      positionY: positionY.trim() === '' ? undefined : Number(positionY),
       technicalSkillIds,
       learningResources: [],
     });
@@ -880,6 +886,34 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
               ))}
             </select>
           </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--md3-on-surface)]">X-axis</span>
+              <input
+                type="number"
+                value={positionX}
+                onChange={(event) => setPositionX(event.target.value)}
+                min={0}
+                max={1400}
+                step={10}
+                className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                placeholder="540"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--md3-on-surface)]">Y-axis</span>
+              <input
+                type="number"
+                value={positionY}
+                onChange={(event) => setPositionY(event.target.value)}
+                min={0}
+                max={2000}
+                step={10}
+                className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                placeholder="240"
+              />
+            </label>
+          </div>
           {technicalSkills.length > 0 && (
             <div>
               <p className="mb-2 text-sm font-medium text-[var(--md3-on-surface)]">Skills</p>

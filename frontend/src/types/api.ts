@@ -369,6 +369,8 @@ export interface CreatePersonalRoadmapStepDto {
   name: string;
   description?: string;
   parentStepIndex?: number;
+  positionX?: number;
+  positionY?: number;
   technicalSkillIds?: string[];
   learningResources?: Array<{
     name: string;

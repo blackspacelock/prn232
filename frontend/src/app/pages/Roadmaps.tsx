@@ -743,6 +743,8 @@ interface CreateStepDraft {
   name: string;
   description: string;
   parentStepIndex: string;
+  positionX: string;
+  positionY: string;
   technicalSkillIds: string[];
   learningResources: Array<{
     name: string;
@@ -759,9 +761,9 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
   const [desire, setDesire] = useState('');
   const [careerRoleId, setCareerRoleId] = useState('');
   const [steps, setSteps] = useState<CreateStepDraft[]>([
-    { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] },
-    { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] },
-    { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', parentStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', parentStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', parentStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
   ]);
 
   if (!isOpen) return null;
@@ -771,6 +773,8 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
       name: step.name.trim(),
       description: step.description.trim() || undefined,
       parentStepIndex: step.parentStepIndex === '' ? undefined : Number(step.parentStepIndex),
+      positionX: step.positionX.trim() === '' ? undefined : Number(step.positionX),
+      positionY: step.positionY.trim() === '' ? undefined : Number(step.positionY),
       technicalSkillIds: step.technicalSkillIds,
       learningResources: step.learningResources
         .map((resource) => ({
@@ -789,7 +793,7 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
     setSteps((current) => current.map((step, i) => i === index ? { ...step, [field]: value } : step));
   };
 
-  const addStep = () => setSteps((current) => [...current, { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] }]);
+  const addStep = () => setSteps((current) => [...current, { name: '', description: '', parentStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] }]);
   const removeStep = (index: number) => setSteps((current) => current.filter((_, i) => i !== index));
   const addStepResource = (stepIndex: number) => {
     setSteps((current) => current.map((step, i) => i === stepIndex
@@ -951,6 +955,34 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
                     className="h-16 w-full resize-none rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
                     placeholder="Optional step details"
                   />
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">X-axis</span>
+                      <input
+                        type="number"
+                        value={step.positionX}
+                        onChange={(e) => updateStep(index, 'positionX', e.target.value)}
+                        min={0}
+                        max={1400}
+                        step={10}
+                        className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                        placeholder={String(index % 2 === 0 ? 540 : 180)}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Y-axis</span>
+                      <input
+                        type="number"
+                        value={step.positionY}
+                        onChange={(e) => updateStep(index, 'positionY', e.target.value)}
+                        min={0}
+                        max={2000}
+                        step={10}
+                        className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                        placeholder={String(80 + index * 160)}
+                      />
+                    </label>
+                  </div>
                   {index > 0 && (
                     <label className="mt-2 block">
                       <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Branch from</span>

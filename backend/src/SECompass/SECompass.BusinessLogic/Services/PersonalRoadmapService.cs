@@ -117,8 +117,8 @@ public class PersonalRoadmapService : IPersonalRoadmapService
                 Order = step.index + 1,
                 NodeType = "Topic",
                 RequirementType = "Required",
-                PositionX = parentRoadmapNode == null ? 120 + (step.index % 3) * 280 : (parentRoadmapNode.PositionX ?? 120) + 280,
-                PositionY = parentRoadmapNode == null ? 120 + (step.index / 3) * 180 : (parentRoadmapNode.PositionY ?? 120) + ((step.index % 2 == 0) ? -110 : 110),
+                PositionX = step.value.PositionX ?? (parentRoadmapNode == null ? 120 + (step.index % 3) * 280 : (parentRoadmapNode.PositionX ?? 120) + 280),
+                PositionY = step.value.PositionY ?? (parentRoadmapNode == null ? 120 + (step.index / 3) * 180 : (parentRoadmapNode.PositionY ?? 120) + ((step.index % 2 == 0) ? -110 : 110)),
                 Node = node,
                 CreatedAt = now
             };
@@ -361,8 +361,8 @@ public class PersonalRoadmapService : IPersonalRoadmapService
             Order = order,
             NodeType = "Topic",
             RequirementType = "Required",
-            PositionX = parentRoadmapNode == null ? 120 + ((order - 1) % 3) * 280 : (parentRoadmapNode.PositionX ?? 120) + 280,
-            PositionY = parentRoadmapNode == null ? 120 + ((order - 1) / 3) * 180 : (parentRoadmapNode.PositionY ?? 120) + ((order % 2 == 0) ? 110 : -110),
+            PositionX = dto.PositionX ?? (parentRoadmapNode == null ? 120 + ((order - 1) % 3) * 280 : (parentRoadmapNode.PositionX ?? 120) + 280),
+            PositionY = dto.PositionY ?? (parentRoadmapNode == null ? 120 + ((order - 1) / 3) * 180 : (parentRoadmapNode.PositionY ?? 120) + ((order % 2 == 0) ? 110 : -110)),
             CreatedAt = now
         };
         await _uow.RoadmapNodes.AddAsync(roadmapNode);
