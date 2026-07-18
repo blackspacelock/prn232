@@ -108,6 +108,22 @@ public class PersonalRoadmapsController : ControllerBase
         return Ok();
     }
 
+    [HttpPut("{id:guid}/steps/{roadmapNodeId:guid}/connection")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateStepConnection(Guid id, Guid roadmapNodeId, [FromBody] UpdatePersonalRoadmapStepConnectionDto dto)
+    {
+        var result = await _service.UpdateStepConnectionAsync(id, roadmapNodeId, dto);
+        if (!result.Success)
+        {
+            return result.Error == "Personal roadmap not found." || result.Error == "Roadmap step not found."
+                ? NotFound(result.Error)
+                : BadRequest(result.Error);
+        }
+        return Ok();
+    }
+
     [HttpGet("shared")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(List<PersonalRoadmapDto>), StatusCodes.Status200OK)]

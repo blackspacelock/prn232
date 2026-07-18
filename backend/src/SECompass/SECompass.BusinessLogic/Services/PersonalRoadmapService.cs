@@ -57,15 +57,40 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         };
         await _uow.PersonalRoadmaps.AddAsync(personalRoadmap);
 
+        RoadmapNode? lastLearningRoadmapNode = null;
         foreach (var step in dto.Steps.Select((value, index) => new { value, index }))
         {
             var name = step.value.Name.Trim();
             if (string.IsNullOrWhiteSpace(name)) continue;
-            var parentRoadmapNode = step.value.ParentStepIndex.HasValue &&
-                step.value.ParentStepIndex.Value >= 0 &&
-                step.value.ParentStepIndex.Value < roadmapNodes.Count
-                    ? roadmapNodes[step.value.ParentStepIndex.Value]
-                    : null;
+            var isBranchNode = step.value.BranchStepIndex.HasValue;
+            RoadmapNode? parentRoadmapNode = null;
+            RoadmapNode? branchSourceRoadmapNode = null;
+
+            if (!isBranchNode)
+            {
+                if (step.value.ParentStepIndex.HasValue)
+                {
+                    if (step.value.ParentStepIndex.Value < 0 || step.value.ParentStepIndex.Value >= roadmapNodes.Count)
+                    {
+                        return ServiceResult<PersonalRoadmapDetailDto>.Fail("Learning step source not found.");
+                    }
+
+                    parentRoadmapNode = roadmapNodes[step.value.ParentStepIndex.Value];
+                }
+                else
+                {
+                    parentRoadmapNode = lastLearningRoadmapNode;
+                }
+            }
+            else
+            {
+                if (step.value.BranchStepIndex!.Value < 0 || step.value.BranchStepIndex.Value >= roadmapNodes.Count)
+                {
+                    return ServiceResult<PersonalRoadmapDetailDto>.Fail("Branch source step not found.");
+                }
+
+                branchSourceRoadmapNode = roadmapNodes[step.value.BranchStepIndex.Value];
+            }
 
             var node = new Node
             {
@@ -117,13 +142,30 @@ public class PersonalRoadmapService : IPersonalRoadmapService
                 Order = step.index + 1,
                 NodeType = "Topic",
                 RequirementType = "Required",
-                PositionX = step.value.PositionX ?? (parentRoadmapNode == null ? 120 + (step.index % 3) * 280 : (parentRoadmapNode.PositionX ?? 120) + 280),
-                PositionY = step.value.PositionY ?? (parentRoadmapNode == null ? 120 + (step.index / 3) * 180 : (parentRoadmapNode.PositionY ?? 120) + ((step.index % 2 == 0) ? -110 : 110)),
+                PositionX = step.value.PositionX ?? ((branchSourceRoadmapNode ?? parentRoadmapNode) == null ? 120 + (step.index % 3) * 280 : ((branchSourceRoadmapNode ?? parentRoadmapNode)!.PositionX ?? 120) + 280),
+                PositionY = step.value.PositionY ?? ((branchSourceRoadmapNode ?? parentRoadmapNode) == null ? 120 + (step.index / 3) * 180 : ((branchSourceRoadmapNode ?? parentRoadmapNode)!.PositionY ?? 120) + ((step.index % 2 == 0) ? -110 : 110)),
                 Node = node,
                 CreatedAt = now
             };
             roadmapNodes.Add(roadmapNode);
             await _uow.RoadmapNodes.AddAsync(roadmapNode);
+
+            if (branchSourceRoadmapNode != null)
+            {
+                await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
+                {
+                    Id = Guid.NewGuid(),
+                    CareerRoadmapId = careerRoadmap.Id,
+                    FromRoadmapNodeId = branchSourceRoadmapNode.Id,
+                    ToRoadmapNodeId = roadmapNode.Id,
+                    EdgeType = "Branch",
+                    CreatedAt = now
+                });
+            }
+            else
+            {
+                lastLearningRoadmapNode = roadmapNode;
+            }
 
             nodeProgresses.Add(new NodeProgress
             {
@@ -136,20 +178,6 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         }
 
         if (roadmapNodes.Count == 0) return ServiceResult<PersonalRoadmapDetailDto>.Fail("Add at least one roadmap step.");
-
-        for (var i = 1; i < roadmapNodes.Count; i++)
-        {
-            var parentRoadmapNodeId = roadmapNodes[i].ParentRoadmapNodeId ?? roadmapNodes[i - 1].Id;
-            await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
-            {
-                Id = Guid.NewGuid(),
-                CareerRoadmapId = careerRoadmap.Id,
-                FromRoadmapNodeId = parentRoadmapNodeId,
-                ToRoadmapNodeId = roadmapNodes[i].Id,
-                EdgeType = "Next",
-                CreatedAt = now
-            });
-        }
 
         await _uow.NodeProgresses.BulkInsertAsync(nodeProgresses);
         await _uow.SaveChangesAsync();
@@ -301,21 +329,30 @@ public class PersonalRoadmapService : IPersonalRoadmapService
             .ThenBy(np => np.RoadmapNode.CreatedAt)
             .ToList();
         var existingRoadmapNodes = orderedProgress.Select(np => np.RoadmapNode).ToList();
-        var previousRoadmapNode = dto.PreviousRoadmapNodeId.HasValue
-            ? existingRoadmapNodes.FirstOrDefault(rn => rn.Id == dto.PreviousRoadmapNodeId.Value)
-            : orderedProgress.LastOrDefault()?.RoadmapNode;
+        var existingBranchTargetIds = (await _uow.RoadmapNodeEdges.FindAsync(edge =>
+                edge.CareerRoadmapId == roadmap.CareerRoadmapId))
+            .Select(edge => edge.ToRoadmapNodeId)
+            .ToHashSet();
+        var lastLearningRoadmapNode = orderedProgress
+            .Select(np => np.RoadmapNode)
+            .LastOrDefault(rn => !existingBranchTargetIds.Contains(rn.Id));
         var parentRoadmapNode = dto.ParentRoadmapNodeId.HasValue
             ? existingRoadmapNodes.FirstOrDefault(rn => rn.Id == dto.ParentRoadmapNodeId.Value)
+            : dto.PreviousRoadmapNodeId.HasValue
+                ? existingRoadmapNodes.FirstOrDefault(rn => rn.Id == dto.PreviousRoadmapNodeId.Value)
+                : lastLearningRoadmapNode;
+        var branchSourceRoadmapNode = dto.BranchRoadmapNodeId.HasValue
+            ? existingRoadmapNodes.FirstOrDefault(rn => rn.Id == dto.BranchRoadmapNodeId.Value)
             : null;
 
-        if (dto.PreviousRoadmapNodeId.HasValue && previousRoadmapNode == null)
+        if ((dto.ParentRoadmapNodeId.HasValue || dto.PreviousRoadmapNodeId.HasValue) && parentRoadmapNode == null)
         {
-            return ServiceResult<PersonalRoadmapDetailDto>.Fail("Previous step not found.");
+            return ServiceResult<PersonalRoadmapDetailDto>.Fail("Learning step source not found.");
         }
 
-        if (dto.ParentRoadmapNodeId.HasValue && parentRoadmapNode == null)
+        if (dto.BranchRoadmapNodeId.HasValue && branchSourceRoadmapNode == null)
         {
-            return ServiceResult<PersonalRoadmapDetailDto>.Fail("Parent step not found.");
+            return ServiceResult<PersonalRoadmapDetailDto>.Fail("Branch source step not found.");
         }
 
         var now = DateTime.Now;
@@ -361,13 +398,13 @@ public class PersonalRoadmapService : IPersonalRoadmapService
             });
         }
 
-        var layoutAnchor = parentRoadmapNode ?? previousRoadmapNode;
+        var layoutAnchor = branchSourceRoadmapNode ?? parentRoadmapNode;
         var roadmapNode = new RoadmapNode
         {
             Id = Guid.NewGuid(),
             CareerRoadmapId = roadmap.CareerRoadmapId,
             NodeId = node.Id,
-            ParentRoadmapNodeId = parentRoadmapNode?.Id,
+            ParentRoadmapNodeId = branchSourceRoadmapNode == null ? parentRoadmapNode?.Id : null,
             Order = order,
             NodeType = "Topic",
             RequirementType = "Required",
@@ -377,15 +414,15 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         };
         await _uow.RoadmapNodes.AddAsync(roadmapNode);
 
-        if (previousRoadmapNode != null)
+        if (branchSourceRoadmapNode != null)
         {
             await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
             {
                 Id = Guid.NewGuid(),
                 CareerRoadmapId = roadmap.CareerRoadmapId,
-                FromRoadmapNodeId = previousRoadmapNode.Id,
+                FromRoadmapNodeId = branchSourceRoadmapNode.Id,
                 ToRoadmapNodeId = roadmapNode.Id,
-                EdgeType = "Next",
+                EdgeType = "Branch",
                 CreatedAt = now
             });
         }
@@ -436,22 +473,6 @@ public class PersonalRoadmapService : IPersonalRoadmapService
             _uow.RoadmapNodeEdges.Delete(edge);
         }
 
-        if (roadmapNode.ParentRoadmapNodeId.HasValue)
-        {
-            foreach (var child in childRoadmapNodes)
-            {
-                await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
-                {
-                    Id = Guid.NewGuid(),
-                    CareerRoadmapId = roadmap.CareerRoadmapId,
-                    FromRoadmapNodeId = roadmapNode.ParentRoadmapNodeId.Value,
-                    ToRoadmapNodeId = child.Id,
-                    EdgeType = "Next",
-                    CreatedAt = now
-                });
-            }
-        }
-
         var resources = await _uow.LearningResources.FindAsync(resource => resource.NodeId == node.Id);
         foreach (var resource in resources)
         {
@@ -489,6 +510,70 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         roadmapNode.PositionY = dto.PositionY;
         roadmapNode.UpdatedAt = DateTime.Now;
         _uow.RoadmapNodes.Update(roadmapNode);
+        await _uow.SaveChangesAsync();
+
+        return ServiceResult<bool>.Ok(true);
+    }
+
+    public async Task<ServiceResult<bool>> UpdateStepConnectionAsync(Guid personalRoadmapId, Guid roadmapNodeId, UpdatePersonalRoadmapStepConnectionDto dto)
+    {
+        var roadmap = await _uow.PersonalRoadmaps.GetWithNodesAndProgressAsync(personalRoadmapId);
+        if (roadmap == null) return ServiceResult<bool>.Fail("Personal roadmap not found.");
+
+        var roadmapNodes = roadmap.NodeProgresses.Select(np => np.RoadmapNode).ToList();
+        var roadmapNode = roadmapNodes.FirstOrDefault(rn => rn.Id == roadmapNodeId);
+        if (roadmapNode == null) return ServiceResult<bool>.Fail("Roadmap step not found.");
+
+        var parentRoadmapNode = dto.ParentRoadmapNodeId.HasValue
+            ? roadmapNodes.FirstOrDefault(rn => rn.Id == dto.ParentRoadmapNodeId.Value)
+            : null;
+        var branchSourceRoadmapNode = dto.BranchRoadmapNodeId.HasValue
+            ? roadmapNodes.FirstOrDefault(rn => rn.Id == dto.BranchRoadmapNodeId.Value)
+            : null;
+
+        if (dto.ParentRoadmapNodeId == roadmapNodeId || dto.BranchRoadmapNodeId == roadmapNodeId)
+        {
+            return ServiceResult<bool>.Fail("A roadmap step cannot connect to itself.");
+        }
+
+        if (dto.ParentRoadmapNodeId.HasValue && parentRoadmapNode == null)
+        {
+            return ServiceResult<bool>.Fail("Learning step source not found.");
+        }
+
+        if (dto.BranchRoadmapNodeId.HasValue && branchSourceRoadmapNode == null)
+        {
+            return ServiceResult<bool>.Fail("Branch source step not found.");
+        }
+
+        var now = DateTime.Now;
+        roadmapNode.ParentRoadmapNodeId = branchSourceRoadmapNode == null ? parentRoadmapNode?.Id : null;
+        roadmapNode.UpdatedAt = now;
+        _uow.RoadmapNodes.Update(roadmapNode);
+
+        var existingBranchEdges = await _uow.RoadmapNodeEdges.FindAsync(edge =>
+            edge.CareerRoadmapId == roadmap.CareerRoadmapId &&
+            edge.ToRoadmapNodeId == roadmapNodeId);
+        foreach (var edge in existingBranchEdges)
+        {
+            _uow.RoadmapNodeEdges.Delete(edge);
+        }
+
+        if (branchSourceRoadmapNode != null)
+        {
+            await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
+            {
+                Id = Guid.NewGuid(),
+                CareerRoadmapId = roadmap.CareerRoadmapId,
+                FromRoadmapNodeId = branchSourceRoadmapNode.Id,
+                ToRoadmapNodeId = roadmapNode.Id,
+                EdgeType = "Branch",
+                CreatedAt = now
+            });
+        }
+
+        roadmap.UpdatedAt = now;
+        _uow.PersonalRoadmaps.Update(roadmap);
         await _uow.SaveChangesAsync();
 
         return ServiceResult<bool>.Ok(true);

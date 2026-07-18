@@ -4,6 +4,7 @@ public class CreateRoadmapNodeDto
 {
     public Guid NodeId { get; set; }
     public Guid? ParentRoadmapNodeId { get; set; }
+    public Guid? BranchRoadmapNodeId { get; set; }
     public int Order { get; set; }
     public string NodeType { get; set; } = "Topic";
     public string RequirementType { get; set; } = "Required";

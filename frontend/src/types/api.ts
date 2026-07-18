@@ -261,6 +261,7 @@ export interface RoadmapNodeDto {
 export interface CreateRoadmapNodeDto {
   nodeId: string;
   parentRoadmapNodeId?: string;
+  branchRoadmapNodeId?: string;
   order: number;
   nodeType?: string;
   requirementType?: string;
@@ -271,6 +272,7 @@ export interface CreateRoadmapNodeDto {
 
 export interface UpdateRoadmapNodeDto {
   parentRoadmapNodeId?: string;
+  branchRoadmapNodeId?: string;
   order?: number;
   nodeType?: string;
   requirementType?: string;
@@ -369,6 +371,7 @@ export interface CreatePersonalRoadmapStepDto {
   name: string;
   description?: string;
   parentStepIndex?: number;
+  branchStepIndex?: number;
   positionX?: number;
   positionY?: number;
   technicalSkillIds?: string[];

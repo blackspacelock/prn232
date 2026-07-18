@@ -6,6 +6,7 @@ public class AddPersonalRoadmapStepDto
     public string? Description { get; set; }
     public Guid? PreviousRoadmapNodeId { get; set; }
     public Guid? ParentRoadmapNodeId { get; set; }
+    public Guid? BranchRoadmapNodeId { get; set; }
     public int? PositionX { get; set; }
     public int? PositionY { get; set; }
     public List<Guid> TechnicalSkillIds { get; set; } = new();

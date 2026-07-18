@@ -134,13 +134,6 @@ function mapToFlow(
     children.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
   });
 
-  const siblingIndexById = new Map<string, { index: number; total: number }>();
-  childrenByParent.forEach((children) => {
-    children.forEach((child, index) => {
-      siblingIndexById.set(child.id, { index, total: children.length });
-    });
-  });
-
   const X_GAP = 320;
   const Y_GAP = 96;
   const START_X = 540;
@@ -220,68 +213,76 @@ function mapToFlow(
     });
   });
 
-  const parentEdges: RoadmapBranchEdge[] = nodes
+  const branchEdgesBySource = new Map<string, RoadmapGraphEdge[]>();
+  graphEdges.forEach((edge) => {
+    if (!byId.has(edge.fromRoadmapNodeId) || !byId.has(edge.toRoadmapNodeId)) return;
+    const edges = branchEdgesBySource.get(edge.fromRoadmapNodeId) ?? [];
+    edges.push(edge);
+    branchEdgesBySource.set(edge.fromRoadmapNodeId, edges);
+  });
+  const branchEdgeIndexById = new Map<string, { index: number; total: number }>();
+  branchEdgesBySource.forEach((edges) => {
+    edges
+      .sort((a, b) => {
+        const targetA = byId.get(a.toRoadmapNodeId);
+        const targetB = byId.get(b.toRoadmapNodeId);
+        return (targetA?.order ?? 0) - (targetB?.order ?? 0) || (targetA?.name ?? '').localeCompare(targetB?.name ?? '');
+      })
+      .forEach((edge, index) => {
+        branchEdgeIndexById.set(edge.id, { index, total: edges.length });
+      });
+  });
+
+  const parentEdges: Edge[] = nodes
     .filter((node) => node.parentRoadmapNodeId && byId.has(node.parentRoadmapNodeId))
-    .map((node) => {
-      const parentPosition = positions.get(node.parentRoadmapNodeId!);
-      const nodePosition = positions.get(node.id);
-      const isLeftBranch =
-        parentPosition && nodePosition ? nodePosition.x < parentPosition.x : false;
-      const requirementType = node.requirementType?.toLowerCase() ?? '';
-      const isSoftRequirement =
-        requirementType.includes('optional') || requirementType.includes('recommended');
-      const sibling = siblingIndexById.get(node.id);
+    .map((node) => ({
+      id: `parent-${node.parentRoadmapNodeId}-${node.id}`,
+      source: node.parentRoadmapNodeId!,
+      target: node.id,
+      sourceHandle: 'bottom-source',
+      targetHandle: 'top-target',
+      type: 'smoothstep',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 16,
+        height: 16,
+        color: '#2563eb',
+      },
+      style: {
+        stroke: '#2563eb',
+        strokeWidth: 3,
+        strokeLinecap: 'round',
+      },
+    }));
+
+  const explicitEdges: RoadmapBranchEdge[] = graphEdges
+    .filter((edge) => byId.has(edge.fromRoadmapNodeId) && byId.has(edge.toRoadmapNodeId))
+    .map((edge) => {
+      const sourcePosition = positions.get(edge.fromRoadmapNodeId);
+      const targetPosition = positions.get(edge.toRoadmapNodeId);
+      const isLeftBranch = sourcePosition && targetPosition ? targetPosition.x < sourcePosition.x : false;
+      const sibling = branchEdgeIndexById.get(edge.id);
       const sourceSlot =
         sibling && sibling.total > 1
           ? Math.round((sibling.index / (sibling.total - 1)) * 4)
           : 2;
       const sourceSide = isLeftBranch ? 'left' : 'right';
       return {
-        id: `parent-${node.parentRoadmapNodeId}-${node.id}`,
-        source: node.parentRoadmapNodeId!,
-        target: node.id,
+        id: edge.id,
+        source: edge.fromRoadmapNodeId,
+        target: edge.toRoadmapNodeId,
         sourceHandle: `${sourceSide}-source-${sourceSlot}`,
         targetHandle: isLeftBranch ? 'right-target' : 'left-target',
         type: 'roadmapBranch',
-        animated: false,
         data: {
           side: isLeftBranch ? 'left' : 'right',
-          soft: isSoftRequirement,
+          soft: true,
         },
         style: {
           stroke: '#2563eb',
           strokeWidth: 2.2,
           strokeLinecap: 'round',
-          strokeDasharray: isSoftRequirement ? '1 7' : '2 6',
-        },
-      };
-    });
-
-  const explicitEdges: Edge[] = graphEdges
-    .filter((edge) => byId.has(edge.fromRoadmapNodeId) && byId.has(edge.toRoadmapNodeId))
-    .map((edge) => {
-      const isSequence = edge.edgeType === 'Next';
-      return {
-        id: edge.id,
-        source: edge.fromRoadmapNodeId,
-        target: edge.toRoadmapNodeId,
-        sourceHandle: 'bottom-source',
-        targetHandle: 'top-target',
-        type: 'smoothstep',
-        label: edge.edgeType && !isSequence ? edge.edgeType : undefined,
-        markerEnd: isSequence
-          ? {
-              type: MarkerType.ArrowClosed,
-              width: 16,
-              height: 16,
-              color: '#2563eb',
-            }
-          : undefined,
-        style: {
-          stroke: '#2563eb',
-          strokeWidth: isSequence ? 3 : 2,
-          strokeLinecap: 'round',
-          strokeDasharray: isSequence ? undefined : '6 5',
+          strokeDasharray: '2 6',
         },
       };
     });

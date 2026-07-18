@@ -137,12 +137,19 @@ public class CareerRoadmapService : ICareerRoadmapService
             if (!parentExists) return ServiceResult<RoadmapNodeDto>.Fail("Parent roadmap node not found in this roadmap.");
         }
 
+        if (dto.BranchRoadmapNodeId.HasValue)
+        {
+            var branchSourceExists = await _uow.RoadmapNodes.ExistsAsync(rn =>
+                rn.Id == dto.BranchRoadmapNodeId.Value && rn.CareerRoadmapId == roadmapId);
+            if (!branchSourceExists) return ServiceResult<RoadmapNodeDto>.Fail("Branch source roadmap node not found in this roadmap.");
+        }
+
         var rn = new RoadmapNode
         {
             Id = Guid.NewGuid(),
             CareerRoadmapId = roadmapId,
             NodeId = dto.NodeId,
-            ParentRoadmapNodeId = dto.ParentRoadmapNodeId,
+            ParentRoadmapNodeId = dto.BranchRoadmapNodeId.HasValue ? null : dto.ParentRoadmapNodeId,
             Order = dto.Order,
             NodeType = string.IsNullOrWhiteSpace(dto.NodeType) ? "Topic" : dto.NodeType,
             RequirementType = string.IsNullOrWhiteSpace(dto.RequirementType) ? "Required" : dto.RequirementType,
@@ -158,6 +165,19 @@ public class CareerRoadmapService : ICareerRoadmapService
         }
 
         await _uow.RoadmapNodes.AddAsync(rn);
+
+        if (dto.BranchRoadmapNodeId.HasValue)
+        {
+            await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
+            {
+                Id = Guid.NewGuid(),
+                CareerRoadmapId = roadmapId,
+                FromRoadmapNodeId = dto.BranchRoadmapNodeId.Value,
+                ToRoadmapNodeId = rn.Id,
+                EdgeType = "Branch"
+            });
+        }
+
         await _uow.SaveChangesAsync();
         return ServiceResult<RoadmapNodeDto>.Ok(_mapper.Map<RoadmapNodeDto>(rn));
     }
@@ -178,7 +198,17 @@ public class CareerRoadmapService : ICareerRoadmapService
             if (!parentExists) return ServiceResult<RoadmapNodeDto>.Fail("Parent roadmap node not found in this roadmap.");
         }
 
-        if (dto.ParentRoadmapNodeId.HasValue) roadmapNode.ParentRoadmapNodeId = dto.ParentRoadmapNodeId;
+        if (dto.BranchRoadmapNodeId.HasValue)
+        {
+            if (dto.BranchRoadmapNodeId.Value == roadmapNodeId)
+                return ServiceResult<RoadmapNodeDto>.Fail("A roadmap node cannot branch from itself.");
+
+            var branchSourceExists = await _uow.RoadmapNodes.ExistsAsync(rn =>
+                rn.Id == dto.BranchRoadmapNodeId.Value && rn.CareerRoadmapId == roadmapId);
+            if (!branchSourceExists) return ServiceResult<RoadmapNodeDto>.Fail("Branch source roadmap node not found in this roadmap.");
+        }
+
+        roadmapNode.ParentRoadmapNodeId = dto.BranchRoadmapNodeId.HasValue ? null : dto.ParentRoadmapNodeId;
         if (dto.Order.HasValue) roadmapNode.Order = dto.Order.Value;
         if (dto.NodeType != null) roadmapNode.NodeType = dto.NodeType;
         if (dto.RequirementType != null) roadmapNode.RequirementType = dto.RequirementType;
@@ -194,6 +224,27 @@ public class CareerRoadmapService : ICareerRoadmapService
 
         roadmapNode.Node = node;
         _uow.RoadmapNodes.Update(roadmapNode);
+
+        var existingBranchEdges = await _uow.RoadmapNodeEdges.FindAsync(edge =>
+            edge.CareerRoadmapId == roadmapId &&
+            edge.ToRoadmapNodeId == roadmapNodeId);
+        foreach (var edge in existingBranchEdges)
+        {
+            _uow.RoadmapNodeEdges.Delete(edge);
+        }
+
+        if (dto.BranchRoadmapNodeId.HasValue)
+        {
+            await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
+            {
+                Id = Guid.NewGuid(),
+                CareerRoadmapId = roadmapId,
+                FromRoadmapNodeId = dto.BranchRoadmapNodeId.Value,
+                ToRoadmapNodeId = roadmapNodeId,
+                EdgeType = "Branch"
+            });
+        }
+
         await _uow.SaveChangesAsync();
         return ServiceResult<RoadmapNodeDto>.Ok(_mapper.Map<RoadmapNodeDto>(roadmapNode));
     }
@@ -298,7 +349,7 @@ public class CareerRoadmapService : ICareerRoadmapService
         var toExists = await _uow.RoadmapNodes.ExistsAsync(rn => rn.Id == dto.ToRoadmapNodeId && rn.CareerRoadmapId == roadmapId);
         if (!fromExists || !toExists) return ServiceResult<RoadmapNodeEdgeDto>.Fail("Both roadmap nodes must belong to this roadmap.");
 
-        var edgeType = string.IsNullOrWhiteSpace(dto.EdgeType) ? "Next" : dto.EdgeType;
+        var edgeType = string.IsNullOrWhiteSpace(dto.EdgeType) ? "Branch" : dto.EdgeType;
         var exists = await _uow.RoadmapNodeEdges.ExistsAsync(e =>
             e.CareerRoadmapId == roadmapId &&
             e.FromRoadmapNodeId == dto.FromRoadmapNodeId &&

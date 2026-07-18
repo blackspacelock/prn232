@@ -743,7 +743,9 @@ interface CreatePersonalRoadmapModalProps {
 interface CreateStepDraft {
   name: string;
   description: string;
+  connectionType: 'learning' | 'branch';
   parentStepIndex: string;
+  branchStepIndex: string;
   positionX: string;
   positionY: string;
   technicalSkillIds: string[];
@@ -762,9 +764,9 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
   const [desire, setDesire] = useState('');
   const [careerRoleId, setCareerRoleId] = useState('');
   const [steps, setSteps] = useState<CreateStepDraft[]>([
-    { name: '', description: '', parentStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
-    { name: '', description: '', parentStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
-    { name: '', description: '', parentStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', connectionType: 'learning', parentStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', connectionType: 'learning', parentStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', connectionType: 'learning', parentStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
   ]);
 
   if (!isOpen) return null;
@@ -773,7 +775,8 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
     .map((step) => ({
       name: step.name.trim(),
       description: step.description.trim() || undefined,
-      parentStepIndex: step.parentStepIndex === '' ? undefined : Number(step.parentStepIndex),
+      parentStepIndex: step.connectionType === 'learning' && step.parentStepIndex !== '' ? Number(step.parentStepIndex) : undefined,
+      branchStepIndex: step.connectionType === 'branch' && step.branchStepIndex !== '' ? Number(step.branchStepIndex) : undefined,
       positionX: step.positionX.trim() === '' ? undefined : Number(step.positionX),
       positionY: step.positionY.trim() === '' ? undefined : Number(step.positionY),
       technicalSkillIds: step.technicalSkillIds,
@@ -788,13 +791,16 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
         .filter((resource) => resource.name && resource.resourceUrl),
     }))
     .filter((step) => step.name.length > 0);
-  const canCreate = profileId && careerRoleId && name.trim() && validSteps.length > 0 && !creating;
+  const hasInvalidBranch = steps.some((step, index) =>
+    step.name.trim() && index > 0 && step.connectionType === 'branch' && step.branchStepIndex === '',
+  );
+  const canCreate = profileId && careerRoleId && name.trim() && validSteps.length > 0 && !hasInvalidBranch && !creating;
 
   const updateStep = <TKey extends keyof CreateStepDraft>(index: number, field: TKey, value: CreateStepDraft[TKey]) => {
     setSteps((current) => current.map((step, i) => i === index ? { ...step, [field]: value } : step));
   };
 
-  const addStep = () => setSteps((current) => [...current, { name: '', description: '', parentStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] }]);
+  const addStep = () => setSteps((current) => [...current, { name: '', description: '', connectionType: 'learning', parentStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] }]);
   const removeStep = (index: number) => setSteps((current) => current.filter((_, i) => i !== index));
   const addStepResource = (stepIndex: number) => {
     setSteps((current) => current.map((step, i) => i === stepIndex
@@ -985,21 +991,65 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
                     </label>
                   </div>
                   {index > 0 && (
-                    <label className="mt-2 block">
-                      <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Branch from</span>
-                      <select
-                        value={step.parentStepIndex}
-                        onChange={(e) => updateStep(index, 'parentStepIndex', e.target.value)}
-                        className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
-                      >
-                        <option value="">Previous step</option>
-                        {steps.slice(0, index).map((candidate, candidateIndex) => (
-                          <option key={candidateIndex} value={candidateIndex}>
-                            Step {candidateIndex + 1}{candidate.name.trim() ? ` - ${candidate.name.trim()}` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <div className="mt-3 space-y-2">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => updateStep(index, 'connectionType', 'learning')}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                            step.connectionType === 'learning'
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                              : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-variant)]'
+                          }`}
+                        >
+                          Learning Step
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateStep(index, 'connectionType', 'branch')}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                            step.connectionType === 'branch'
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                              : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-variant)]'
+                          }`}
+                        >
+                          Branch Node
+                        </button>
+                      </div>
+                      {step.connectionType === 'learning' ? (
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Arrow from</span>
+                          <select
+                            value={step.parentStepIndex}
+                            onChange={(e) => updateStep(index, 'parentStepIndex', e.target.value)}
+                            className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                          >
+                            <option value="">Previous learning step</option>
+                            {steps.slice(0, index).map((candidate, candidateIndex) => (
+                              <option key={candidateIndex} value={candidateIndex}>
+                                Step {candidateIndex + 1}{candidate.name.trim() ? ` - ${candidate.name.trim()}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : (
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Dashed branch from</span>
+                          <select
+                            value={step.branchStepIndex}
+                            onChange={(e) => updateStep(index, 'branchStepIndex', e.target.value)}
+                            className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                          >
+                            <option value="">Select branch source</option>
+                            {steps.slice(0, index).map((candidate, candidateIndex) => (
+                              <option key={candidateIndex} value={candidateIndex}>
+                                Step {candidateIndex + 1}{candidate.name.trim() ? ` - ${candidate.name.trim()}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                    </div>
                   )}
 
                   {technicalSkills.length > 0 && (
