@@ -1071,6 +1071,14 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
                 </div>
               ))}
             </div>
+            <ActionButton
+              icon={Plus}
+              label="Add Step"
+              variant="tonal"
+              size="md"
+              onClick={addStep}
+              className="mt-3 w-full"
+            />
           </div>
         </div>
 
