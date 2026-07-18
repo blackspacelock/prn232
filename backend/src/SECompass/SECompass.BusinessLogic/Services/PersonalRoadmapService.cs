@@ -300,9 +300,18 @@ public class PersonalRoadmapService : IPersonalRoadmapService
             .OrderBy(np => np.RoadmapNode.Order)
             .ThenBy(np => np.RoadmapNode.CreatedAt)
             .ToList();
-        var parentRoadmapNode = dto.ParentRoadmapNodeId.HasValue
-            ? orderedProgress.Select(np => np.RoadmapNode).FirstOrDefault(rn => rn.Id == dto.ParentRoadmapNodeId.Value)
+        var existingRoadmapNodes = orderedProgress.Select(np => np.RoadmapNode).ToList();
+        var previousRoadmapNode = dto.PreviousRoadmapNodeId.HasValue
+            ? existingRoadmapNodes.FirstOrDefault(rn => rn.Id == dto.PreviousRoadmapNodeId.Value)
             : orderedProgress.LastOrDefault()?.RoadmapNode;
+        var parentRoadmapNode = dto.ParentRoadmapNodeId.HasValue
+            ? existingRoadmapNodes.FirstOrDefault(rn => rn.Id == dto.ParentRoadmapNodeId.Value)
+            : null;
+
+        if (dto.PreviousRoadmapNodeId.HasValue && previousRoadmapNode == null)
+        {
+            return ServiceResult<PersonalRoadmapDetailDto>.Fail("Previous step not found.");
+        }
 
         if (dto.ParentRoadmapNodeId.HasValue && parentRoadmapNode == null)
         {
@@ -352,6 +361,7 @@ public class PersonalRoadmapService : IPersonalRoadmapService
             });
         }
 
+        var layoutAnchor = parentRoadmapNode ?? previousRoadmapNode;
         var roadmapNode = new RoadmapNode
         {
             Id = Guid.NewGuid(),
@@ -361,19 +371,19 @@ public class PersonalRoadmapService : IPersonalRoadmapService
             Order = order,
             NodeType = "Topic",
             RequirementType = "Required",
-            PositionX = dto.PositionX ?? (parentRoadmapNode == null ? 120 + ((order - 1) % 3) * 280 : (parentRoadmapNode.PositionX ?? 120) + 280),
-            PositionY = dto.PositionY ?? (parentRoadmapNode == null ? 120 + ((order - 1) / 3) * 180 : (parentRoadmapNode.PositionY ?? 120) + ((order % 2 == 0) ? 110 : -110)),
+            PositionX = dto.PositionX ?? (layoutAnchor == null ? 120 + ((order - 1) % 3) * 280 : (layoutAnchor.PositionX ?? 120) + 280),
+            PositionY = dto.PositionY ?? (layoutAnchor == null ? 120 + ((order - 1) / 3) * 180 : (layoutAnchor.PositionY ?? 120) + ((order % 2 == 0) ? 110 : -110)),
             CreatedAt = now
         };
         await _uow.RoadmapNodes.AddAsync(roadmapNode);
 
-        if (parentRoadmapNode != null)
+        if (previousRoadmapNode != null)
         {
             await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
             {
                 Id = Guid.NewGuid(),
                 CareerRoadmapId = roadmap.CareerRoadmapId,
-                FromRoadmapNodeId = parentRoadmapNode.Id,
+                FromRoadmapNodeId = previousRoadmapNode.Id,
                 ToRoadmapNodeId = roadmapNode.Id,
                 EdgeType = "Next",
                 CreatedAt = now

@@ -128,7 +128,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
     ?.[detailKey];
   const careerRoadmapId = personalRoadmap?.careerRoadmapId ?? '';
 
-  const { data: templateData } = useQuery(GET_CAREER_ROADMAP_WITH_NODES, {
+  const { data: templateData, refetch: refetchTemplate } = useQuery(GET_CAREER_ROADMAP_WITH_NODES, {
     variables: { roadmapId: careerRoadmapId },
     skip: !careerRoadmapId,
   });
@@ -311,6 +311,9 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
       setShowAddStep(false);
       await refetch();
       await refetchProgress();
+      if (careerRoadmapId) {
+        await refetchTemplate();
+      }
       setSnackbar({ open: true, message: 'Roadmap step added.', variant: 'success' });
     },
     onError: (error: unknown) => {
@@ -760,6 +763,7 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
 interface AddStepDraft {
   name: string;
   description?: string;
+  previousRoadmapNodeId?: string;
   parentRoadmapNodeId?: string;
   positionX?: number;
   positionY?: number;
@@ -857,6 +861,8 @@ interface AddStepDialogProps {
 function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd }: AddStepDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [connectionType, setConnectionType] = useState<'next' | 'branch'>('next');
+  const [previousRoadmapNodeId, setPreviousRoadmapNodeId] = useState('');
   const [parentRoadmapNodeId, setParentRoadmapNodeId] = useState('');
   const [positionX, setPositionX] = useState('');
   const [positionY, setPositionY] = useState('');
@@ -895,11 +901,12 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
   };
 
   const handleAdd = () => {
-    if (!name.trim()) return;
+    if (!name.trim() || (connectionType === 'branch' && !parentRoadmapNodeId)) return;
     onAdd({
       name: name.trim(),
       description: description.trim() || undefined,
-      parentRoadmapNodeId: parentRoadmapNodeId || undefined,
+      previousRoadmapNodeId: connectionType === 'next' ? (previousRoadmapNodeId || undefined) : undefined,
+      parentRoadmapNodeId: connectionType === 'branch' ? parentRoadmapNodeId : undefined,
       positionX: positionX.trim() === '' ? undefined : Number(positionX),
       positionY: positionY.trim() === '' ? undefined : Number(positionY),
       technicalSkillIds,
@@ -952,21 +959,66 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
               className="h-20 w-full resize-none rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
             />
           </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-[var(--md3-on-surface)]">Branch from</span>
-            <select
-              value={parentRoadmapNodeId}
-              onChange={(event) => setParentRoadmapNodeId(event.target.value)}
-              className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
-            >
-              <option value="">Last step</option>
-              {progressNodes.map((progress) => (
-                <option key={progress.roadmapNodeId} value={progress.roadmapNodeId}>
-                  {progress.node.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div>
+            <span className="mb-2 block text-sm font-medium text-[var(--md3-on-surface)]">Connection type</span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setConnectionType('next')}
+                className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                  connectionType === 'next'
+                    ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                    : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-variant)]'
+                }`}
+              >
+                Next learning step
+              </button>
+              <button
+                type="button"
+                onClick={() => setConnectionType('branch')}
+                className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                  connectionType === 'branch'
+                    ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                    : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-variant)]'
+                }`}
+              >
+                Branch node
+              </button>
+            </div>
+          </div>
+          {connectionType === 'next' ? (
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--md3-on-surface)]">Add after</span>
+              <select
+                value={previousRoadmapNodeId}
+                onChange={(event) => setPreviousRoadmapNodeId(event.target.value)}
+                className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+              >
+                <option value="">Current last step</option>
+                {progressNodes.map((progress) => (
+                  <option key={progress.roadmapNodeId} value={progress.roadmapNodeId}>
+                    {progress.node.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--md3-on-surface)]">Branch from</span>
+              <select
+                value={parentRoadmapNodeId}
+                onChange={(event) => setParentRoadmapNodeId(event.target.value)}
+                className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+              >
+                <option value="">Select branch parent</option>
+                {progressNodes.map((progress) => (
+                  <option key={progress.roadmapNodeId} value={progress.roadmapNodeId}>
+                    {progress.node.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--md3-on-surface)]">X-axis</span>
@@ -1070,7 +1122,7 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
 
         <div className="flex justify-end gap-3 border-t border-[var(--md3-outline-variant)] p-6">
           <ActionButton icon={X} label="Cancel" variant="text" onClick={onClose} disabled={adding} />
-          <ActionButton icon={Plus} label={adding ? 'Adding...' : 'Add Step'} variant="primary" onClick={handleAdd} disabled={adding || !name.trim()} />
+          <ActionButton icon={Plus} label={adding ? 'Adding...' : 'Add Step'} variant="primary" onClick={handleAdd} disabled={adding || !name.trim() || (connectionType === 'branch' && !parentRoadmapNodeId)} />
         </div>
       </div>
     </div>
