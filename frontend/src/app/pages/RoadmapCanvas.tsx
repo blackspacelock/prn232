@@ -516,6 +516,81 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
   }
 
   const currentColors = optimisticStatus !== null ? NODE_STATUS_COLORS[optimisticStatus] : NODE_STATUS_COLORS[0];
+  const learningResourcesPanel = (
+    <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-xs font-medium uppercase tracking-wider text-[var(--md3-on-surface-variant)]">Learning Resources</p>
+        {!shared && <ActionButton icon={Plus} label="Add" variant="text" onClick={addResourceDraft} />}
+      </div>
+      {resourcesLoading && shared ? (
+        <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
+      ) : !shared ? (
+        <div className="space-y-3">
+          {resourceDrafts.length === 0 ? (
+            <p className="text-sm text-[var(--md3-on-surface-variant)]">No resources for this node.</p>
+          ) : resourceDrafts.map((resource, index) => (
+            <div key={resource.id ?? index} className="rounded-lg border border-[var(--md3-outline-variant)] p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <input
+                  value={resource.name}
+                  onChange={(event) => updateResourceDraft(index, 'name', event.target.value)}
+                  className="min-w-0 flex-1 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                  placeholder="Resource name"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeResourceDraft(index)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--md3-error)] hover:bg-[var(--md3-error-container)]"
+                  aria-label="Remove resource"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <input
+                value={resource.resourceUrl}
+                onChange={(event) => updateResourceDraft(index, 'resourceUrl', event.target.value)}
+                className="mb-2 w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                placeholder="https://..."
+              />
+              <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                <input
+                  value={resource.resourceType}
+                  onChange={(event) => updateResourceDraft(index, 'resourceType', event.target.value)}
+                  className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                  placeholder="Article"
+                />
+                <input
+                  value={resource.provider}
+                  onChange={(event) => updateResourceDraft(index, 'provider', event.target.value)}
+                  className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                  placeholder="Provider"
+                />
+                <label className="flex items-center gap-2 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm text-[var(--md3-on-surface)]">
+                  <input
+                    type="checkbox"
+                    checked={resource.isFree}
+                    onChange={(event) => updateResourceDraft(index, 'isFree', event.target.checked)}
+                  />
+                  Free
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : resources.length === 0 ? (
+        <p className="text-sm text-[var(--md3-on-surface-variant)]">No resources for this node.</p>
+      ) : (
+        <div className="space-y-3">
+          {resources.map((r) => (
+            <RoadmapResourceCard key={r.id} resource={r} />
+          ))}
+          {recommended.map((r) => (
+            <RoadmapResourceCard key={`rec-${r.id}`} resource={r} recommended />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <AppShell
@@ -595,20 +670,23 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
 
             <div className="flex-1 space-y-4 overflow-y-auto p-5">
               {shared ? (
-                <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
-                  <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Shared by</p>
-                  <p className="text-sm text-[var(--md3-on-surface)]">{personalRoadmap?.ownerName ?? 'SE Compass learner'}</p>
-                  {personalRoadmap?.note && <p className="mt-2 text-sm text-[var(--md3-on-surface-variant)]">{personalRoadmap.note}</p>}
-                  <ActionButton
-                    icon={Copy}
-                    label={copySharedMutation.isPending ? 'Copying...' : 'Copy to my roadmaps'}
-                    variant="primary"
-                    size="md"
-                    onClick={() => copySharedMutation.mutate()}
-                    disabled={copySharedMutation.isPending || !profileId}
-                    className="mt-4 w-full"
-                  />
-                </div>
+                <>
+                  <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
+                    <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Shared by</p>
+                    <p className="text-sm text-[var(--md3-on-surface)]">{personalRoadmap?.ownerName ?? 'SE Compass learner'}</p>
+                    {personalRoadmap?.note && <p className="mt-2 text-sm text-[var(--md3-on-surface-variant)]">{personalRoadmap.note}</p>}
+                    <ActionButton
+                      icon={Copy}
+                      label={copySharedMutation.isPending ? 'Copying...' : 'Copy to my roadmaps'}
+                      variant="primary"
+                      size="md"
+                      onClick={() => copySharedMutation.mutate()}
+                      disabled={copySharedMutation.isPending || !profileId}
+                      className="mt-4 w-full"
+                    />
+                  </div>
+                  {learningResourcesPanel}
+                </>
               ) : (
                 <>
                   <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
@@ -714,6 +792,8 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
                     />
                   </div>
 
+                  {learningResourcesPanel}
+
                   <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
                     <p className="text-xs font-medium text-[var(--md3-on-surface-variant)] uppercase tracking-wider mb-3">Note</p>
                     <textarea
@@ -723,88 +803,15 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
                       className="w-full h-24 px-4 py-3 bg-white border-2 border-[var(--md3-outline)] rounded-lg focus:border-[var(--md3-primary)] focus:outline-none resize-none text-sm"
                     />
                   </div>
-
-                  <div className="grid gap-2">
-                    <ActionButton icon={Save} label={saveStepMutation.isPending ? 'Saving...' : 'Save'} variant="primary" size="lg" onClick={handleSave} disabled={saveStepMutation.isPending || !stepName.trim() || (stepConnectionType === 'branch' && !stepBranchSourceId)} className="w-full" />
-                    <ActionButton icon={Trash2} label="Delete Step" variant="danger" size="md" onClick={() => setDeleteStepId(selectedNodeProgress.roadmapNodeId)} disabled={deleteStepMutation.isPending || progressNodes.length <= 1} className="w-full" />
-                  </div>
                 </>
               )}
-
-              <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--md3-on-surface-variant)]">Learning Resources</p>
-                  {!shared && <ActionButton icon={Plus} label="Add" variant="text" onClick={addResourceDraft} />}
-                </div>
-                {resourcesLoading && shared ? (
-                  <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
-                ) : !shared ? (
-                  <div className="space-y-3">
-                    {resourceDrafts.length === 0 ? (
-                      <p className="text-sm text-[var(--md3-on-surface-variant)]">No resources for this node.</p>
-                    ) : resourceDrafts.map((resource, index) => (
-                      <div key={resource.id ?? index} className="rounded-lg border border-[var(--md3-outline-variant)] p-3">
-                        <div className="mb-2 flex items-center gap-2">
-                          <input
-                            value={resource.name}
-                            onChange={(event) => updateResourceDraft(index, 'name', event.target.value)}
-                            className="min-w-0 flex-1 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
-                            placeholder="Resource name"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeResourceDraft(index)}
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--md3-error)] hover:bg-[var(--md3-error-container)]"
-                            aria-label="Remove resource"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <input
-                          value={resource.resourceUrl}
-                          onChange={(event) => updateResourceDraft(index, 'resourceUrl', event.target.value)}
-                          className="mb-2 w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
-                          placeholder="https://..."
-                        />
-                        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                          <input
-                            value={resource.resourceType}
-                            onChange={(event) => updateResourceDraft(index, 'resourceType', event.target.value)}
-                            className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
-                            placeholder="Article"
-                          />
-                          <input
-                            value={resource.provider}
-                            onChange={(event) => updateResourceDraft(index, 'provider', event.target.value)}
-                            className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
-                            placeholder="Provider"
-                          />
-                          <label className="flex items-center gap-2 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm text-[var(--md3-on-surface)]">
-                            <input
-                              type="checkbox"
-                              checked={resource.isFree}
-                              onChange={(event) => updateResourceDraft(index, 'isFree', event.target.checked)}
-                            />
-                            Free
-                          </label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : resources.length === 0 ? (
-                  <p className="text-sm text-[var(--md3-on-surface-variant)]">No resources for this node.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {resources.map((r) => (
-                      <RoadmapResourceCard key={r.id} resource={r} />
-                    ))}
-                    {recommended.map((r) => (
-                      <RoadmapResourceCard key={`rec-${r.id}`} resource={r} recommended />
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
+            {!shared && (
+              <div className="grid gap-2 border-t border-[var(--md3-outline-variant)] bg-white p-5">
+                <ActionButton icon={Save} label={saveStepMutation.isPending ? 'Saving...' : 'Save'} variant="primary" size="lg" onClick={handleSave} disabled={saveStepMutation.isPending || !stepName.trim() || (stepConnectionType === 'branch' && !stepBranchSourceId)} className="w-full" />
+                <ActionButton icon={Trash2} label="Delete Step" variant="danger" size="md" onClick={() => setDeleteStepId(selectedNodeProgress.roadmapNodeId)} disabled={deleteStepMutation.isPending || progressNodes.length <= 1} className="w-full" />
+              </div>
+            )}
           </div>
         )}
       </div>

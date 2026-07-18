@@ -927,6 +927,13 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
             />
           </label>
 
+          <div className="rounded-xl border border-[var(--md3-primary)]/25 bg-[var(--md3-primary-container)]/45 p-4">
+            <p className="text-sm font-semibold text-[var(--md3-on-primary-container)]">Start with Learning Step milestones</p>
+            <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">
+              Build the main roadmap path first with Learning Steps. Add smaller Branch Nodes later for side topics, references, and optional details.
+            </p>
+          </div>
+
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-[var(--md3-on-surface)]">Learning steps</span>
