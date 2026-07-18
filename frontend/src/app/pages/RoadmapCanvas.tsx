@@ -7,6 +7,7 @@ import { Snackbar } from '../components/Snackbar';
 import { ActionButton } from '../components/ActionButton';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { NodeStatusPicker } from '../components/NodeStatusPicker';
+import { SkillSearchPicker } from '../components/SkillSearchPicker';
 import { Copy, Plus, Trash2, X, Save, Settings } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
@@ -339,6 +340,26 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
     },
   });
 
+  const updateStepPositionMutation = useMutation({
+    mutationFn: ({ roadmapNodeId, x, y }: { roadmapNodeId: string; x: number; y: number }) =>
+      apiClient.put(`/api/personal-roadmaps/${personalRoadmapId}/steps/${roadmapNodeId}/position`, {
+        positionX: x,
+        positionY: y,
+      }),
+    onSuccess: async () => {
+      await refetch();
+      await refetchProgress();
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: string | { message?: string } } })?.response?.data;
+      setSnackbar({
+        open: true,
+        message: typeof msg === 'string' ? msg : (msg?.message ?? 'Failed to update roadmap step position.'),
+        variant: 'error',
+      });
+    },
+  });
+
   const handleNodeSelect = useCallback((node: RoadmapGraphNode) => {
     const np = progressNodes.find((p) => p.roadmapNodeId === node.id);
     if (np) {
@@ -486,6 +507,15 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
             selectedNodeId={selectedNodeProgress?.roadmapNodeId}
             useStatusColors
             onNodeSelect={handleNodeSelect}
+            onNodePositionChange={(roadmapNodeId, position) => {
+              if (!shared) {
+                updateStepPositionMutation.mutate({
+                  roadmapNodeId,
+                  x: position.x,
+                  y: position.y,
+                });
+              }
+            }}
           />
         </div>
 
@@ -547,18 +577,11 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
                     {technicalSkills.length > 0 && (
                       <div className="mt-3">
                         <p className="mb-2 text-sm font-medium text-[var(--md3-on-surface)]">Skills</p>
-                        <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto rounded-lg border border-[var(--md3-outline-variant)] p-2">
-                          {technicalSkills.map((skill) => (
-                            <label key={skill.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--md3-outline-variant)] px-2 py-1 text-xs text-[var(--md3-on-surface)]">
-                              <input
-                                type="checkbox"
-                                checked={selectedSkillIds.includes(skill.id)}
-                                onChange={() => toggleSkill(skill.id)}
-                              />
-                              {skill.name}
-                            </label>
-                          ))}
-                        </div>
+                        <SkillSearchPicker
+                          skills={technicalSkills}
+                          selectedSkillIds={selectedSkillIds}
+                          onToggle={toggleSkill}
+                        />
                       </div>
                     )}
                   </div>
@@ -812,6 +835,7 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
   const [positionX, setPositionX] = useState('');
   const [positionY, setPositionY] = useState('');
   const [technicalSkillIds, setTechnicalSkillIds] = useState<string[]>([]);
+  const [learningResources, setLearningResources] = useState<ResourceDraft[]>([]);
 
   const toggleSkill = (skillId: string) => {
     setTechnicalSkillIds((current) =>
@@ -819,6 +843,29 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
         ? current.filter((id) => id !== skillId)
         : [...current, skillId],
     );
+  };
+
+  const addLearningResource = () => {
+    setLearningResources((current) => [
+      ...current,
+      { name: '', resourceUrl: '', resourceType: 'Article', provider: '', isFree: true },
+    ]);
+  };
+
+  const updateLearningResource = <TKey extends keyof ResourceDraft>(
+    index: number,
+    field: TKey,
+    value: ResourceDraft[TKey],
+  ) => {
+    setLearningResources((current) =>
+      current.map((resource, resourceIndex) =>
+        resourceIndex === index ? { ...resource, [field]: value } : resource,
+      ),
+    );
+  };
+
+  const removeLearningResource = (index: number) => {
+    setLearningResources((current) => current.filter((_, resourceIndex) => resourceIndex !== index));
   };
 
   const handleAdd = () => {
@@ -830,7 +877,15 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
       positionX: positionX.trim() === '' ? undefined : Number(positionX),
       positionY: positionY.trim() === '' ? undefined : Number(positionY),
       technicalSkillIds,
-      learningResources: [],
+      learningResources: learningResources
+        .map((resource) => ({
+          ...resource,
+          name: resource.name.trim(),
+          resourceUrl: resource.resourceUrl.trim(),
+          resourceType: resource.resourceType.trim() || 'Article',
+          provider: resource.provider.trim(),
+        }))
+        .filter((resource) => resource.name && resource.resourceUrl),
     });
   };
 
@@ -917,20 +972,74 @@ function AddStepDialog({ progressNodes, technicalSkills, adding, onClose, onAdd 
           {technicalSkills.length > 0 && (
             <div>
               <p className="mb-2 text-sm font-medium text-[var(--md3-on-surface)]">Skills</p>
-              <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-lg border border-[var(--md3-outline-variant)] p-2">
-                {technicalSkills.map((skill) => (
-                  <label key={skill.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--md3-outline-variant)] px-2 py-1 text-xs text-[var(--md3-on-surface)]">
-                    <input
-                      type="checkbox"
-                      checked={technicalSkillIds.includes(skill.id)}
-                      onChange={() => toggleSkill(skill.id)}
-                    />
-                    {skill.name}
-                  </label>
-                ))}
-              </div>
+              <SkillSearchPicker
+                skills={technicalSkills}
+                selectedSkillIds={technicalSkillIds}
+                onToggle={toggleSkill}
+              />
             </div>
           )}
+
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-[var(--md3-on-surface)]">Learning Resources</p>
+              <ActionButton icon={Plus} label="Add Resource" variant="text" size="sm" onClick={addLearningResource} />
+            </div>
+            <div className="space-y-2">
+              {learningResources.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-[var(--md3-outline-variant)] px-3 py-4 text-sm text-[var(--md3-on-surface-variant)]">
+                  No resources added yet.
+                </p>
+              ) : learningResources.map((resource, resourceIndex) => (
+                <div key={resourceIndex} className="rounded-lg border border-[var(--md3-outline-variant)] p-2">
+                  <div className="mb-2 flex items-center gap-2">
+                    <input
+                      value={resource.name}
+                      onChange={(event) => updateLearningResource(resourceIndex, 'name', event.target.value)}
+                      className="min-w-0 flex-1 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                      placeholder="Resource name"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeLearningResource(resourceIndex)}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--md3-error)] hover:bg-[var(--md3-error-container)]"
+                      aria-label="Remove resource"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <input
+                    value={resource.resourceUrl}
+                    onChange={(event) => updateLearningResource(resourceIndex, 'resourceUrl', event.target.value)}
+                    className="mb-2 w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                    placeholder="https://..."
+                  />
+                  <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                    <input
+                      value={resource.resourceType}
+                      onChange={(event) => updateLearningResource(resourceIndex, 'resourceType', event.target.value)}
+                      className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                      placeholder="Article"
+                    />
+                    <input
+                      value={resource.provider}
+                      onChange={(event) => updateLearningResource(resourceIndex, 'provider', event.target.value)}
+                      className="rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                      placeholder="Provider"
+                    />
+                    <label className="flex items-center gap-2 rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={resource.isFree}
+                        onChange={(event) => updateLearningResource(resourceIndex, 'isFree', event.target.checked)}
+                      />
+                      Free
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 border-t border-[var(--md3-outline-variant)] p-6">

@@ -98,6 +98,16 @@ public class PersonalRoadmapsController : ControllerBase
         return Ok();
     }
 
+    [HttpPut("{id:guid}/steps/{roadmapNodeId:guid}/position")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateStepPosition(Guid id, Guid roadmapNodeId, [FromBody] UpdatePersonalRoadmapStepPositionDto dto)
+    {
+        var result = await _service.UpdateStepPositionAsync(id, roadmapNodeId, dto);
+        if (!result.Success) return NotFound(result.Error);
+        return Ok();
+    }
+
     [HttpGet("shared")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(List<PersonalRoadmapDto>), StatusCodes.Status200OK)]

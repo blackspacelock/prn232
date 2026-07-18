@@ -15,6 +15,7 @@ public interface IPersonalRoadmapService
     Task<ServiceResult<PersonalRoadmapDetailDto>> UpdateAsync(Guid personalRoadmapId, UpdatePersonalRoadmapDto dto);
     Task<ServiceResult<PersonalRoadmapDetailDto>> AddStepAsync(Guid personalRoadmapId, AddPersonalRoadmapStepDto dto);
     Task<ServiceResult<bool>> DeleteStepAsync(Guid personalRoadmapId, Guid roadmapNodeId);
+    Task<ServiceResult<bool>> UpdateStepPositionAsync(Guid personalRoadmapId, Guid roadmapNodeId, UpdatePersonalRoadmapStepPositionDto dto);
     Task<ServiceResult<decimal>> RecalculateProgressAsync(Guid personalRoadmapId);
     Task<ServiceResult<bool>> DeleteAsync(Guid personalRoadmapId);
     Task<ServiceResult<bool>> ToggleActiveAsync(Guid personalRoadmapId);

@@ -88,6 +88,7 @@ interface RoadmapGraphCanvasProps {
   selectedNodeId?: string;
   useStatusColors?: boolean;
   onNodeSelect?: (node: RoadmapGraphNode) => void;
+  onNodePositionChange?: (nodeId: string, position: { x: number; y: number }) => void;
 }
 
 function getNodeDepths(nodes: RoadmapGraphNode[]) {
@@ -153,13 +154,10 @@ function mapToFlow(
   const shouldUseStoredPositions = storedPositionNodes.length >= Math.max(3, nodes.length * 0.6);
 
   if (shouldUseStoredPositions) {
-    const minX = Math.min(...storedPositionNodes.map((node) => node.positionX ?? 0));
-    const minY = Math.min(...storedPositionNodes.map((node) => node.positionY ?? 0));
-
     storedPositionNodes.forEach((node) => {
       positions.set(node.id, {
-        x: (node.positionX ?? 0) - minX + 120,
-        y: (node.positionY ?? 0) - minY + 120,
+        x: node.positionX ?? 0,
+        y: node.positionY ?? 0,
       });
       visited.add(node.id);
     });
@@ -297,6 +295,7 @@ export function RoadmapGraphCanvas({
   selectedNodeId,
   useStatusColors = false,
   onNodeSelect,
+  onNodePositionChange,
 }: RoadmapGraphCanvasProps) {
   const { flowNodes, flowEdges } = useMemo(
     () => mapToFlow(graphNodes, graphEdges, selectedNodeId, useStatusColors),
@@ -307,6 +306,7 @@ export function RoadmapGraphCanvas({
       [
         graphNodes.map((node) => node.id).join('|'),
         graphNodes.map((node) => `${node.id}:${node.status ?? 'none'}`).join('|'),
+        graphNodes.map((node) => `${node.id}:${node.positionX ?? 'auto'},${node.positionY ?? 'auto'}`).join('|'),
         graphEdges.map((edge) => edge.id).join('|'),
         useStatusColors ? 'status-colors' : 'structure-colors',
       ].join('::'),
@@ -324,6 +324,12 @@ export function RoadmapGraphCanvas({
       onNodeClick={(_, node) => {
         const graphNode = nodeById.get(node.id);
         if (graphNode) onNodeSelect?.(graphNode);
+      }}
+      onNodeDragStop={(_, node) => {
+        onNodePositionChange?.(node.id, {
+          x: Math.round(node.position.x),
+          y: Math.round(node.position.y),
+        });
       }}
       fitView
       fitViewOptions={{ padding: 0.08, maxZoom: 0.82 }}

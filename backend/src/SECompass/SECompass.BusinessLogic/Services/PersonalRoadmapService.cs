@@ -465,6 +465,25 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         return ServiceResult<bool>.Ok(true);
     }
 
+    public async Task<ServiceResult<bool>> UpdateStepPositionAsync(Guid personalRoadmapId, Guid roadmapNodeId, UpdatePersonalRoadmapStepPositionDto dto)
+    {
+        var roadmap = await _uow.PersonalRoadmaps.GetWithNodesAndProgressAsync(personalRoadmapId);
+        if (roadmap == null) return ServiceResult<bool>.Fail("Personal roadmap not found.");
+
+        var roadmapNode = roadmap.NodeProgresses
+            .Select(np => np.RoadmapNode)
+            .FirstOrDefault(rn => rn.Id == roadmapNodeId);
+        if (roadmapNode == null) return ServiceResult<bool>.Fail("Roadmap step not found.");
+
+        roadmapNode.PositionX = dto.PositionX;
+        roadmapNode.PositionY = dto.PositionY;
+        roadmapNode.UpdatedAt = DateTime.Now;
+        _uow.RoadmapNodes.Update(roadmapNode);
+        await _uow.SaveChangesAsync();
+
+        return ServiceResult<bool>.Ok(true);
+    }
+
     public async Task<ServiceResult<decimal>> RecalculateProgressAsync(Guid personalRoadmapId)
     {
         var roadmap = await _uow.PersonalRoadmaps.GetByIdAsync(personalRoadmapId);
