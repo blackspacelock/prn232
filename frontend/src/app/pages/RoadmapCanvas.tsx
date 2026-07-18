@@ -72,7 +72,11 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
   const [note, setNote] = useState('');
   const [resourceDrafts, setResourceDrafts] = useState<ResourceDraft[]>([]);
   const [deletedResourceIds, setDeletedResourceIds] = useState<string[]>([]);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    variant: 'success',
+  });
 
   const detailQuery = shared ? GET_SHARED_PERSONAL_ROADMAP_WITH_PROGRESS : GET_PERSONAL_ROADMAP_WITH_PROGRESS;
   const detailKey = shared ? 'sharedPersonalRoadmapWithProgress' : 'personalRoadmapWithProgress';
@@ -112,8 +116,14 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
 
   const summary: Array<{ status: number }> =
     (progressData as { nodeProgress?: Array<{ status: number }> })?.nodeProgress ?? [];
-  const resources: LearningResource[] = (resourcesData as { learningResourcesByNode?: LearningResource[] })?.learningResourcesByNode ?? [];
-  const recommended: LearningResource[] = (recommendedData as { recommendedResources?: LearningResource[] })?.recommendedResources ?? [];
+  const resources: LearningResource[] = useMemo(
+    () => (resourcesData as { learningResourcesByNode?: LearningResource[] })?.learningResourcesByNode ?? [],
+    [resourcesData],
+  );
+  const recommended: LearningResource[] = useMemo(
+    () => (recommendedData as { recommendedResources?: LearningResource[] })?.recommendedResources ?? [],
+    [recommendedData],
+  );
 
   const graphNodes: RoadmapGraphNode[] = useMemo(
     () =>
@@ -206,14 +216,18 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
           : current,
       );
       setOptimisticStatus(updatedProgress.status as NodeStatusInt);
-      setSnackbar({ open: true, message: 'Roadmap step updated.' });
+      setSnackbar({ open: true, message: 'Roadmap step updated.', variant: 'success' });
     },
     onError: (error: unknown) => {
       const msg =
         error instanceof Error
           ? error.message
           : (error as { response?: { data?: string | { message?: string } } })?.response?.data;
-      setSnackbar({ open: true, message: typeof msg === 'string' ? msg : (msg?.message ?? 'Failed to update roadmap step.') });
+      setSnackbar({
+        open: true,
+        message: typeof msg === 'string' ? msg : (msg?.message ?? 'Failed to update roadmap step.'),
+        variant: 'error',
+      });
     },
   });
 
@@ -225,7 +239,11 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: string | { message?: string } } })?.response?.data;
-      setSnackbar({ open: true, message: typeof msg === 'string' ? msg : (msg?.message ?? 'Failed to copy shared roadmap.') });
+      setSnackbar({
+        open: true,
+        message: typeof msg === 'string' ? msg : (msg?.message ?? 'Failed to copy shared roadmap.'),
+        variant: 'error',
+      });
     },
   });
 
@@ -278,16 +296,25 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
 
   useEffect(() => {
     if (!selectedNodeProgress) return;
-    setResourceDrafts(resources.map((resource) => ({
-      id: resource.id,
-      name: resource.name,
-      resourceUrl: resource.resourceUrl,
-      resourceType: resource.resourceType || 'Article',
-      provider: resource.provider ?? '',
-      isFree: resource.isFree,
-    })));
-    setDeletedResourceIds([]);
-  }, [resourcesData, selectedNodeProgress?.nodeId]);
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setResourceDrafts(resources.map((resource) => ({
+        id: resource.id,
+        name: resource.name,
+        resourceUrl: resource.resourceUrl,
+        resourceType: resource.resourceType || 'Article',
+        provider: resource.provider ?? '',
+        isFree: resource.isFree,
+      })));
+      setDeletedResourceIds([]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resources, selectedNodeProgress]);
 
   const summaryNodes = summary.length > 0 ? summary : progressNodes;
   const completedCount = summaryNodes.filter((n: { status: number }) => n.status === 4).length;
@@ -496,7 +523,12 @@ function RoadmapCanvasView({ shared }: { shared: boolean }) {
         )}
       </div>
 
-      <Snackbar isOpen={snackbar.open} message={snackbar.message} variant="error" onClose={() => setSnackbar({ open: false, message: '' })} />
+      <Snackbar
+        isOpen={snackbar.open}
+        message={snackbar.message}
+        variant={snackbar.variant}
+        onClose={() => setSnackbar((current) => ({ ...current, open: false }))}
+      />
     </AppShell>
   );
 }
