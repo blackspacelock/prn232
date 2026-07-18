@@ -12,6 +12,11 @@ public interface IPersonalRoadmapService
     Task<ServiceResult<List<PersonalRoadmapDto>>> GetSharedAsync();
     Task<ServiceResult<PersonalRoadmapDetailDto>> GetWithProgressAsync(Guid personalRoadmapId);
     Task<ServiceResult<PersonalRoadmapDetailDto>> GetSharedWithProgressAsync(Guid personalRoadmapId);
+    Task<ServiceResult<PersonalRoadmapDetailDto>> UpdateAsync(Guid personalRoadmapId, UpdatePersonalRoadmapDto dto);
+    Task<ServiceResult<PersonalRoadmapDetailDto>> AddStepAsync(Guid personalRoadmapId, AddPersonalRoadmapStepDto dto);
+    Task<ServiceResult<bool>> DeleteStepAsync(Guid personalRoadmapId, Guid roadmapNodeId);
+    Task<ServiceResult<bool>> UpdateStepPositionAsync(Guid personalRoadmapId, Guid roadmapNodeId, UpdatePersonalRoadmapStepPositionDto dto);
+    Task<ServiceResult<bool>> UpdateStepConnectionAsync(Guid personalRoadmapId, Guid roadmapNodeId, UpdatePersonalRoadmapStepConnectionDto dto);
     Task<ServiceResult<decimal>> RecalculateProgressAsync(Guid personalRoadmapId);
     Task<ServiceResult<bool>> DeleteAsync(Guid personalRoadmapId);
     Task<ServiceResult<bool>> ToggleActiveAsync(Guid personalRoadmapId);

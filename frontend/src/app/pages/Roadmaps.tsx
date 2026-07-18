@@ -10,6 +10,7 @@ import { ActionButton, ActionLink } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import { ToggleSwitch } from '../components/ToggleSwitch';
+import { SkillSearchPicker } from '../components/SkillSearchPicker';
 import { AdminFilterSelect, AdminListToolbar, AdminPagination } from '../components/admin/AdminListControls';
 import { useAdminList, type AdminSortOption } from '../components/admin/useAdminList';
 import { Copy, FolderOpen, Globe2, MoreVertical, Plus, Rocket, Share2, Tag, Trash2, X } from 'lucide-react';
@@ -742,7 +743,11 @@ interface CreatePersonalRoadmapModalProps {
 interface CreateStepDraft {
   name: string;
   description: string;
-  parentStepIndex: string;
+  connectionType: 'learning' | 'branch';
+  previousStepIndex: string;
+  branchStepIndex: string;
+  positionX: string;
+  positionY: string;
   technicalSkillIds: string[];
   learningResources: Array<{
     name: string;
@@ -759,9 +764,9 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
   const [desire, setDesire] = useState('');
   const [careerRoleId, setCareerRoleId] = useState('');
   const [steps, setSteps] = useState<CreateStepDraft[]>([
-    { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] },
-    { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] },
-    { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', connectionType: 'learning', previousStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', connectionType: 'learning', previousStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
+    { name: '', description: '', connectionType: 'learning', previousStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] },
   ]);
 
   if (!isOpen) return null;
@@ -770,7 +775,10 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
     .map((step) => ({
       name: step.name.trim(),
       description: step.description.trim() || undefined,
-      parentStepIndex: step.parentStepIndex === '' ? undefined : Number(step.parentStepIndex),
+      previousStepIndex: step.connectionType === 'learning' && step.previousStepIndex !== '' ? Number(step.previousStepIndex) : undefined,
+      branchStepIndex: step.connectionType === 'branch' && step.branchStepIndex !== '' ? Number(step.branchStepIndex) : undefined,
+      positionX: step.positionX.trim() === '' ? undefined : Number(step.positionX),
+      positionY: step.positionY.trim() === '' ? undefined : Number(step.positionY),
       technicalSkillIds: step.technicalSkillIds,
       learningResources: step.learningResources
         .map((resource) => ({
@@ -783,13 +791,16 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
         .filter((resource) => resource.name && resource.resourceUrl),
     }))
     .filter((step) => step.name.length > 0);
-  const canCreate = profileId && careerRoleId && name.trim() && validSteps.length > 0 && !creating;
+  const hasInvalidBranch = steps.some((step, index) =>
+    step.name.trim() && index > 0 && step.connectionType === 'branch' && step.branchStepIndex === '',
+  );
+  const canCreate = profileId && careerRoleId && name.trim() && validSteps.length > 0 && !hasInvalidBranch && !creating;
 
   const updateStep = <TKey extends keyof CreateStepDraft>(index: number, field: TKey, value: CreateStepDraft[TKey]) => {
     setSteps((current) => current.map((step, i) => i === index ? { ...step, [field]: value } : step));
   };
 
-  const addStep = () => setSteps((current) => [...current, { name: '', description: '', parentStepIndex: '', technicalSkillIds: [], learningResources: [] }]);
+  const addStep = () => setSteps((current) => [...current, { name: '', description: '', connectionType: 'learning', previousStepIndex: '', branchStepIndex: '', positionX: '', positionY: '', technicalSkillIds: [], learningResources: [] }]);
   const removeStep = (index: number) => setSteps((current) => current.filter((_, i) => i !== index));
   const addStepResource = (stepIndex: number) => {
     setSteps((current) => current.map((step, i) => i === stepIndex
@@ -916,6 +927,13 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
             />
           </label>
 
+          <div className="rounded-xl border border-[var(--md3-primary)]/25 bg-[var(--md3-primary-container)]/45 p-4">
+            <p className="text-sm font-semibold text-[var(--md3-on-primary-container)]">Start with Learning Step milestones</p>
+            <p className="mt-1 text-sm text-[var(--md3-on-surface-variant)]">
+              Build the main roadmap path first with Learning Steps. Add smaller Branch Nodes later for side topics, references, and optional details.
+            </p>
+          </div>
+
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-[var(--md3-on-surface)]">Learning steps</span>
@@ -951,39 +969,104 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
                     className="h-16 w-full resize-none rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
                     placeholder="Optional step details"
                   />
-                  {index > 0 && (
-                    <label className="mt-2 block">
-                      <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Branch from</span>
-                      <select
-                        value={step.parentStepIndex}
-                        onChange={(e) => updateStep(index, 'parentStepIndex', e.target.value)}
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">X-axis</span>
+                      <input
+                        type="number"
+                        value={step.positionX}
+                        onChange={(e) => updateStep(index, 'positionX', e.target.value)}
+                        min={0}
+                        max={1400}
+                        step={10}
                         className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
-                      >
-                        <option value="">Previous step</option>
-                        {steps.slice(0, index).map((candidate, candidateIndex) => (
-                          <option key={candidateIndex} value={candidateIndex}>
-                            Step {candidateIndex + 1}{candidate.name.trim() ? ` - ${candidate.name.trim()}` : ''}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder={String(index % 2 === 0 ? 540 : 180)}
+                      />
                     </label>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Y-axis</span>
+                      <input
+                        type="number"
+                        value={step.positionY}
+                        onChange={(e) => updateStep(index, 'positionY', e.target.value)}
+                        min={0}
+                        max={2000}
+                        step={10}
+                        className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                        placeholder={String(80 + index * 160)}
+                      />
+                    </label>
+                  </div>
+                  {index > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => updateStep(index, 'connectionType', 'learning')}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                            step.connectionType === 'learning'
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                              : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-variant)]'
+                          }`}
+                        >
+                          Learning Step
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateStep(index, 'connectionType', 'branch')}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                            step.connectionType === 'branch'
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                              : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-variant)]'
+                          }`}
+                        >
+                          Branch Node
+                        </button>
+                      </div>
+                      {step.connectionType === 'learning' ? (
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Arrow from</span>
+                          <select
+                            value={step.previousStepIndex}
+                            onChange={(e) => updateStep(index, 'previousStepIndex', e.target.value)}
+                            className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                          >
+                            <option value="">Previous learning step</option>
+                            {steps.slice(0, index).map((candidate, candidateIndex) => (
+                              <option key={candidateIndex} value={candidateIndex}>
+                                Step {candidateIndex + 1}{candidate.name.trim() ? ` - ${candidate.name.trim()}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : (
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Dashed branch from</span>
+                          <select
+                            value={step.branchStepIndex}
+                            onChange={(e) => updateStep(index, 'branchStepIndex', e.target.value)}
+                            className="w-full rounded-lg border border-[var(--md3-outline)] px-3 py-2 text-sm outline-none focus:border-[var(--md3-primary)]"
+                          >
+                            <option value="">Select branch source</option>
+                            {steps.slice(0, index).map((candidate, candidateIndex) => (
+                              <option key={candidateIndex} value={candidateIndex}>
+                                Step {candidateIndex + 1}{candidate.name.trim() ? ` - ${candidate.name.trim()}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                    </div>
                   )}
 
                   {technicalSkills.length > 0 && (
                     <div className="mt-3">
                       <p className="mb-2 text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">Skills</p>
-                      <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-lg border border-[var(--md3-outline-variant)] p-2">
-                        {technicalSkills.map((skill) => (
-                          <label key={skill.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--md3-outline-variant)] px-2 py-1 text-xs text-[var(--md3-on-surface)]">
-                            <input
-                              type="checkbox"
-                              checked={step.technicalSkillIds.includes(skill.id)}
-                              onChange={() => toggleStepSkill(index, skill.id)}
-                            />
-                            {skill.name}
-                          </label>
-                        ))}
-                      </div>
+                      <SkillSearchPicker
+                        skills={technicalSkills}
+                        selectedSkillIds={step.technicalSkillIds}
+                        onToggle={(skillId) => toggleStepSkill(index, skillId)}
+                      />
                     </div>
                   )}
 
@@ -1046,6 +1129,14 @@ function CreatePersonalRoadmapModal({ isOpen, onClose, careerRoles, technicalSki
                 </div>
               ))}
             </div>
+            <ActionButton
+              icon={Plus}
+              label="Add Step"
+              variant="tonal"
+              size="md"
+              onClick={addStep}
+              className="mt-3 w-full"
+            />
           </div>
         </div>
 

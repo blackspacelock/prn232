@@ -71,7 +71,9 @@ export function AdminRoadmapTemplatesPage() {
   const [selectedRoadmapNode, setSelectedRoadmapNode] = useState<RoadmapNodeDto | null>(null);
   const [roadmapNodeForm, setRoadmapNodeForm] = useState<RoadmapNodeForm>({
     nodeId: '',
+    previousRoadmapNodeId: undefined,
     parentRoadmapNodeId: undefined,
+    branchRoadmapNodeId: undefined,
     order: 1,
     nodeType: 'Topic',
     requirementType: 'Required',
@@ -117,9 +119,19 @@ export function AdminRoadmapTemplatesPage() {
         ?.careerRoadmapWithNodes?.nodes ?? [],
     [roadmapNodesData],
   );
-  const roadmapEdges =
-    (roadmapNodesData as { careerRoadmapWithNodes?: { edges?: Array<{ id: string; fromRoadmapNodeId: string; toRoadmapNodeId: string; edgeType?: string }> } })
-      ?.careerRoadmapWithNodes?.edges ?? [];
+  const roadmapEdges = useMemo(
+    () =>
+      (roadmapNodesData as { careerRoadmapWithNodes?: { edges?: Array<{ id: string; fromRoadmapNodeId: string; toRoadmapNodeId: string; edgeType?: string }> } })
+        ?.careerRoadmapWithNodes?.edges ?? [],
+    [roadmapNodesData],
+  );
+  const learningSourceByRoadmapNodeId = useMemo(() => {
+    const map = new Map<string, string>();
+    roadmapEdges.forEach((edge) => {
+      map.set(edge.toRoadmapNodeId, edge.fromRoadmapNodeId);
+    });
+    return map;
+  }, [roadmapEdges]);
   const graphNodes: RoadmapGraphNode[] = useMemo(() => {
     const depthById = getNodeDepths(roadmapNodes);
     return roadmapNodes.map((roadmapNode) => ({
@@ -208,9 +220,12 @@ export function AdminRoadmapTemplatesPage() {
       apiClient.post<RoadmapNodeDto>(`/api/career-roadmaps/${roadmapId}/roadmap-nodes`, dto).then((r) => r.data),
     onSuccess: (roadmapNode, { roadmapId }) => {
       updateExpandedRoadmapNodes(roadmapId, (nodes) => [...nodes, roadmapNode]);
+      loadRoadmapNodes({ variables: { roadmapId } });
       setRoadmapNodeForm({
         nodeId: '',
+        previousRoadmapNodeId: undefined,
         parentRoadmapNodeId: undefined,
+        branchRoadmapNodeId: undefined,
         order: roadmapNodeForm.order + 1,
         nodeType: roadmapNodeForm.nodeType,
         requirementType: roadmapNodeForm.requirementType,
@@ -227,6 +242,7 @@ export function AdminRoadmapTemplatesPage() {
       apiClient.put<RoadmapNodeDto>(`/api/career-roadmaps/${roadmapId}/roadmap-nodes/${roadmapNodeId}`, dto).then((r) => r.data),
     onSuccess: (roadmapNode, { roadmapId }) => {
       updateExpandedRoadmapNodes(roadmapId, (nodes) => nodes.map((node) => node.id === roadmapNode.id ? roadmapNode : node));
+      loadRoadmapNodes({ variables: { roadmapId } });
       setSelectedRoadmapNode(roadmapNode);
     },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update node.'),
@@ -249,7 +265,9 @@ export function AdminRoadmapTemplatesPage() {
     setSelectedRoadmapNode(null);
     setRoadmapNodeForm({
       nodeId: '',
+      previousRoadmapNodeId: undefined,
       parentRoadmapNodeId: undefined,
+      branchRoadmapNodeId: undefined,
       order: 1,
       nodeType: 'Topic',
       requirementType: 'Required',
@@ -268,7 +286,9 @@ export function AdminRoadmapTemplatesPage() {
     setForm({ name: '', description: '', careerRoleId: selectedRoleId === 'All' ? '' : selectedRoleId });
     setRoadmapNodeForm({
       nodeId: '',
+      previousRoadmapNodeId: undefined,
       parentRoadmapNodeId: undefined,
+      branchRoadmapNodeId: undefined,
       order: 1,
       nodeType: 'Topic',
       requirementType: 'Required',
@@ -294,7 +314,9 @@ export function AdminRoadmapTemplatesPage() {
     setSelectedRoadmapNode(roadmapNode);
     setRoadmapNodeForm({
       nodeId: roadmapNode.nodeId,
+      previousRoadmapNodeId: learningSourceByRoadmapNodeId.get(roadmapNode.id),
       parentRoadmapNodeId: roadmapNode.parentRoadmapNodeId,
+      branchRoadmapNodeId: roadmapNode.parentRoadmapNodeId ? roadmapNode.parentRoadmapNodeId : undefined,
       order: roadmapNode.order,
       nodeType: roadmapNode.nodeType,
       requirementType: roadmapNode.requirementType,
@@ -308,7 +330,9 @@ export function AdminRoadmapTemplatesPage() {
     setSelectedRoadmapNode(null);
     setRoadmapNodeForm({
       nodeId: '',
+      previousRoadmapNodeId: undefined,
       parentRoadmapNodeId: undefined,
+      branchRoadmapNodeId: undefined,
       order: roadmapNodes.length + 1,
       nodeType: 'Topic',
       requirementType: 'Required',
@@ -319,7 +343,9 @@ export function AdminRoadmapTemplatesPage() {
   };
 
   const buildRoadmapNodePayload = () => ({
-    parentRoadmapNodeId: roadmapNodeForm.parentRoadmapNodeId,
+    previousRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId !== undefined ? undefined : roadmapNodeForm.previousRoadmapNodeId,
+    parentRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId || undefined,
+    branchRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId || undefined,
     order: roadmapNodeForm.order,
     nodeType: roadmapNodeForm.nodeType,
     requirementType: roadmapNodeForm.requirementType,
@@ -570,16 +596,57 @@ export function AdminRoadmapTemplatesPage() {
                         disabled={selectedRoadmapNode !== null}
                         className="md3-field h-10 w-full px-3 text-sm"
                       />
-                      <select
-                        value={roadmapNodeForm.parentRoadmapNodeId ?? ''}
-                        onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, parentRoadmapNodeId: event.target.value || undefined })}
-                        className="md3-field h-10 w-full px-3 text-sm"
-                      >
-                        <option value="">Root node</option>
-                        {(activeRoadmap ? roadmapNodes : []).map((roadmapNode) => (
-                          <option key={roadmapNode.id} value={roadmapNode.id}>{roadmapNode.node.name}</option>
-                        ))}
-                      </select>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setRoadmapNodeForm({ ...roadmapNodeForm, branchRoadmapNodeId: undefined, parentRoadmapNodeId: undefined })}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                            roadmapNodeForm.branchRoadmapNodeId === undefined
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                              : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-container)]'
+                          }`}
+                        >
+                          Learning Step
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRoadmapNodeForm({ ...roadmapNodeForm, previousRoadmapNodeId: undefined, branchRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId ?? '' })}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                            roadmapNodeForm.branchRoadmapNodeId !== undefined
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                              : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-container)]'
+                          }`}
+                        >
+                          Branch Node
+                        </button>
+                      </div>
+                      {roadmapNodeForm.branchRoadmapNodeId === undefined ? (
+                        <select
+                          value={roadmapNodeForm.previousRoadmapNodeId ?? ''}
+                          onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, previousRoadmapNodeId: event.target.value || undefined })}
+                          className="md3-field h-10 w-full px-3 text-sm"
+                        >
+                          <option value="">Root learning step</option>
+                          {(activeRoadmap ? roadmapNodes : [])
+                            .filter((roadmapNode) => roadmapNode.id !== selectedRoadmapNode?.id)
+                            .map((roadmapNode) => (
+                              <option key={roadmapNode.id} value={roadmapNode.id}>{roadmapNode.node.name}</option>
+                            ))}
+                        </select>
+                      ) : (
+                        <select
+                          value={roadmapNodeForm.branchRoadmapNodeId}
+                          onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, previousRoadmapNodeId: undefined, branchRoadmapNodeId: event.target.value || '' })}
+                          className="md3-field h-10 w-full px-3 text-sm"
+                        >
+                          <option value="">Select dashed branch source</option>
+                          {(activeRoadmap ? roadmapNodes : [])
+                            .filter((roadmapNode) => roadmapNode.id !== selectedRoadmapNode?.id)
+                            .map((roadmapNode) => (
+                              <option key={roadmapNode.id} value={roadmapNode.id}>{roadmapNode.node.name}</option>
+                            ))}
+                        </select>
+                      )}
                       <div className="grid grid-cols-3 gap-2">
                         <input
                           type="number"
@@ -668,6 +735,7 @@ export function AdminRoadmapTemplatesPage() {
                         disabled={
                           !activeRoadmap ||
                           (!selectedRoadmapNode && !roadmapNodeForm.nodeId.trim()) ||
+                          (roadmapNodeForm.branchRoadmapNodeId !== undefined && !roadmapNodeForm.branchRoadmapNodeId) ||
                           assignNodeMutation.isPending ||
                           updateRoadmapNodeMutation.isPending
                         }
