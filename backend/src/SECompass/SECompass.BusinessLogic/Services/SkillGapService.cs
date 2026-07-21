@@ -19,10 +19,10 @@ public class SkillGapService : ISkillGapService
 
     public async Task<ServiceResult<SkillGapAnalysisDto>> AnalyzeSkillGapAsync(Guid profileId)
     {
-        var roadmaps = (await _uow.PersonalRoadmaps.GetByProfileWithCareerRoadmapAsync(profileId)).ToList();
-        var activeRoadmap = roadmaps.FirstOrDefault(pr => pr.IsActive) ?? roadmaps.FirstOrDefault();
+        var activeRoadmaps = await _uow.PersonalRoadmaps.FindAsync(pr => pr.ProfileId == profileId && pr.IsActive);
+        var activeRoadmap = activeRoadmaps.FirstOrDefault();
         if (activeRoadmap == null)
-            return ServiceResult<SkillGapAnalysisDto>.Fail("No roadmap found. Generate a roadmap to see your skill gap analysis.");
+            return ServiceResult<SkillGapAnalysisDto>.Fail("No active roadmap found. Set a roadmap as active to see your skill gap analysis.");
 
         var careerRoadmapId = activeRoadmap.CareerRoadmapId;
 

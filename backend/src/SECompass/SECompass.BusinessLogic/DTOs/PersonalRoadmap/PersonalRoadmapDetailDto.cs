@@ -1,5 +1,4 @@
 using SECompass.BusinessLogic.DTOs.NodeProgress;
-using SECompass.BusinessLogic.DTOs.RoadmapTag;
 
 namespace SECompass.BusinessLogic.DTOs.PersonalRoadmap;
 
@@ -13,10 +12,6 @@ public class PersonalRoadmapDetailDto
     public string? Note { get; set; }
     public decimal ProgressPercentage { get; set; }
     public bool IsActive { get; set; }
-    public bool IsShared { get; set; }
-    public DateTime? SharedAt { get; set; }
-    public string? OwnerName { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<NodeProgressDto> NodeProgresses { get; set; } = new();
-    public List<RoadmapTagDto> Tags { get; set; } = new();
 }

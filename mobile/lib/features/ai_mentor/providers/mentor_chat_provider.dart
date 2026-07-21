@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/chat_models.dart';
 import '../../../core/storage/token_storage.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../data/chat_repository.dart';
 import '../data/chat_repository_impl.dart';
 
@@ -115,17 +114,8 @@ class MentorChatNotifier extends FamilyAsyncNotifier<ChatState, String?> {
   }
 
   Future<String> _profileId() async {
-    final user = ref.read(authProvider).valueOrNull;
-    final authProfileId = user?.profileId;
-    if (authProfileId != null && authProfileId.isNotEmpty) {
-      return authProfileId;
-    }
-
-    final storedProfileId = await TokenStorage.getProfileId();
-    if (storedProfileId != null && storedProfileId.isNotEmpty) {
-      return storedProfileId;
-    }
-
-    return user?.id ?? await TokenStorage.getUserId() ?? '';
+    return await TokenStorage.getProfileId() ??
+        await TokenStorage.getUserId() ??
+        '';
   }
 }

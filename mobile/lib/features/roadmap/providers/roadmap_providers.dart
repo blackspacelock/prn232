@@ -1,14 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/models/chat_models.dart';
 import '../../../core/models/job_trend_models.dart';
-import '../../../core/models/portfolio_models.dart';
 import '../../../core/models/profile_models.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/storage/token_storage.dart';
-import '../../ai_mentor/providers/mentor_chat_provider.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../job_trends/providers/market_pulse_provider.dart';
-import '../../portfolio/providers/portfolio_provider.dart';
+import '../../ai_mentor/data/chat_repository_impl.dart';
+import '../../job_trends/data/job_trends_repository_impl.dart';
+import '../../portfolio/data/portfolio_repository_impl.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../data/roadmap_repository.dart';
 import '../data/roadmap_repository_impl.dart';
@@ -18,18 +15,9 @@ final roadmapRepositoryProvider = Provider<RoadmapRepository>(
 );
 
 final profileIdProvider = FutureProvider<String>((ref) async {
-  final user = ref.watch(authProvider).valueOrNull;
-  final authProfileId = user?.profileId;
-  if (authProfileId != null && authProfileId.isNotEmpty) {
-    return authProfileId;
-  }
-
-  final storedProfileId = await TokenStorage.getProfileId();
-  if (storedProfileId != null && storedProfileId.isNotEmpty) {
-    return storedProfileId;
-  }
-
-  return user?.id ?? await TokenStorage.getUserId() ?? '';
+  return await TokenStorage.getProfileId() ??
+      await TokenStorage.getUserId() ??
+      '';
 });
 
 final careerRolesProvider = FutureProvider<List<CareerRoleDto>>((ref) {
@@ -47,27 +35,10 @@ final roadmapsBySelectedRoleProvider =
       .getRoadmapsByRole(selected.careerRoleId);
 });
 
-final roadmapsByRoleProvider =
-    FutureProvider.family<List<CareerRoadmapDto>, String>((ref, roleId) {
-  return ref.watch(roadmapRepositoryProvider).getRoadmapsByRole(roleId);
-});
-
-final careerRoadmapTemplateProvider =
-    FutureProvider.family<CareerRoadmapWithNodesDto, String>((ref, roadmapId) {
-  return ref
-      .watch(roadmapRepositoryProvider)
-      .getCareerRoadmapWithNodes(roadmapId);
-});
-
 final personalRoadmapsProvider =
     FutureProvider<List<PersonalRoadmapDto>>((ref) async {
   final profileId = await ref.watch(profileIdProvider.future);
   return ref.watch(roadmapRepositoryProvider).getPersonalRoadmaps(profileId);
-});
-
-final sharedRoadmapsProvider =
-    FutureProvider<List<PersonalRoadmapDto>>((ref) async {
-  return ref.watch(roadmapRepositoryProvider).getSharedRoadmaps();
 });
 
 final personalRoadmapDetailProvider =
@@ -137,8 +108,8 @@ final trendingSkillRecommendationsProvider =
 });
 
 final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
-  final roadmaps = await ref.watch(personalRoadmapsProvider.future);
   final profileId = await ref.watch(profileIdProvider.future);
+  final roadmaps = await ref.watch(personalRoadmapsProvider.future);
   PersonalRoadmapDto? activeRoadmap;
   for (final roadmap in roadmaps) {
     if (roadmap.isActive) {
@@ -153,39 +124,58 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
               .reduce((a, b) => a + b) /
           roadmaps.length;
 
-  final skills = profileId.isEmpty
-      ? const <SkillDto>[]
-      : await _orDefault(
-          () => ref.read(profileRepositoryProvider).getSkillsByProfile(
-                profileId,
-              ),
-          const <SkillDto>[],
-        );
-  final repos = profileId.isEmpty
-      ? const <GitHubRepositoryDto>[]
-      : await _orDefault(
-          () => ref.read(portfolioRepositoryProvider).getRepos(profileId),
-          const <GitHubRepositoryDto>[],
-        );
-  final skillGap = activeRoadmap == null || profileId.isEmpty
-      ? null
-      : await _orDefault<SkillGapAnalysisDto?>(
-          () => ref.read(roadmapRepositoryProvider).getSkillGapAnalysis(
-                profileId,
-                activeRoadmap!.careerRoadmapId,
-              ),
-          null,
-        );
-  final topSkills = await _orDefault(
-    () => ref.read(jobTrendsRepositoryProvider).getTopTrending(6),
-    const <JobTrendDto>[],
-  );
-  final sessions = profileId.isEmpty
-      ? const <ChatSessionDto>[]
-      : await _orDefault(
-          () => ref.read(chatRepositoryProvider).getSessions(profileId),
-          const <ChatSessionDto>[],
-        );
+  final profileRepo = ref.watch(profileRepositoryProvider);
+  final roadmapRepo = ref.watch(roadmapRepositoryProvider);
+  final portfolioRepo = PortfolioRepositoryImpl();
+  final chatRepo = ChatRepositoryImpl();
+  final trendsRepo = JobTrendsRepositoryImpl();
+
+  final results = await Future.wait<Object>([
+    if (profileId.isEmpty)
+      Future<List<SkillDto>>.value(const [])
+    else
+      profileRepo.getSkillsByProfile(profileId),
+    if (profileId.isEmpty)
+      Future.value(0)
+    else
+      portfolioRepo.getRepos(profileId).then((repos) => repos.length),
+    if (activeRoadmap == null || profileId.isEmpty)
+      Future<SkillGapAnalysisDto>.value(
+        const SkillGapAnalysisDto(
+          coveragePercentage: 0,
+          matchedSkills: [],
+          missingSkills: [],
+          categoryBreakdown: [],
+        ),
+      )
+    else
+      roadmapRepo.getSkillGapAnalysis(
+        profileId,
+        activeRoadmap.careerRoadmapId,
+      ),
+    trendsRepo.getTopTrending(5),
+    if (profileId.isEmpty)
+      Future.value(<MentorSessionSummary>[])
+    else
+      chatRepo.getSessions(profileId).then(
+            (sessions) => sessions
+                .take(3)
+                .map(
+                  (session) => MentorSessionSummary(
+                    title: session.title,
+                    preview: 'Continue this mentor conversation',
+                    dateLabel: _dateLabel(session.createdAt),
+                  ),
+                )
+                .toList(),
+          ),
+  ]);
+
+  final skills = results[0] as List<SkillDto>;
+  final repositoryCount = results[1] as int;
+  final skillGap = results[2] as SkillGapAnalysisDto;
+  final trendingSkills = results[3] as List<JobTrendDto>;
+  final mentorSessions = results[4] as List<MentorSessionSummary>;
 
   return DashboardData(
     roadmaps: roadmaps,
@@ -193,56 +183,35 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
     roadmapCount: roadmaps.length,
     averageProgress: avgProgress,
     skillsCount: skills.length,
-    repositoryCount: repos.length,
-    skillGapCategories: skillGap?.categoryBreakdown
-            .map(
-              (category) => SkillGapCategory(
-                category.category,
-                category.currentScore,
-                category.requiredScore,
-              ),
-            )
-            .toList() ??
-        const [],
-    trendingSkills: topSkills
+    repositoryCount: repositoryCount,
+    skillGapCategories: skillGap.categoryBreakdown
         .map(
-          (skill) => SkillTrend(skill.techSkill, skill.trendScore),
-        )
-        .toList(),
-    recentMentorSessions: sessions
-        .take(2)
-        .map(
-          (session) => MentorSessionSummary(
-            title: session.title,
-            preview: session.messages.isNotEmpty
-                ? session.messages.last.messageContent
-                : 'Continue your AI mentor conversation.',
-            dateLabel: _dateLabel(session.createdAt),
+          (item) => SkillGapCategory(
+            item.category,
+            item.currentScore,
+            item.requiredScore,
           ),
         )
         .toList(),
+    trendingSkills: trendingSkills
+        .map(
+          (item) => SkillTrend(
+            item.techSkill,
+            item.trendScore / 100,
+          ),
+        )
+        .toList(),
+    recentMentorSessions: mentorSessions,
   );
 });
 
-Future<T> _orDefault<T>(Future<T> Function() load, T fallback) async {
-  try {
-    return await load();
-  } catch (_) {
-    return fallback;
-  }
-}
-
 String _dateLabel(String value) {
-  final date = DateTime.tryParse(value)?.toLocal();
-  if (date == null) return '';
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final sessionDay = DateTime(date.year, date.month, date.day);
-  final days = today.difference(sessionDay).inDays;
-  if (days == 0) return 'Today';
-  if (days == 1) return 'Yesterday';
-  if (days < 7) return '${days}d ago';
-  return '${date.month}/${date.day}/${date.year}';
+  final createdAt = DateTime.tryParse(value);
+  if (createdAt == null) return '';
+  final age = DateTime.now().difference(createdAt);
+  if (age.inDays == 0) return 'Today';
+  if (age.inDays == 1) return 'Yesterday';
+  return '${age.inDays} days ago';
 }
 
 class DashboardData {

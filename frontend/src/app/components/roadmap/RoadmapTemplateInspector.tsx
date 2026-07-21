@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, GitBranch, Hash, LogIn, Rocket, Sparkles, X } from 'lucide-react';
+import { ArrowRight, BookOpen, GitBranch, Hash, LogIn, Rocket, X } from 'lucide-react';
 import { Skeleton } from '../Skeleton';
 import { ActionButton, ActionLink } from '../ActionButton';
 import { RoadmapResourceCard } from './RoadmapResourceCard';
@@ -73,39 +73,6 @@ export function RoadmapTemplateInspector({
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
-          <section className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">
-                Technical Skills
-              </p>
-              <span className="inline-flex items-center gap-1 text-xs text-[var(--md3-on-surface-variant)]">
-                <Sparkles className="h-3.5 w-3.5" />
-                {selectedNode?.technicalSkills.length ?? 0}
-              </span>
-            </div>
-            {!selectedNode ? (
-              <p className="text-sm text-[var(--md3-on-surface-variant)]">
-                Select a node to inspect its required skills.
-              </p>
-            ) : selectedNode.technicalSkills.length === 0 ? (
-              <p className="text-sm text-[var(--md3-on-surface-variant)]">
-                No technical skills are attached to this node yet.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {selectedNode.technicalSkills.map((skill) => (
-                  <span
-                    key={skill.id}
-                    className="inline-flex rounded-md border border-[var(--md3-outline-variant)] bg-[var(--md3-surface-container)] px-2.5 py-1 text-xs font-medium text-[var(--md3-on-surface)]"
-                    title={skill.category}
-                  >
-                    {skill.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </section>
-
           <section className="rounded-lg border border-[var(--md3-outline-variant)] bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-xs font-medium uppercase text-[var(--md3-on-surface-variant)]">

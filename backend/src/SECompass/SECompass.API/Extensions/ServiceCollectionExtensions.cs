@@ -60,7 +60,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICareerRoleService, CareerRoleService>();
         services.AddScoped<ICareerRoadmapService, CareerRoadmapService>();
         services.AddScoped<IPersonalRoadmapService, PersonalRoadmapService>();
-        services.AddScoped<IRoadmapTagService, RoadmapTagService>();
         services.AddScoped<INodeService, NodeService>();
         services.AddScoped<INodeProgressService, NodeProgressService>();
         services.AddScoped<ILearningResourceService, LearningResourceService>();

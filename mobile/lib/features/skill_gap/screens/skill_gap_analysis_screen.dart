@@ -19,89 +19,16 @@ class SkillGapAnalysisScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final roadmaps = ref.watch(personalRoadmapsProvider);
-
-    if (careerRoadmapId.isEmpty) {
-      return roadmaps.when(
-        loading: () => const Scaffold(body: _ResultSkeleton()),
-        error: (error, _) => Scaffold(
-          appBar: AppBar(title: const Text('Skill Gap Analysis')),
-          body: EmptyStateView(
-            icon: Icons.error_outline,
-            title: 'Could not load roadmaps',
-            subtitle: error.toString(),
-            actionLabel: 'Retry',
-            onAction: () => ref.invalidate(personalRoadmapsProvider),
-          ),
-        ),
-        data: (items) {
-          PersonalRoadmapDto? active;
-          for (final roadmap in items) {
-            if (roadmap.isActive) {
-              active = roadmap;
-              break;
-            }
-          }
-          if (active == null) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Skill Gap Analysis')),
-              body: EmptyStateView(
-                icon: Icons.radar,
-                title: 'No active roadmap',
-                subtitle:
-                    'Set a roadmap as active to see your skill gap analysis.',
-                actionLabel: 'Go to Roadmaps',
-                onAction: () => context.go('/roadmaps'),
-              ),
-            );
-          }
-          return _SkillGapAnalysisBody(
-            careerRoadmapId: active.careerRoadmapId,
-            roleName: active.displayName,
-          );
-        },
-      );
-    }
-
-    final roleName =
-        ref.watch(selectedCareerRoleProvider)?.name ?? 'target role';
-    return _SkillGapAnalysisBody(
-      careerRoadmapId: careerRoadmapId,
-      roleName: roleName,
-    );
-  }
-}
-
-class _SkillGapAnalysisBody extends ConsumerWidget {
-  const _SkillGapAnalysisBody({
-    required this.careerRoadmapId,
-    required this.roleName,
-  });
-
-  final String careerRoadmapId;
-  final String roleName;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
     final analysis = ref.watch(skillGapAnalysisProvider(careerRoadmapId));
     final trending = ref.watch(trendingSkillRecommendationsProvider);
+    final roleName =
+        ref.watch(selectedCareerRoleProvider)?.name ?? 'target role';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Skill Gap Analysis'),
         actions: [
           IconButton(
-            tooltip: 'Re-analyse',
-            icon: const Icon(Icons.refresh),
-            onPressed: analysis.isLoading
-                ? null
-                : () {
-                    ref.invalidate(skillGapAnalysisProvider(careerRoadmapId));
-                    ref.invalidate(trendingSkillRecommendationsProvider);
-                  },
-          ),
-          IconButton(
-            tooltip: 'Share',
             icon: const Icon(Icons.share_outlined),
             onPressed: analysis.valueOrNull == null
                 ? null
@@ -136,9 +63,6 @@ class _SkillGapAnalysisBody extends ConsumerWidget {
               const SizedBox(height: 20),
               _SkillChipSection(
                 title: 'Skills You Have',
-                subtitle: data.requiredSkills.isEmpty
-                    ? null
-                    : '${data.matchedSkills.length} of ${data.requiredSkills.length} required skills covered',
                 skills: data.matchedSkills,
                 background: AppColors.successContainer,
                 foreground: AppColors.success,
@@ -146,7 +70,6 @@ class _SkillGapAnalysisBody extends ConsumerWidget {
               const SizedBox(height: 16),
               _SkillChipSection(
                 title: 'Skills to Develop',
-                subtitle: '${data.missingSkills.length} skills to develop',
                 skills: data.missingSkills,
                 background: const Color(0xFFFCE8E6),
                 foreground: const Color(0xFFD93025),
@@ -173,12 +96,9 @@ class _SkillGapAnalysisBody extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               AppButton(
-                label: 'Review My Skills',
-                variant: AppButtonVariant.outlined,
-                leadingIcon: const Icon(Icons.tune),
-                onPressed: () => context.go(
-                  '/skill-gap/input?careerRoadmapId=$careerRoadmapId',
-                ),
+                label: 'Go to Learning Resources',
+                leadingIcon: const Icon(Icons.menu_book_outlined),
+                onPressed: () => context.go('/career-roles'),
               ),
             ],
           ),
@@ -188,12 +108,8 @@ class _SkillGapAnalysisBody extends ConsumerWidget {
   }
 
   String _shareText(SkillGapAnalysisDto data, String roleName) {
-    final summary = data.summary == null || data.summary!.isEmpty
-        ? ''
-        : '${data.summary}\n';
     return 'SECompass Skill Gap for $roleName\n'
         'Coverage: ${data.coveragePercentage.round()}%\n'
-        '$summary'
         'Skills I have: ${data.matchedSkills.join(', ')}\n'
         'Skills to develop: ${data.missingSkills.join(', ')}';
   }
@@ -235,17 +151,8 @@ class _CoverageCard extends StatelessWidget {
           LinearProgressBar(
             value: (data.coveragePercentage / 100).clamp(0, 1),
             height: 8,
-            color: color,
+            color: AppColors.success,
           ),
-          if (data.summary != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              data.summary!,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.onSurfaceVariant,
-              ),
-            ),
-          ],
         ],
       ),
     );

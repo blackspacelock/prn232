@@ -6,8 +6,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
-import { AdminFilterSelect, AdminListToolbar, AdminPagination } from '../../components/admin/AdminListControls';
-import { useAdminList } from '../../components/admin/useAdminList';
+import { AdminFilterSelect, AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
 import { apiClient } from '@/lib/axios';
 import type { AdminUpdateUserDto, UserDto } from '@/types/api';
 
@@ -70,7 +69,7 @@ export function AdminUsersPage() {
     },
   });
 
-  const users = useMemo(() => data ?? [], [data]);
+  const users = data ?? [];
   const normalUsers = useMemo(() => users.filter((u) => u.role !== 0), [users]);
   const filteredByFacets = useMemo(() => {
     return users.filter((user) => {

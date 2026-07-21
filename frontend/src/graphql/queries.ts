@@ -98,11 +98,6 @@ export const GET_CAREER_ROADMAP_WITH_NODES = gql`
           description
           order
           createdAt
-          technicalSkills {
-            id
-            name
-            category
-          }
         }
       }
       edges {
@@ -179,19 +174,8 @@ export const GET_PERSONAL_ROADMAPS_BY_PROFILE = gql`
       careerRoadmapDescription
       note
       progressPercentage
-      inProgressCount
       isActive
-      isShared
-      sharedAt
-      ownerName
       createdAt
-      tags {
-        id
-        personalRoadmapId
-        name
-        color
-        createdAt
-      }
     }
   }
 `;
@@ -207,17 +191,7 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
       note
       progressPercentage
       isActive
-      isShared
-      sharedAt
-      ownerName
       createdAt
-      tags {
-        id
-        personalRoadmapId
-        name
-        color
-        createdAt
-      }
       nodeProgresses {
         id
         personalRoadmapId
@@ -243,11 +217,6 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
             name
             description
             order
-            technicalSkills {
-              id
-              name
-              category
-            }
           }
         }
         node {
@@ -256,109 +225,6 @@ export const GET_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
           name
           description
           order
-          technicalSkills {
-            id
-            name
-            category
-          }
-        }
-      }
-    }
-  }
-`;
-
-export const GET_SHARED_PERSONAL_ROADMAPS = gql`
-  query GetSharedPersonalRoadmaps {
-    sharedPersonalRoadmaps {
-      id
-      profileId
-      careerRoadmapId
-      careerRoadmapName
-      careerRoadmapDescription
-      note
-      progressPercentage
-      inProgressCount
-      isActive
-      isShared
-      sharedAt
-      ownerName
-      createdAt
-      tags {
-        id
-        personalRoadmapId
-        name
-        color
-        createdAt
-      }
-    }
-  }
-`;
-
-export const GET_SHARED_PERSONAL_ROADMAP_WITH_PROGRESS = gql`
-  query GetSharedPersonalRoadmapWithProgress($personalRoadmapId: UUID!) {
-    sharedPersonalRoadmapWithProgress(personalRoadmapId: $personalRoadmapId) {
-      id
-      profileId
-      careerRoadmapId
-      careerRoadmapName
-      careerRoadmapDescription
-      note
-      progressPercentage
-      isActive
-      isShared
-      sharedAt
-      ownerName
-      createdAt
-      tags {
-        id
-        personalRoadmapId
-        name
-        color
-        createdAt
-      }
-      nodeProgresses {
-        id
-        personalRoadmapId
-        roadmapNodeId
-        nodeId
-        status
-        note
-        createdAt
-        roadmapNode {
-          id
-          careerRoadmapId
-          nodeId
-          parentRoadmapNodeId
-          order
-          nodeType
-          requirementType
-          positionX
-          positionY
-          createdAt
-          node {
-            id
-            parentNodeId
-            name
-            description
-            order
-            technicalSkills {
-              id
-              name
-              category
-            }
-          }
-        }
-        node {
-          id
-          parentNodeId
-          name
-          description
-          order
-          technicalSkills {
-            id
-            name
-            category
-          }
         }
       }
     }
@@ -390,11 +256,6 @@ export const GET_NODE_PROGRESS = gql`
           name
           description
           order
-          technicalSkills {
-            id
-            name
-            category
-          }
         }
       }
       node {
@@ -402,11 +263,6 @@ export const GET_NODE_PROGRESS = gql`
         name
         description
         order
-        technicalSkills {
-          id
-          name
-          category
-        }
       }
     }
   }

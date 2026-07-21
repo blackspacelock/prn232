@@ -21,12 +21,12 @@ import { apiClient } from '@/lib/axios';
 import type { AdminOverviewDto } from '@/types/api';
 import {
   AdminStatCard,
+  CHART_COLORS,
   SectionHeader,
   StatusBadgeRow,
   TrendListRow,
   UserListRow,
 } from '../../components/admin/AdminDataWidgets';
-import { CHART_COLORS } from '../../components/admin/adminChartColors';
 
 export function AdminDashboardPage() {
   const { data, isLoading, error, refetch } = useRestQuery({

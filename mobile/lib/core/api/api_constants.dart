@@ -4,10 +4,16 @@ class ApiConstants {
   // Override this at runtime via envied or .env
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://localhost:7210',
+    defaultValue:
+        'https://secompass-api-gndnb0erdecjf2d0.southeastasia-01.azurewebsites.net',
   );
 
   static const graphqlEndpoint = '$baseUrl/graphql';
+  static const googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue:
+        '1066573154515-pgiqct5pra74rj7bc2583kbo3lgvfgot.apps.googleusercontent.com',
+  );
 
   // Auth
   static const login = '/api/auth/login';
@@ -20,7 +26,6 @@ class ApiConstants {
   static const profiles = '/api/profiles';
 
   // Roadmaps
-  static const careerRoadmaps = '/api/career-roadmaps';
   static const personalRoadmaps = '/api/personal-roadmaps';
   static const nodeProgress = '/api/node-progress';
 
@@ -32,7 +37,6 @@ class ApiConstants {
 
   // Portfolio
   static const githubRepositories = '/api/github-repositories';
-  static const publicPortfolios = '/api/public-portfolios';
 
   // Users
   static const users = '/api/users';
