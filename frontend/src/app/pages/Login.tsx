@@ -9,6 +9,7 @@ import { Snackbar } from '../components/Snackbar';
 import { PublicLayout } from '../components/PublicLayout';
 import { apiClient } from '@/lib/axios';
 import { mapAuthResponse } from '@/lib/authMapper';
+import { getPostAuthRedirect, getRoleHomePath } from '@/lib/authRedirect';
 import { useAuthStore } from '@/store/authStore';
 import type { AuthResponseDto, LoginUserDto, GoogleLoginDto } from '@/types/api';
 
@@ -18,7 +19,6 @@ export function LoginPage() {
   const { isAuthenticated, _initialized, user } = useAuthStore();
   const setAuth = useAuthStore((s) => s.setAuth);
   const from = (location.state as { from?: string })?.from;
-  const getDefaultRedirect = (role: string) => (role === 'Admin' ? '/admin' : '/dashboard');
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -33,7 +33,7 @@ export function LoginPage() {
     onSuccess: (data) => {
       const { user: mappedUser, accessToken, refreshToken } = mapAuthResponse(data);
       setAuth(accessToken, mappedUser, refreshToken);
-      navigate(from ?? getDefaultRedirect(mappedUser.role), { replace: true });
+      navigate(getPostAuthRedirect(mappedUser.role, from), { replace: true });
     },
     onError: (error: unknown) => {
       const msg =
@@ -49,7 +49,7 @@ export function LoginPage() {
     onSuccess: (data) => {
       const { user: mappedUser, accessToken, refreshToken } = mapAuthResponse(data);
       setAuth(accessToken, mappedUser, refreshToken);
-      navigate(from ?? getDefaultRedirect(mappedUser.role), { replace: true });
+      navigate(getPostAuthRedirect(mappedUser.role, from), { replace: true });
     },
     onError: (error: unknown) => {
       const msg =
@@ -65,7 +65,7 @@ export function LoginPage() {
   };
 
   if (_initialized && isAuthenticated) {
-    return <Navigate to={from ?? getDefaultRedirect(user?.role ?? '')} replace />;
+    return <Navigate to={user ? getPostAuthRedirect(user.role, from) : getRoleHomePath(null)} replace />;
   }
 
   return (

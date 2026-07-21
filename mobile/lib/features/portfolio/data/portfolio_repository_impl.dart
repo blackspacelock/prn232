@@ -9,6 +9,7 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
   PortfolioRepositoryImpl({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
   final Dio _dio;
+  static const _cascadeDeleteQuery = {'delete': true};
 
   @override
   Future<List<GitHubRepositoryDto>> getRepos(String profileId) async {
@@ -58,7 +59,10 @@ class PortfolioRepositoryImpl implements PortfolioRepository {
   @override
   Future<void> deleteRepo(String id) async {
     try {
-      await _dio.delete('${ApiConstants.githubRepositories}/$id');
+      await _dio.delete(
+        '${ApiConstants.githubRepositories}/$id',
+        queryParameters: _cascadeDeleteQuery,
+      );
     } on DioException catch (e) {
       _throwMapped(e);
     }

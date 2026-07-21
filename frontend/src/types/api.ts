@@ -241,6 +241,7 @@ export interface NodeDto {
   description?: string;
   order: number;
   createdAt?: string;
+  technicalSkills: TechnicalSkillDto[];
 }
 
 export interface RoadmapNodeDto {
@@ -259,21 +260,27 @@ export interface RoadmapNodeDto {
 
 export interface CreateRoadmapNodeDto {
   nodeId: string;
+  previousRoadmapNodeId?: string;
   parentRoadmapNodeId?: string;
+  branchRoadmapNodeId?: string;
   order: number;
   nodeType?: string;
   requirementType?: string;
   positionX?: number;
   positionY?: number;
+  technicalSkillIds?: string[];
 }
 
 export interface UpdateRoadmapNodeDto {
+  previousRoadmapNodeId?: string;
   parentRoadmapNodeId?: string;
+  branchRoadmapNodeId?: string;
   order?: number;
   nodeType?: string;
   requirementType?: string;
   positionX?: number;
   positionY?: number;
+  technicalSkillIds?: string[];
 }
 
 export interface RoadmapNodeEdgeDto {
@@ -308,6 +315,9 @@ export interface PersonalRoadmapDto {
   progressPercentage: number;
   inProgressCount: number;
   isActive: boolean;
+  isShared: boolean;
+  sharedAt?: string;
+  ownerName?: string;
   createdAt: string;
   tags: RoadmapTagDto[];
 }
@@ -321,6 +331,10 @@ export interface PersonalRoadmapDetailDto {
   note?: string;
   progressPercentage: number;
   isActive: boolean;
+  isShared: boolean;
+  sharedAt?: string;
+  ownerName?: string;
+  createdAt: string;
   nodeProgresses: NodeProgressDto[];
   tags: RoadmapTagDto[];
 }
@@ -349,6 +363,37 @@ export interface UpdateRoadmapTagDto {
 export interface GeneratePersonalRoadmapRequestDto {
   profileId: string;
   careerRoadmapId: string;
+}
+
+export interface CopySharedRoadmapRequestDto {
+  profileId: string;
+}
+
+export interface CreatePersonalRoadmapStepDto {
+  name: string;
+  description?: string;
+  previousStepIndex?: number;
+  parentStepIndex?: number;
+  branchStepIndex?: number;
+  positionX?: number;
+  positionY?: number;
+  technicalSkillIds?: string[];
+  learningResources?: Array<{
+    name: string;
+    resourceUrl: string;
+    resourceType: string;
+    provider?: string;
+    isFree: boolean;
+  }>;
+}
+
+export interface CreatePersonalRoadmapDto {
+  profileId: string;
+  careerRoleId: string;
+  name: string;
+  description?: string;
+  desire?: string;
+  steps: CreatePersonalRoadmapStepDto[];
 }
 
 export interface RoadmapNodeData {

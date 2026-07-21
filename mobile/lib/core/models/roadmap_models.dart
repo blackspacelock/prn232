@@ -1,3 +1,5 @@
+import 'profile_models.dart';
+
 class CareerRoleDto {
   const CareerRoleDto({
     required this.careerRoleId,
@@ -54,6 +56,7 @@ class NodeDto {
     required this.order,
     this.description,
     this.parentNodeId,
+    this.technicalSkills = const [],
   });
 
   final String nodeId;
@@ -61,14 +64,24 @@ class NodeDto {
   final int order;
   final String? description;
   final String? parentNodeId;
+  final List<TechnicalSkillDto> technicalSkills;
 
-  factory NodeDto.fromJson(Map<String, dynamic> json) => NodeDto(
-        nodeId: (json['nodeId'] ?? json['id']).toString(),
-        name: (json['name'] ?? json['title'] ?? 'Roadmap Node').toString(),
-        order: json['order'] as int? ?? 0,
-        description: json['description'] as String?,
-        parentNodeId: json['parentNodeId'] as String?,
-      );
+  factory NodeDto.fromJson(Map<String, dynamic> json) {
+    final skills = json['technicalSkills'];
+    return NodeDto(
+      nodeId: (json['nodeId'] ?? json['id']).toString(),
+      name: (json['name'] ?? json['title'] ?? 'Roadmap Node').toString(),
+      order: json['order'] as int? ?? 0,
+      description: json['description'] as String?,
+      parentNodeId: json['parentNodeId'] as String?,
+      technicalSkills: skills is List
+          ? skills
+              .whereType<Map<String, dynamic>>()
+              .map(TechnicalSkillDto.fromJson)
+              .toList()
+          : const [],
+    );
+  }
 }
 
 class NodeProgressDto {
@@ -113,6 +126,9 @@ class PersonalRoadmapDto {
     required this.progressPercentage,
     required this.isActive,
     required this.createdAt,
+    this.isShared = false,
+    this.sharedAt,
+    this.ownerName,
     this.careerRoadmapName,
     this.careerRoadmapDescription,
     this.note,
@@ -131,6 +147,9 @@ class PersonalRoadmapDto {
   final double progressPercentage;
   final int inProgressCount;
   final bool isActive;
+  final bool isShared;
+  final String? sharedAt;
+  final String? ownerName;
   final String createdAt;
   final CareerRoadmapDto? careerRoadmap;
   final List<NodeProgressDto> nodeProgresses;
@@ -155,6 +174,9 @@ class PersonalRoadmapDto {
       progressPercentage: (json['progressPercentage'] as num?)?.toDouble() ?? 0,
       inProgressCount: json['inProgressCount'] as int? ?? 0,
       isActive: json['isActive'] as bool? ?? false,
+      isShared: json['isShared'] as bool? ?? false,
+      sharedAt: json['sharedAt']?.toString(),
+      ownerName: json['ownerName'] as String?,
       createdAt: (json['createdAt'] ?? '').toString(),
       careerRoadmap: json['careerRoadmap'] is Map<String, dynamic>
           ? CareerRoadmapDto.fromJson(
@@ -178,6 +200,9 @@ class PersonalRoadmapDto {
 
   PersonalRoadmapDto copyWith({
     bool? isActive,
+    bool? isShared,
+    String? sharedAt,
+    String? ownerName,
     List<RoadmapTagDto>? tags,
   }) {
     return PersonalRoadmapDto(
@@ -190,6 +215,9 @@ class PersonalRoadmapDto {
       progressPercentage: progressPercentage,
       inProgressCount: inProgressCount,
       isActive: isActive ?? this.isActive,
+      isShared: isShared ?? this.isShared,
+      sharedAt: sharedAt ?? this.sharedAt,
+      ownerName: ownerName ?? this.ownerName,
       createdAt: createdAt,
       careerRoadmap: careerRoadmap,
       nodeProgresses: nodeProgresses,
@@ -268,6 +296,71 @@ class RoadmapTemplateNodeDto {
             ? NodeDto.fromJson(json['node'] as Map<String, dynamic>)
             : null,
       );
+}
+
+class CreateRoadmapNodeDto {
+  const CreateRoadmapNodeDto({
+    required this.nodeId,
+    required this.order,
+    this.parentRoadmapNodeId,
+    this.nodeType,
+    this.requirementType,
+    this.positionX,
+    this.positionY,
+    this.technicalSkillIds = const [],
+  });
+
+  final String nodeId;
+  final String? parentRoadmapNodeId;
+  final int order;
+  final String? nodeType;
+  final String? requirementType;
+  final int? positionX;
+  final int? positionY;
+  final List<String> technicalSkillIds;
+
+  Map<String, dynamic> toJson() => {
+        'nodeId': nodeId,
+        'order': order,
+        if (parentRoadmapNodeId != null)
+          'parentRoadmapNodeId': parentRoadmapNodeId,
+        if (nodeType != null) 'nodeType': nodeType,
+        if (requirementType != null) 'requirementType': requirementType,
+        if (positionX != null) 'positionX': positionX,
+        if (positionY != null) 'positionY': positionY,
+        'technicalSkillIds': technicalSkillIds,
+      };
+}
+
+class UpdateRoadmapNodeDto {
+  const UpdateRoadmapNodeDto({
+    this.parentRoadmapNodeId,
+    this.order,
+    this.nodeType,
+    this.requirementType,
+    this.positionX,
+    this.positionY,
+    this.technicalSkillIds,
+  });
+
+  final String? parentRoadmapNodeId;
+  final int? order;
+  final String? nodeType;
+  final String? requirementType;
+  final int? positionX;
+  final int? positionY;
+  final List<String>? technicalSkillIds;
+
+  Map<String, dynamic> toJson() => {
+        if (parentRoadmapNodeId != null)
+          'parentRoadmapNodeId': parentRoadmapNodeId,
+        if (order != null) 'order': order,
+        if (nodeType != null) 'nodeType': nodeType,
+        if (requirementType != null) 'requirementType': requirementType,
+        if (positionX != null) 'positionX': positionX,
+        if (positionY != null) 'positionY': positionY,
+        if (technicalSkillIds != null) 'technicalSkillIds': technicalSkillIds,
+      };
 }
 
 class RoadmapTemplateEdgeDto {

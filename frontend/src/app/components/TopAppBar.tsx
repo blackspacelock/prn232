@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Search, Bell, Settings, LogOut } from 'lucide-react';
+import { Bell, Settings, LogOut } from 'lucide-react';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
 import { GET_USER_BY_ID } from '@/graphql/queries';
@@ -102,16 +102,6 @@ export function TopAppBar({ breadcrumb, breadcrumbs, showProgress }: TopAppBarPr
 
       {/* Actions */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => {
-            const input = document.querySelector<HTMLInputElement>('input[placeholder*="Search"], input[placeholder*="Filter"]');
-            if (input) { input.focus(); input.select(); }
-          }}
-          className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[var(--md3-surface-variant)]"
-          aria-label="Search"
-        >
-          <Search className="w-6 h-6 text-[var(--md3-on-surface-variant)]" />
-        </button>
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button

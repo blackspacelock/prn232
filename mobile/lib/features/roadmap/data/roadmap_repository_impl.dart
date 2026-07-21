@@ -8,6 +8,7 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   RoadmapRepositoryImpl({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
   final Dio _dio;
+  static const _cascadeDeleteQuery = {'delete': true};
 
   @override
   Future<List<CareerRoleDto>> getCareerRoles() async {
@@ -42,6 +43,46 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   }
 
   @override
+  Future<RoadmapTemplateNodeDto> assignRoadmapNode(
+    String careerRoadmapId,
+    CreateRoadmapNodeDto dto,
+  ) async {
+    final response = await _dio.post(
+      '${ApiConstants.careerRoadmaps}/$careerRoadmapId/roadmap-nodes',
+      data: dto.toJson(),
+    );
+    return RoadmapTemplateNodeDto.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  @override
+  Future<RoadmapTemplateNodeDto> updateRoadmapNode(
+    String careerRoadmapId,
+    String roadmapNodeId,
+    UpdateRoadmapNodeDto dto,
+  ) async {
+    final response = await _dio.put(
+      '${ApiConstants.careerRoadmaps}/$careerRoadmapId/roadmap-nodes/$roadmapNodeId',
+      data: dto.toJson(),
+    );
+    return RoadmapTemplateNodeDto.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  @override
+  Future<void> deleteRoadmapNode(
+    String careerRoadmapId,
+    String roadmapNodeId,
+  ) async {
+    await _dio.delete(
+      '${ApiConstants.careerRoadmaps}/$careerRoadmapId/roadmap-nodes/$roadmapNodeId',
+      queryParameters: _cascadeDeleteQuery,
+    );
+  }
+
+  @override
   Future<List<PersonalRoadmapDto>> getPersonalRoadmaps(String profileId) async {
     if (profileId.isEmpty) return const [];
     final data = await _query(
@@ -49,6 +90,17 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
       variables: {'profileId': profileId},
     );
     return _asList(data['personalRoadmapsByProfile'])
+        .map(PersonalRoadmapDto.fromJson)
+        .toList();
+  }
+
+  @override
+  Future<List<PersonalRoadmapDto>> getSharedRoadmaps() async {
+    final response = await _dio.get('${ApiConstants.personalRoadmaps}/shared');
+    final data = response.data;
+    if (data is! List) return const [];
+    return data
+        .whereType<Map<String, dynamic>>()
         .map(PersonalRoadmapDto.fromJson)
         .toList();
   }
@@ -86,9 +138,48 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   }
 
   @override
+  Future<PersonalRoadmapDto> copySharedRoadmap(
+    String profileId,
+    String sharedPersonalRoadmapId,
+  ) async {
+    final response = await _dio.post(
+      '${ApiConstants.personalRoadmaps}/shared/$sharedPersonalRoadmapId/copy',
+      data: {'profileId': profileId},
+    );
+    return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<PersonalRoadmapDto> createPersonalRoadmap({
+    required String profileId,
+    required String careerRoleId,
+    required String name,
+    String? description,
+    String? desire,
+    required List<Map<String, String>> steps,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.personalRoadmaps,
+      data: {
+        'profileId': profileId,
+        'careerRoleId': careerRoleId,
+        'name': name,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+        if (desire != null && desire.isNotEmpty) 'desire': desire,
+        'steps': steps,
+      },
+    );
+    return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
   Future<void> deleteRoadmap(String personalRoadmapId) async {
     try {
-      await _dio.delete('${ApiConstants.personalRoadmaps}/$personalRoadmapId');
+      await _dio.delete(
+        '${ApiConstants.personalRoadmaps}/$personalRoadmapId',
+        queryParameters: _cascadeDeleteQuery,
+      );
     } on DioException {
       return;
     }
@@ -103,6 +194,13 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     } on DioException {
       return;
     }
+  }
+
+  @override
+  Future<void> toggleSharedRoadmap(String personalRoadmapId) async {
+    await _dio.put(
+      '${ApiConstants.personalRoadmaps}/$personalRoadmapId/toggle-shared',
+    );
   }
 
   @override
@@ -160,6 +258,7 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     try {
       await _dio.delete(
         '${ApiConstants.personalRoadmaps}/$personalRoadmapId/tags/$tagId',
+        queryParameters: _cascadeDeleteQuery,
       );
     } on DioException {
       return;
@@ -312,6 +411,11 @@ query MobileCareerRoadmapWithNodes($roadmapId: UUID!) {
         name
         description
         order
+        technicalSkills {
+          id
+          name
+          category
+        }
       }
     }
     edges {
@@ -338,6 +442,9 @@ query MobilePersonalRoadmapsByProfile($profileId: UUID!) {
     progressPercentage
     inProgressCount
     isActive
+    isShared
+    sharedAt
+    ownerName
     createdAt
     tags {
       id
@@ -361,6 +468,9 @@ query MobilePersonalRoadmapWithProgress($personalRoadmapId: UUID!) {
     note
     progressPercentage
     isActive
+    isShared
+    sharedAt
+    ownerName
     createdAt
     tags {
       id
@@ -383,6 +493,11 @@ query MobilePersonalRoadmapWithProgress($personalRoadmapId: UUID!) {
         name
         description
         order
+        technicalSkills {
+          id
+          name
+          category
+        }
       }
     }
   }

@@ -20,6 +20,7 @@ class ApiConstants {
   static const profiles = '/api/profiles';
 
   // Roadmaps
+  static const careerRoadmaps = '/api/career-roadmaps';
   static const personalRoadmaps = '/api/personal-roadmaps';
   static const nodeProgress = '/api/node-progress';
 

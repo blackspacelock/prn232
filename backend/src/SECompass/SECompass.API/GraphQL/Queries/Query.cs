@@ -91,9 +91,21 @@ public class Query
         return result.Success ? result.Data! : new();
     }
 
+    public async Task<List<PersonalRoadmapDto>> GetSharedPersonalRoadmaps([Service] IPersonalRoadmapService service)
+    {
+        var result = await service.GetSharedAsync();
+        return result.Success ? result.Data! : new();
+    }
+
     public async Task<PersonalRoadmapDetailDto?> GetPersonalRoadmapWithProgress([Service] IPersonalRoadmapService service, Guid personalRoadmapId)
     {
         var result = await service.GetWithProgressAsync(personalRoadmapId);
+        return result.Success ? result.Data : null;
+    }
+
+    public async Task<PersonalRoadmapDetailDto?> GetSharedPersonalRoadmapWithProgress([Service] IPersonalRoadmapService service, Guid personalRoadmapId)
+    {
+        var result = await service.GetSharedWithProgressAsync(personalRoadmapId);
         return result.Success ? result.Data : null;
     }
 
