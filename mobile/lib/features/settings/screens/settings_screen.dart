@@ -1,5 +1,10 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/app_exception.dart';
 import '../../../core/models/profile_models.dart';
@@ -40,10 +45,207 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             _SkillsSection(data: data),
             const SizedBox(height: 16),
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+              const _MessagingSection(),
+              const SizedBox(height: 16),
+            ],
             _SecuritySection(email: data.user.email),
+            if (kDebugMode &&
+                defaultTargetPlatform == TargetPlatform.android) ...[
+              const SizedBox(height: 16),
+              const _FirebaseTestSection(),
+            ],
             const SizedBox(height: 16),
             _DangerZone(),
             const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MessagingSection extends StatefulWidget {
+  const _MessagingSection();
+
+  @override
+  State<_MessagingSection> createState() => _MessagingSectionState();
+}
+
+class _MessagingSectionState extends State<_MessagingSection> {
+  String? _token;
+  bool _loading = false;
+
+  Future<void> _enable() async {
+    setState(() => _loading = true);
+    try {
+      final settings = await FirebaseMessaging.instance.requestPermission();
+      final allowed =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+              settings.authorizationStatus == AuthorizationStatus.provisional;
+      if (!allowed) {
+        if (mounted)
+          AppSnackbar.showError(context, 'Notification permission denied');
+        return;
+      }
+
+      await FirebaseMessaging.instance.subscribeToTopic('secompass_updates');
+      final token = await FirebaseMessaging.instance.getToken();
+      await FirebaseAnalytics.instance.logEvent(name: 'notifications_enabled');
+      if (!mounted) return;
+      setState(() => _token = token);
+      AppSnackbar.showSuccess(context, 'Notifications enabled');
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _copyToken() async {
+    final token = _token;
+    if (token == null) return;
+    await Clipboard.setData(ClipboardData(text: token));
+    if (mounted) AppSnackbar.showSuccess(context, 'FCM token copied');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 36),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      shape: const StadiumBorder(),
+      textStyle: AppTextStyles.labelSmall,
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Notifications', style: AppTextStyles.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'Receive SECompass announcements through Firebase Messaging.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  style: style,
+                  icon: _loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.notifications_active_outlined,
+                          size: 16),
+                  label: const Text('Enable'),
+                  onPressed: _loading ? null : _enable,
+                ),
+                if (_token != null)
+                  OutlinedButton.icon(
+                    style: style,
+                    icon: const Icon(Icons.copy_outlined, size: 16),
+                    label: const Text('Copy token'),
+                    onPressed: _copyToken,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FirebaseTestSection extends StatelessWidget {
+  const _FirebaseTestSection();
+
+  Future<void> _testHandledException(BuildContext context) async {
+    try {
+      throw StateError('Manual handled exception test');
+    } catch (error, stack) {
+      await FirebaseAnalytics.instance.logEvent(name: 'firebase_debug_test');
+      await FirebaseCrashlytics.instance.recordError(
+        error,
+        stack,
+        reason: 'Settings handled exception test',
+      );
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, 'Test event and exception sent');
+      }
+    }
+  }
+
+  Future<void> _testCrash(BuildContext context) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Test app crash?',
+      message:
+          'The app will close immediately. Reopen it to upload the crash report.',
+      confirmLabel: 'Crash App',
+      isDanger: true,
+    );
+    if (confirmed != true) return;
+
+    await FirebaseAnalytics.instance.logEvent(name: 'firebase_crash_test');
+    FirebaseCrashlytics.instance.log('Manual crash test from Settings');
+    FirebaseCrashlytics.instance.crash();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 36),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      shape: const StadiumBorder(),
+      textStyle: AppTextStyles.labelSmall,
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Firebase Tests', style: AppTextStyles.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'Debug builds only',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  style: style,
+                  icon: const Icon(Icons.bug_report_outlined, size: 16),
+                  label: const Text('Handled error'),
+                  onPressed: () => _testHandledException(context),
+                ),
+                OutlinedButton.icon(
+                  style: style.copyWith(
+                    foregroundColor:
+                        const WidgetStatePropertyAll(AppColors.error),
+                  ),
+                  icon: const Icon(Icons.warning_amber_rounded, size: 16),
+                  label: const Text('Crash app'),
+                  onPressed: () => _testCrash(context),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -72,15 +274,16 @@ class _AccountSection extends ConsumerWidget {
           children: [
             CircleAvatar(
               radius: 32,
-              backgroundImage: user.avatarUrl != null
-                  ? NetworkImage(user.avatarUrl!)
-                  : null,
+              backgroundImage:
+                  user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
               backgroundColor: AppColors.primaryContainer,
               child: user.avatarUrl == null
                   ? Text(
                       initials,
                       style: const TextStyle(
-                          fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold),
                     )
                   : null,
             ),
@@ -93,7 +296,8 @@ class _AccountSection extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(
               user.email,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.onSurfaceVariant),
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Container(
@@ -102,7 +306,9 @@ class _AccountSection extends ConsumerWidget {
                 color: AppColors.primaryContainer.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(roleName, style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary)),
+              child: Text(roleName,
+                  style: AppTextStyles.labelSmall
+                      .copyWith(color: AppColors.primary)),
             ),
             const SizedBox(height: 16),
             AppButton(
@@ -130,7 +336,8 @@ class _AccountSection extends ConsumerWidget {
         _ => 'Student',
       };
 
-  void _showAccountEditSheet(BuildContext context, WidgetRef ref, SettingsData data) {
+  void _showAccountEditSheet(
+      BuildContext context, WidgetRef ref, SettingsData data) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -195,7 +402,8 @@ class _AccountEditSheetState extends State<_AccountEditSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          16, 0, 16, MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +449,8 @@ class _PersonalInfoSection extends ConsumerStatefulWidget {
   final SettingsData data;
 
   @override
-  ConsumerState<_PersonalInfoSection> createState() => _PersonalInfoSectionState();
+  ConsumerState<_PersonalInfoSection> createState() =>
+      _PersonalInfoSectionState();
 }
 
 class _PersonalInfoSectionState extends ConsumerState<_PersonalInfoSection> {
@@ -287,10 +496,15 @@ class _PersonalInfoSectionState extends ConsumerState<_PersonalInfoSection> {
     setState(() => _isSaving = true);
     try {
       await ref.read(settingsProvider.notifier).updateProfile(UpdateProfileDto(
-            bioDescription: _bioCtrl.text.trim().isEmpty ? null : _bioCtrl.text.trim(),
-            phoneNumber: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-            university: _universityCtrl.text.trim().isEmpty ? null : _universityCtrl.text.trim(),
-            major: _majorCtrl.text.trim().isEmpty ? null : _majorCtrl.text.trim(),
+            bioDescription:
+                _bioCtrl.text.trim().isEmpty ? null : _bioCtrl.text.trim(),
+            phoneNumber:
+                _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+            university: _universityCtrl.text.trim().isEmpty
+                ? null
+                : _universityCtrl.text.trim(),
+            major:
+                _majorCtrl.text.trim().isEmpty ? null : _majorCtrl.text.trim(),
             studiedYear: _studiedYear,
           ));
       setState(() => _isEditing = false);
@@ -371,7 +585,9 @@ class _ReadView extends StatelessWidget {
         _InfoRow(label: 'Major', value: profile.major),
         _InfoRow(
           label: 'Year of Study',
-          value: profile.studiedYear != null ? 'Year ${profile.studiedYear}' : null,
+          value: profile.studiedYear != null
+              ? 'Year ${profile.studiedYear}'
+              : null,
         ),
       ],
     );
@@ -394,7 +610,8 @@ class _InfoRow extends StatelessWidget {
             width: 100,
             child: Text(
               label,
-              style: AppTextStyles.labelMedium.copyWith(color: AppColors.onSurfaceVariant),
+              style: AppTextStyles.labelMedium
+                  .copyWith(color: AppColors.onSurfaceVariant),
             ),
           ),
           Expanded(
@@ -468,13 +685,15 @@ class _EditForm extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Year of Study',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           ),
           items: [
             const DropdownMenuItem(value: null, child: Text('Not specified')),
             ...List.generate(
               5,
-              (i) => DropdownMenuItem(value: i + 1, child: Text('Year ${i + 1}')),
+              (i) =>
+                  DropdownMenuItem(value: i + 1, child: Text('Year ${i + 1}')),
             ),
           ],
           onChanged: onYearChanged,
@@ -518,10 +737,12 @@ class _SkillsSectionState extends ConsumerState<_SkillsSection> {
   List<TechnicalSkillDto> get _suggestions {
     if (_searchText.isEmpty) return const [];
     final q = _searchText.toLowerCase();
-    final existing = widget.data.skills.map((s) => s.skillName.toLowerCase()).toSet();
+    final existing =
+        widget.data.skills.map((s) => s.skillName.toLowerCase()).toSet();
     return widget.data.technicalSkills
         .where((s) =>
-            s.skillName.toLowerCase().contains(q) && !existing.contains(s.skillName.toLowerCase()))
+            s.skillName.toLowerCase().contains(q) &&
+            !existing.contains(s.skillName.toLowerCase()))
         .take(6)
         .toList();
   }
@@ -566,7 +787,8 @@ class _SkillsSectionState extends ConsumerState<_SkillsSection> {
                 const Spacer(),
                 Text(
                   '${skills.length} / 50',
-                  style: AppTextStyles.labelSmall.copyWith(color: AppColors.onSurfaceVariant),
+                  style: AppTextStyles.labelSmall
+                      .copyWith(color: AppColors.onSurfaceVariant),
                 ),
               ],
             ),
@@ -577,10 +799,12 @@ class _SkillsSectionState extends ConsumerState<_SkillsSection> {
                 runSpacing: 6,
                 children: skills
                     .map((skill) => InputChip(
-                          label: Text(skill.skillName, style: AppTextStyles.labelSmall),
+                          label: Text(skill.skillName,
+                              style: AppTextStyles.labelSmall),
                           backgroundColor: _skillColor(skill.skillName),
                           deleteIcon: const Icon(Icons.close, size: 14),
-                          onDeleted: () => _removeSkill(skill.skillId, skill.skillName),
+                          onDeleted: () =>
+                              _removeSkill(skill.skillId, skill.skillName),
                         ))
                     .toList(),
               ),
@@ -593,8 +817,10 @@ class _SkillsSectionState extends ConsumerState<_SkillsSection> {
                 decoration: InputDecoration(
                   hintText: 'Search and add a skill…',
                   prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 ),
                 onChanged: (v) => setState(() {
                   _searchText = v;
@@ -608,14 +834,18 @@ class _SkillsSectionState extends ConsumerState<_SkillsSection> {
                     color: AppColors.surfaceContainerLowest,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppColors.outlineVariant),
-                    boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black12)],
+                    boxShadow: const [
+                      BoxShadow(blurRadius: 4, color: Colors.black12)
+                    ],
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: suggestions
                         .map((s) => ListTile(
-                              title: Text(s.skillName, style: AppTextStyles.bodyMedium),
-                              subtitle: Text(s.category, style: AppTextStyles.labelSmall),
+                              title: Text(s.skillName,
+                                  style: AppTextStyles.bodyMedium),
+                              subtitle: Text(s.category,
+                                  style: AppTextStyles.labelSmall),
                               dense: true,
                               onTap: () => _addSkill(s.skillName),
                             ))
@@ -661,11 +891,13 @@ class _SecuritySection extends StatelessWidget {
             const Divider(height: 20),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.email_outlined, color: AppColors.primary),
+              leading:
+                  const Icon(Icons.email_outlined, color: AppColors.primary),
               title: Text(email, style: AppTextStyles.bodyMedium),
               subtitle: Text(
                 'Primary account credential',
-                style: AppTextStyles.labelSmall.copyWith(color: AppColors.onSurfaceVariant),
+                style: AppTextStyles.labelSmall
+                    .copyWith(color: AppColors.onSurfaceVariant),
               ),
               trailing: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -675,7 +907,8 @@ class _SecuritySection extends StatelessWidget {
                 ),
                 child: Text(
                   'Verified',
-                  style: AppTextStyles.labelSmall.copyWith(color: AppColors.success),
+                  style: AppTextStyles.labelSmall
+                      .copyWith(color: AppColors.success),
                 ),
               ),
             ),
@@ -703,11 +936,14 @@ class _DangerZone extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Danger Zone', style: AppTextStyles.titleMedium.copyWith(color: AppColors.error)),
+            Text('Danger Zone',
+                style:
+                    AppTextStyles.titleMedium.copyWith(color: AppColors.error)),
             const SizedBox(height: 8),
             Text(
               'Deactivating your account will remove access to all your data.',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.onSurfaceVariant),
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
             AppButton(

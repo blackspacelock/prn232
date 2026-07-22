@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "293334359217",
+    "project_id": "secompass-5e1cb",
+    "storage_bucket": "secompass-5e1cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:293334359217:android:9424a59cf2f8e87266d690",
+        "android_client_info": {
+          "package_name": "com.secompass.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrUcGS0flLUGbodnflSpGSJ2AAC9AQcsQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

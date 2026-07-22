@@ -1,3 +1,5 @@
+import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -11,12 +13,33 @@ import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../roadmap/providers/roadmap_providers.dart';
 
+final _announcementProvider = FutureProvider<String>((ref) async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return '';
+
+  final config = FirebaseRemoteConfig.instance;
+  await config.setDefaults(const {'dashboard_announcement': ''});
+  await config.setConfigSettings(
+    RemoteConfigSettings(
+      fetchTimeout: const Duration(seconds: 10),
+      minimumFetchInterval:
+          kDebugMode ? Duration.zero : const Duration(hours: 1),
+    ),
+  );
+  try {
+    await config.fetchAndActivate();
+  } catch (_) {
+    // Keep the in-app default when Remote Config is unavailable.
+  }
+  return config.getString('dashboard_announcement').trim();
+});
+
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(dashboardDataProvider);
+    final announcement = ref.watch(_announcementProvider).valueOrNull ?? '';
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -48,10 +71,21 @@ class DashboardScreen extends ConsumerWidget {
           onAction: () => ref.invalidate(dashboardDataProvider),
         ),
         data: (data) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(dashboardDataProvider),
+          onRefresh: () async {
+            ref.invalidate(dashboardDataProvider);
+            ref.invalidate(_announcementProvider);
+            await Future.wait([
+              ref.read(dashboardDataProvider.future),
+              ref.read(_announcementProvider.future),
+            ]);
+          },
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (announcement.isNotEmpty) ...[
+                _AnnouncementBanner(message: announcement),
+                const SizedBox(height: 16),
+              ],
               _StatsScroller(data: data),
               const SizedBox(height: 24),
               _RoadmapsSection(roadmaps: data.roadmaps),
@@ -69,6 +103,31 @@ class DashboardScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AnnouncementBanner extends StatelessWidget {
+  const _AnnouncementBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryContainer.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primaryContainer),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.campaign_outlined, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(child: Text(message, style: AppTextStyles.bodyMedium)),
+        ],
       ),
     );
   }

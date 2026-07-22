@@ -1,3 +1,5 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +30,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
+    observers: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+        ? [FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance)]
+        : const [],
     initialLocation: '/',
     redirect: (context, state) async {
       final isAuthenticated = authState.valueOrNull != null;
