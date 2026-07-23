@@ -41,7 +41,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
         title: const Text('My Roadmaps'),
         actions: [
           IconButton(
-            tooltip: 'Generate roadmap',
+            tooltip: 'Create roadmap',
             icon: const Icon(Icons.add_road_outlined),
             onPressed: () => context.go('/career-roles'),
           ),
@@ -50,7 +50,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/career-roles'),
         icon: const Icon(Icons.rocket_launch_outlined),
-        label: const Text('Generate'),
+        label: const Text('Create Roadmap'),
       ),
       body: roadmaps.when(
         loading: () => const _RoadmapListSkeleton(),
@@ -102,7 +102,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
                     title: 'No roadmaps yet',
                     subtitle:
                         'Generate a personalized roadmap from an available career role to begin tracking progress.',
-                    actionLabel: 'Generate Roadmap',
+                    actionLabel: 'Create Roadmap',
                     onAction: () => context.go('/career-roles'),
                   )
                 else if (visible.isEmpty)

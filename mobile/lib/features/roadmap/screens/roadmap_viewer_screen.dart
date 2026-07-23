@@ -50,7 +50,6 @@ class RoadmapViewerScreen extends ConsumerWidget {
                   .compareTo(b.roadmapNode?.order ?? b.node?.order ?? 0),
             );
           final completed = nodes.where((node) => node.status == 4).length;
-          final phases = _buildPhases(nodes);
 
           return CustomScrollView(
             slivers: [
@@ -83,24 +82,14 @@ class RoadmapViewerScreen extends ConsumerWidget {
                   ),
                 )
               else
-                SliverList.separated(
-                  itemCount: phases.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final phase = phases[index];
-                    return Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        index == 0 ? 16 : 0,
-                        16,
-                        index == phases.length - 1 ? 24 : 0,
-                      ),
-                      child: _PhaseExpansionTile(
-                        phase: phase,
-                        onNodeTap: (node) => _showNodeSheet(context, ref, node),
-                      ),
-                    );
-                  },
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 16, 0, 24),
+                    child: _RoadmapGraphSection(
+                      nodes: nodes,
+                      onNodeTap: (node) => _showNodeSheet(context, ref, node),
+                    ),
+                  ),
                 ),
             ],
           );
@@ -182,48 +171,233 @@ class _RoadmapHeader extends StatelessWidget {
   }
 }
 
-class _PhaseExpansionTile extends StatelessWidget {
-  const _PhaseExpansionTile({
-    required this.phase,
+class _RoadmapGraphSection extends StatelessWidget {
+  const _RoadmapGraphSection({
+    required this.nodes,
     required this.onNodeTap,
   });
 
-  final _RoadmapPhase phase;
+  final List<NodeProgressDto> nodes;
   final ValueChanged<NodeProgressDto> onNodeTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.outlineVariant),
-      ),
-      child: ExpansionTile(
-        initiallyExpanded: true,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        collapsedShape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(phase.name, style: AppTextStyles.titleMedium),
-        subtitle: Text(
-          '${phase.completedCount} of ${phase.nodes.length} completed',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.onSurfaceVariant,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewportWidth = constraints.maxWidth;
+        final canvasWidth = viewportWidth < 640 ? 720.0 : viewportWidth;
+        final positions = _layoutRoadmapNodes(nodes, canvasWidth);
+        final canvasHeight = positions.values.fold<double>(
+          520,
+          (height, position) =>
+              position.dy + 150 > height ? position.dy + 150 : height,
+        );
+
+        return SizedBox(
+          height: canvasHeight,
+          child: InteractiveViewer(
+            constrained: false,
+            minScale: 0.72,
+            maxScale: 1.35,
+            boundaryMargin: const EdgeInsets.all(80),
+            child: SizedBox(
+              width: canvasWidth,
+              height: canvasHeight,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _RoadmapConnectorPainter(
+                        nodes: nodes,
+                        positions: positions,
+                      ),
+                    ),
+                  ),
+                  ...nodes.map((node) {
+                    final position = positions[node._graphId] ?? Offset.zero;
+                    return Positioned(
+                      left: position.dx,
+                      top: position.dy,
+                      width: 280,
+                      child: RoadmapNodeCard(
+                        nodeProgress: node,
+                        onTap: () => onNodeTap(node),
+                      ),
+                    );
+                  }),
+                  Positioned(
+                    left: 16,
+                    top: 12,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: AppColors.outlineVariant),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.open_with, size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Pan and tap milestones',
+                              style: AppTextStyles.labelSmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RoadmapConnectorPainter extends CustomPainter {
+  const _RoadmapConnectorPainter({
+    required this.nodes,
+    required this.positions,
+  });
+
+  final List<NodeProgressDto> nodes;
+  final Map<String, Offset> positions;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final byRoadmapNodeId = {
+      for (final node in nodes)
+        if ((node.roadmapNode?.roadmapNodeId ?? '').isNotEmpty)
+          node.roadmapNode!.roadmapNodeId: node,
+    };
+    final byNodeId = {for (final node in nodes) node.nodeId: node};
+    final paint = Paint()
+      ..color = AppColors.outlineVariant
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    for (var index = 0; index < nodes.length; index++) {
+      final node = nodes[index];
+      final from = _parentFor(node, byRoadmapNodeId, byNodeId) ??
+          (index > 0 ? nodes[index - 1] : null);
+      if (from == null) continue;
+
+      final fromPosition = positions[from._graphId];
+      final toPosition = positions[node._graphId];
+      if (fromPosition == null || toPosition == null) continue;
+
+      final start = fromPosition + const Offset(140, 110);
+      final end = toPosition + const Offset(140, 0);
+      final midY = (start.dy + end.dy) / 2;
+      final path = Path()
+        ..moveTo(start.dx, start.dy)
+        ..cubicTo(start.dx, midY, end.dx, midY, end.dx, end.dy);
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  NodeProgressDto? _parentFor(
+    NodeProgressDto node,
+    Map<String, NodeProgressDto> byRoadmapNodeId,
+    Map<String, NodeProgressDto> byNodeId,
+  ) {
+    final parentRoadmapNodeId = node.roadmapNode?.parentRoadmapNodeId;
+    if (parentRoadmapNodeId != null &&
+        byRoadmapNodeId.containsKey(parentRoadmapNodeId)) {
+      return byRoadmapNodeId[parentRoadmapNodeId];
+    }
+    final parentNodeId = node.node?.parentNodeId;
+    if (parentNodeId != null && byNodeId.containsKey(parentNodeId)) {
+      return byNodeId[parentNodeId];
+    }
+    return null;
+  }
+
+  @override
+  bool shouldRepaint(covariant _RoadmapConnectorPainter oldDelegate) {
+    return oldDelegate.nodes != nodes || oldDelegate.positions != positions;
+  }
+}
+
+Map<String, Offset> _layoutRoadmapNodes(
+  List<NodeProgressDto> nodes,
+  double canvasWidth,
+) {
+  final positioned = nodes
+      .where((node) =>
+          node.roadmapNode?.positionX != null &&
+          node.roadmapNode?.positionY != null)
+      .toList();
+
+  if (positioned.length == nodes.length && nodes.isNotEmpty) {
+    final xs = positioned.map((node) => node.roadmapNode!.positionX!).toList();
+    final ys = positioned.map((node) => node.roadmapNode!.positionY!).toList();
+    final minX = xs.reduce((a, b) => a < b ? a : b);
+    final maxX = xs.reduce((a, b) => a > b ? a : b);
+    final minY = ys.reduce((a, b) => a < b ? a : b);
+    final maxY = ys.reduce((a, b) => a > b ? a : b);
+    final usableWidth = canvasWidth - 320;
+    final usableHeight = (nodes.length * 150).clamp(520, 1800).toDouble();
+
+    return {
+      for (final node in nodes)
+        node._graphId: Offset(
+          _scale(
+            node.roadmapNode!.positionX!,
+            minX,
+            maxX,
+            24,
+            usableWidth,
+          ),
+          _scale(
+            node.roadmapNode!.positionY!,
+            minY,
+            maxY,
+            64,
+            usableHeight,
           ),
         ),
-        children: phase.nodes
-            .map(
-              (node) => Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: RoadmapNodeCard(
-                  nodeProgress: node,
-                  onTap: () => onNodeTap(node),
-                ),
-              ),
-            )
-            .toList(),
+    };
+  }
+
+  const left = 32.0;
+  final right = canvasWidth - 312;
+  return {
+    for (var index = 0; index < nodes.length; index++)
+      nodes[index]._graphId: Offset(
+        index.isEven ? left : right,
+        72.0 + index * 150,
       ),
-    );
+  };
+}
+
+double _scale(
+  double value,
+  double min,
+  double max,
+  double targetMin,
+  double targetMax,
+) {
+  if (max - min == 0) return (targetMin + targetMax) / 2;
+  return targetMin + ((value - min) / (max - min)) * (targetMax - targetMin);
+}
+
+extension on NodeProgressDto {
+  String get _graphId {
+    final roadmapNodeId = roadmapNode?.roadmapNodeId;
+    return roadmapNodeId == null || roadmapNodeId.isEmpty
+        ? nodeProgressId
+        : roadmapNodeId;
   }
 }
 
@@ -514,61 +688,4 @@ class _RoadmapSkeleton extends StatelessWidget {
       ],
     );
   }
-}
-
-List<_RoadmapPhase> _buildPhases(List<NodeProgressDto> nodes) {
-  final parentNodes = nodes
-      .where((node) => node.node?.parentNodeId == null)
-      .where((node) => nodes.any((child) =>
-          child.roadmapNode?.parentRoadmapNodeId ==
-              node.roadmapNode?.roadmapNodeId ||
-          child.node?.parentNodeId == node.nodeId))
-      .toList();
-
-  if (parentNodes.isEmpty) {
-    return [_RoadmapPhase(name: 'Phase 1', nodes: nodes)];
-  }
-
-  final phases = <_RoadmapPhase>[];
-  final groupedNodeIds = <String>{};
-  for (final parent in parentNodes) {
-    final children = nodes
-        .where((node) =>
-            node.roadmapNode?.parentRoadmapNodeId ==
-                parent.roadmapNode?.roadmapNodeId ||
-            node.node?.parentNodeId == parent.nodeId)
-        .toList()
-      ..sort(
-        (a, b) => (a.roadmapNode?.order ?? a.node?.order ?? 0)
-            .compareTo(b.roadmapNode?.order ?? b.node?.order ?? 0),
-      );
-    groupedNodeIds.add(parent.nodeId);
-    groupedNodeIds.addAll(children.map((node) => node.nodeId));
-    phases.add(
-      _RoadmapPhase(
-        name: parent.node?.name ?? 'Phase ${phases.length + 1}',
-        nodes: children.isEmpty ? [parent] : children,
-      ),
-    );
-  }
-
-  final ungrouped =
-      nodes.where((node) => !groupedNodeIds.contains(node.nodeId)).toList();
-  if (ungrouped.isNotEmpty) {
-    phases.add(_RoadmapPhase(name: 'Additional Milestones', nodes: ungrouped));
-  }
-
-  return phases;
-}
-
-class _RoadmapPhase {
-  const _RoadmapPhase({
-    required this.name,
-    required this.nodes,
-  });
-
-  final String name;
-  final List<NodeProgressDto> nodes;
-
-  int get completedCount => nodes.where((node) => node.status == 4).length;
 }
