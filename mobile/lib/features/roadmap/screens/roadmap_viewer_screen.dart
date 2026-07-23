@@ -198,7 +198,7 @@ class _RoadmapGraphSection extends StatefulWidget {
 }
 
 class _RoadmapGraphSectionState extends State<_RoadmapGraphSection> {
-  static const _minZoom = 0.72;
+  static const _minZoom = 0.25;
   static const _maxZoom = 1.35;
   final TransformationController _transformationController =
       TransformationController();
