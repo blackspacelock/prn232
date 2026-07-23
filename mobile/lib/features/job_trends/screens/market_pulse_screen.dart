@@ -27,6 +27,7 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
   Timer? _debounce;
   String _query = '';
   _TrendSort _sort = _TrendSort.scoreDesc;
+  String _sourceFilter = '';
 
   @override
   void dispose() {
@@ -74,7 +75,28 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
           onAction: () => ref.invalidate(marketPulseProvider),
         ),
         data: (data) {
-          final list = _sorted(_filtered(data.regionalTrends));
+          final sources = data.regionalTrends
+              .map((trend) => trend.source)
+              .whereType<String>()
+              .where((source) => source.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+          final selectedSource =
+              sources.contains(_sourceFilter) ? _sourceFilter : '';
+          final sourceFiltered = selectedSource.isEmpty
+              ? data.regionalTrends
+              : data.regionalTrends
+                  .where((trend) => trend.source == selectedSource)
+                  .toList();
+          final list = _sorted(_filtered(sourceFiltered));
+          final topChartSkills = _query.isEmpty
+              ? data.topSkills
+              : data.topSkills
+                  .where(
+                    (trend) => trend.techSkill.toLowerCase().contains(_query),
+                  )
+                  .toList();
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(marketPulseProvider);
@@ -83,17 +105,28 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
+                Text(
+                  'Real-time demand data for software engineering skills.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 const _RegionChips(),
                 const SizedBox(height: 16),
-                _TopTrendingSection(trends: data.topSkills.take(5).toList()),
+                _TopTrendingSection(trends: topChartSkills.take(10).toList()),
                 const SizedBox(height: 16),
-                _TrendAreaSection(trends: data.topSkills.take(3).toList()),
+                _TrendAreaSection(trends: data.regionalTrends),
                 const SizedBox(height: 16),
                 _SearchSortToolbar(
                   controller: _searchController,
                   sort: _sort,
+                  sources: sources,
+                  selectedSource: selectedSource,
                   onSearchChanged: _onSearchChanged,
                   onSortChanged: (value) => setState(() => _sort = value),
+                  onSourceChanged: (value) =>
+                      setState(() => _sourceFilter = value),
                 ),
                 const SizedBox(height: 12),
                 if (list.isEmpty)
@@ -145,23 +178,34 @@ class _RegionChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(selectedMarketRegionProvider);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: regions
-            .map(
-              (region) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(region),
-                  selected: selected == region,
-                  onSelected: (_) => ref
-                      .read(selectedMarketRegionProvider.notifier)
-                      .state = region,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: regions
+              .map(
+                (region) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(region),
+                    selected: selected == region,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    onSelected: (_) => ref
+                        .read(selectedMarketRegionProvider.notifier)
+                        .state = region,
+                  ),
                 ),
-              ),
-            )
-            .toList(),
+              )
+              .toList(),
+        ),
       ),
     );
   }
@@ -174,60 +218,101 @@ class _TopTrendingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final updated = trends.isEmpty
-        ? ''
-        : DateFormat('MMM d').format(DateTime.parse(trends.first.snapshotDate));
+    final region = trends.isEmpty ? 'Global' : trends.first.region ?? 'Global';
     return _SectionCard(
       title: 'Top Trending Skills',
-      subtitle: updated.isEmpty ? null : 'Updated $updated',
-      child: SizedBox(
-        height: 220,
-        child: BarChart(
-          BarChartData(
-            maxY: 100,
-            alignment: BarChartAlignment.spaceAround,
-            gridData: const FlGridData(show: true),
-            borderData: FlBorderData(show: false),
-            titlesData: FlTitlesData(
-              topTitles: const AxisTitles(),
-              rightTitles: const AxisTitles(),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 80,
-                  getTitlesWidget: (value, meta) {
-                    final index = value.toInt();
-                    if (index < 0 || index >= trends.length) {
-                      return const SizedBox.shrink();
-                    }
-                    return Text(
-                      trends[index].techSkill,
-                      style: AppTextStyles.labelSmall,
-                    );
-                  },
+      subtitle: region,
+      child: trends.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text(
+                  'No data available for this region.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
               ),
-              bottomTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: true, reservedSize: 24),
+            )
+          : SizedBox(
+              height: 280,
+              child: BarChart(
+                BarChartData(
+                  maxY: 100,
+                  alignment: BarChartAlignment.spaceAround,
+                  gridData: FlGridData(
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (_) => const FlLine(
+                      color: AppColors.outlineVariant,
+                      strokeWidth: 1,
+                      dashArray: [3, 3],
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(),
+                    rightTitles: const AxisTitles(),
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 36,
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 54,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= trends.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return SideTitleWidget(
+                            axisSide: meta.axisSide,
+                            angle: -0.72,
+                            child: SizedBox(
+                              width: 74,
+                              child: Text(
+                                trends[index].techSkill,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.labelSmall,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  barGroups: [
+                    for (var i = 0; i < trends.length; i++)
+                      BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: trends[i].trendScore,
+                            width: 18,
+                            borderRadius: BorderRadius.circular(4),
+                            color: _skillColor(trends[i].techSkill).accent,
+                          ),
+                        ],
+                      ),
+                  ],
+                  barTouchData: BarTouchData(
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipColor: (_) => AppColors.surface,
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        final trend = trends[group.x.toInt()];
+                        return BarTooltipItem(
+                          '${trend.techSkill}\nScore: ${rod.toY.round()}',
+                          AppTextStyles.labelSmall,
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ),
             ),
-            barGroups: [
-              for (var i = 0; i < trends.length; i++)
-                BarChartGroupData(
-                  x: i,
-                  barRods: [
-                    BarChartRodData(
-                      toY: trends[i].trendScore,
-                      width: 16,
-                      borderRadius: BorderRadius.circular(4),
-                      color: _palette[i % _palette.length],
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -239,54 +324,93 @@ class _TrendAreaSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final history = _buildTrendHistory(trends);
     return _SectionCard(
       title: 'Trend Over Time',
-      child: SizedBox(
-        height: 220,
-        child: LineChart(
-          LineChartData(
-            minY: 0,
-            maxY: 100,
-            gridData: FlGridData(
-              getDrawingHorizontalLine: (_) => const FlLine(
-                color: AppColors.outlineVariant,
-                strokeWidth: 1,
-                dashArray: [4, 4],
-              ),
-            ),
-            borderData: FlBorderData(show: false),
-            titlesData: const FlTitlesData(
-              topTitles: AxisTitles(),
-              rightTitles: AxisTitles(),
-            ),
-            lineBarsData: [
-              for (var i = 0; i < trends.length; i++)
-                LineChartBarData(
-                  spots: _seriesFor(trends[i], i),
-                  isCurved: true,
-                  color: _palette[i % _palette.length],
-                  barWidth: 3,
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color:
-                        _palette[i % _palette.length].withValues(alpha: 0.15),
+      subtitle: trends.isEmpty ? 'Global' : trends.first.region ?? 'Global',
+      child: history.points.length < 2
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text(
+                  'Trend history builds up after weekly scrapes run.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
                   ),
                 ),
-            ],
-          ),
-        ),
-      ),
+              ),
+            )
+          : SizedBox(
+              height: 280,
+              child: LineChart(
+                LineChartData(
+                  minY: 0,
+                  maxY: 100,
+                  gridData: FlGridData(
+                    getDrawingHorizontalLine: (_) => const FlLine(
+                      color: AppColors.outlineVariant,
+                      strokeWidth: 1,
+                      dashArray: [3, 3],
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(),
+                    rightTitles: const AxisTitles(),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 34,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= history.points.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return SideTitleWidget(
+                            axisSide: meta.axisSide,
+                            child: Text(
+                              DateFormat('MM/dd').format(
+                                DateTime.parse(history.points[index].date),
+                              ),
+                              style: AppTextStyles.labelSmall,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  lineTouchData: const LineTouchData(enabled: true),
+                  lineBarsData: [
+                    for (var i = 0; i < history.skills.length; i++)
+                      LineChartBarData(
+                        spots: [
+                          for (var pointIndex = 0;
+                              pointIndex < history.points.length;
+                              pointIndex++)
+                            FlSpot(
+                              pointIndex.toDouble(),
+                              history.points[pointIndex]
+                                      .scores[history.skills[i]] ??
+                                  0,
+                            ),
+                        ],
+                        isCurved: true,
+                        color: _areaSeriesColors[i % _areaSeriesColors.length]
+                            .stroke,
+                        barWidth: 3,
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: _areaSeriesColors[i % _areaSeriesColors.length]
+                              .fill,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
     );
-  }
-
-  List<FlSpot> _seriesFor(JobTrendDto trend, int index) {
-    return [
-      for (var i = 0; i < 6; i++)
-        FlSpot(
-          i.toDouble(),
-          (trend.trendScore - ((5 - i) * (4 + index))).clamp(0, 100),
-        ),
-    ];
   }
 }
 
@@ -294,20 +418,30 @@ class _SearchSortToolbar extends StatelessWidget {
   const _SearchSortToolbar({
     required this.controller,
     required this.sort,
+    required this.sources,
+    required this.selectedSource,
     required this.onSearchChanged,
     required this.onSortChanged,
+    required this.onSourceChanged,
   });
 
   final TextEditingController controller;
   final _TrendSort sort;
+  final List<String> sources;
+  final String selectedSource;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<_TrendSort> onSortChanged;
+  final ValueChanged<String> onSourceChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Expanded(
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width - 32,
           child: AppTextField(
             controller: controller,
             label: 'Search skills',
@@ -315,7 +449,6 @@ class _SearchSortToolbar extends StatelessWidget {
             onChanged: onSearchChanged,
           ),
         ),
-        const SizedBox(width: 12),
         DropdownButton<_TrendSort>(
           value: sort,
           onChanged: (value) {
@@ -333,6 +466,22 @@ class _SearchSortToolbar extends StatelessWidget {
             DropdownMenuItem(value: _TrendSort.dateDesc, child: Text('Date ↓')),
           ],
         ),
+        if (sources.isNotEmpty)
+          DropdownButton<String>(
+            value: selectedSource,
+            onChanged: (value) {
+              if (value != null) onSourceChanged(value);
+            },
+            items: [
+              const DropdownMenuItem(value: '', child: Text('All Sources')),
+              ...sources.map(
+                (source) => DropdownMenuItem(
+                  value: source,
+                  child: Text(source),
+                ),
+              ),
+            ],
+          ),
       ],
     );
   }
@@ -345,20 +494,16 @@ class TrendSkillCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scoreColor = trend.trendScore >= 70
-        ? AppColors.success
-        : trend.trendScore >= 40
-            ? AppColors.warning
-            : AppColors.error;
+    final colors = _skillColor(trend.techSkill);
     final date = DateTime.tryParse(trend.snapshotDate);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: colors.background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,7 +515,13 @@ class TrendSkillCard extends StatelessWidget {
                       Text(trend.techSkill, style: AppTextStyles.titleSmall)),
               Text(
                 trend.trendScore.round().toString(),
-                style: AppTextStyles.displayMedium.copyWith(color: scoreColor),
+                style: AppTextStyles.displayMedium.copyWith(color: colors.text),
+              ),
+              Text(
+                '/100',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -385,7 +536,7 @@ class TrendSkillCard extends StatelessWidget {
           const SizedBox(height: 12),
           LinearProgressBar(
             value: (trend.trendScore / 100).clamp(0, 1),
-            color: scoreColor,
+            color: colors.accent,
           ),
           if (date != null) ...[
             const SizedBox(height: 8),
@@ -464,6 +615,82 @@ class _Badge extends StatelessWidget {
   }
 }
 
+class _TrendHistoryPoint {
+  const _TrendHistoryPoint({required this.date, required this.scores});
+
+  final String date;
+  final Map<String, double> scores;
+}
+
+({List<String> skills, List<_TrendHistoryPoint> points}) _buildTrendHistory(
+  List<JobTrendDto> trends,
+) {
+  if (trends.isEmpty) {
+    return (skills: const [], points: const []);
+  }
+
+  final latestDate = trends
+      .map((trend) => trend.snapshotDate)
+      .reduce((a, b) => a.compareTo(b) > 0 ? a : b);
+  final latestScores = <String, double>{};
+  for (final trend in trends) {
+    if (trend.snapshotDate != latestDate) continue;
+    latestScores[trend.techSkill] = [
+      latestScores[trend.techSkill] ?? 0,
+      trend.trendScore,
+    ].reduce((a, b) => a > b ? a : b);
+  }
+
+  final topSkills = latestScores.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  final skills = topSkills.take(3).map((entry) => entry.key).toList();
+  final byDate = <String, Map<String, double>>{};
+  for (final trend in trends) {
+    if (!skills.contains(trend.techSkill)) continue;
+    final dateKey = trend.snapshotDate.split('T').first;
+    (byDate[dateKey] ??= {})[trend.techSkill] = trend.trendScore;
+  }
+
+  final points = byDate.entries
+      .map((entry) => _TrendHistoryPoint(date: entry.key, scores: entry.value))
+      .toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+  return (skills: skills, points: points);
+}
+
+({Color background, Color border, Color text, Color accent}) _skillColor(
+  String label,
+) {
+  final palettes = [
+    (
+      background: const Color(0xFFE8F0FE),
+      border: const Color(0xFFB8D0FA),
+      text: const Color(0xFF1A73E8),
+      accent: const Color(0xFF1A73E8),
+    ),
+    (
+      background: const Color(0xFFE6F4EA),
+      border: const Color(0xFFB7DFC0),
+      text: const Color(0xFF188038),
+      accent: const Color(0xFF34A853),
+    ),
+    (
+      background: const Color(0xFFF3E8FD),
+      border: const Color(0xFFD8B4F8),
+      text: const Color(0xFF7B1FA2),
+      accent: const Color(0xFF7B1FA2),
+    ),
+    (
+      background: const Color(0xFFFFF4D6),
+      border: const Color(0xFFFFD166),
+      text: const Color(0xFF8A5A00),
+      accent: const Color(0xFFFBBC04),
+    ),
+  ];
+  final hash = label.codeUnits.fold<int>(0, (sum, code) => sum + code);
+  return palettes[hash.abs() % palettes.length];
+}
+
 class _MarketSkeleton extends StatelessWidget {
   const _MarketSkeleton();
 
@@ -481,10 +708,8 @@ class _MarketSkeleton extends StatelessWidget {
   }
 }
 
-const _palette = [
-  AppColors.primaryContainer,
-  Color(0xFF00897B),
-  AppColors.warning,
-  Color(0xFF7B1FA2),
-  AppColors.success,
+const _areaSeriesColors = [
+  (stroke: Color(0xFF1A73E8), fill: Color(0xFFE8F0FE)),
+  (stroke: Color(0xFF34A853), fill: Color(0xFFE6F4EA)),
+  (stroke: Color(0xFF7B1FA2), fill: Color(0xFFF3E8FD)),
 ];
