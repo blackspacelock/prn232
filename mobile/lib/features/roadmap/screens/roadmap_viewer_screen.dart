@@ -10,8 +10,8 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/linear_progress_bar.dart';
-import '../../../core/widgets/roadmap_node_card.dart';
 import '../../../core/widgets/skeleton_loader.dart';
+import '../../../core/widgets/status_chip.dart';
 import '../providers/roadmap_providers.dart';
 
 class RoadmapViewerScreen extends ConsumerWidget {
@@ -28,7 +28,14 @@ class RoadmapViewerScreen extends ConsumerWidget {
         loading: () => const _RoadmapSkeleton(),
         error: (error, _) => CustomScrollView(
           slivers: [
-            const SliverAppBar(title: Text('Roadmap')),
+            SliverAppBar(
+              title: const Text('Roadmap'),
+              leading: IconButton(
+                tooltip: 'Back',
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => _backToRoadmaps(context),
+              ),
+            ),
             SliverFillRemaining(
               child: EmptyStateView(
                 icon: Icons.error_outline,
@@ -56,6 +63,11 @@ class RoadmapViewerScreen extends ConsumerWidget {
               SliverAppBar(
                 pinned: true,
                 expandedHeight: 210,
+                leading: IconButton(
+                  tooltip: 'Back',
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => _backToRoadmaps(context),
+                ),
                 title: Text(data.careerRoadmap?.name ?? 'Roadmap'),
                 flexibleSpace: FlexibleSpaceBar(
                   background: _RoadmapHeader(
@@ -96,6 +108,14 @@ class RoadmapViewerScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  void _backToRoadmaps(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go('/roadmaps');
   }
 
   void _showNodeSheet(
@@ -185,82 +205,254 @@ class _RoadmapGraphSection extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final viewportWidth = constraints.maxWidth;
-        final canvasWidth = viewportWidth < 640 ? 720.0 : viewportWidth;
-        final positions = _layoutRoadmapNodes(nodes, canvasWidth);
+        final canvasWidth = viewportWidth < 640 ? 760.0 : viewportWidth;
+        final layout = _layoutRoadmapNodes(nodes, canvasWidth);
+        final positions = layout.positions;
         final canvasHeight = positions.values.fold<double>(
           520,
           (height, position) =>
-              position.dy + 150 > height ? position.dy + 150 : height,
+              position.dy + _GraphNodeCard.height + 80 > height
+                  ? position.dy + _GraphNodeCard.height + 80
+                  : height,
         );
 
-        return SizedBox(
-          height: canvasHeight,
-          child: InteractiveViewer(
-            constrained: false,
-            minScale: 0.72,
-            maxScale: 1.35,
-            boundaryMargin: const EdgeInsets.all(80),
-            child: SizedBox(
-              width: canvasWidth,
-              height: canvasHeight,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _RoadmapConnectorPainter(
-                        nodes: nodes,
-                        positions: positions,
-                      ),
-                    ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.outlineVariant),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                  ...nodes.map((node) {
-                    final position = positions[node._graphId] ?? Offset.zero;
-                    return Positioned(
-                      left: position.dx,
-                      top: position.dy,
-                      width: 280,
-                      child: RoadmapNodeCard(
-                        nodeProgress: node,
-                        onTap: () => onNodeTap(node),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.swipe, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        layout.usedStoredPositions
+                            ? 'Template layout'
+                            : 'Generated roadmap layout',
+                        style: AppTextStyles.labelSmall,
                       ),
-                    );
-                  }),
-                  Positioned(
-                    left: 16,
-                    top: 12,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: AppColors.outlineVariant),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.open_with, size: 16),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Pan and tap milestones',
-                              style: AppTextStyles.labelSmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: canvasWidth,
+                height: canvasHeight,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _RoadmapConnectorPainter(
+                          nodes: nodes,
+                          positions: positions,
+                        ),
+                      ),
+                    ),
+                    ...nodes.map((node) {
+                      final position = positions[node._graphId] ?? Offset.zero;
+                      return Positioned(
+                        left: position.dx,
+                        top: position.dy,
+                        width: _GraphNodeCard.width,
+                        height: _GraphNodeCard.height,
+                        child: _GraphNodeCard(
+                          nodeProgress: node,
+                          onTap: () => onNodeTap(node),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
   }
+}
+
+class _GraphNodeCard extends StatelessWidget {
+  const _GraphNodeCard({
+    required this.nodeProgress,
+    required this.onTap,
+  });
+
+  static const width = 232.0;
+  static const height = 86.0;
+
+  final NodeProgressDto nodeProgress;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final node = nodeProgress.node;
+    final roadmapNode = nodeProgress.roadmapNode;
+    final style = _graphNodeStyle(nodeProgress);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: style.fill,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: style.stroke, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x22111827),
+                offset: Offset(3, 3),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: -16,
+                top: 31,
+                child: _ConnectorDot(color: style.dot),
+              ),
+              Positioned(
+                right: -16,
+                top: 31,
+                child: _ConnectorDot(color: style.dot),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    node?.name ?? 'Roadmap milestone',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.titleSmall.copyWith(
+                      color: style.text,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          [
+                            roadmapNode?.nodeType,
+                            roadmapNode?.requirementType,
+                          ].whereType<String>().where((v) => v.isNotEmpty).join(
+                                ' / ',
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: style.text.withValues(alpha: 0.78),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      StatusChip(status: nodeProgress.status),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectorDot extends StatelessWidget {
+  const _ConnectorDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+    );
+  }
+}
+
+({Color fill, Color stroke, Color text, Color dot}) _graphNodeStyle(
+  NodeProgressDto nodeProgress,
+) {
+  final statusColors =
+      nodeStatusColors[nodeProgress.status] ?? nodeStatusColors[0]!;
+  final nodeType = nodeProgress.roadmapNode?.nodeType?.toLowerCase() ?? '';
+  final requirementType =
+      nodeProgress.roadmapNode?.requirementType?.toLowerCase() ?? '';
+  final isMain = nodeType.contains('group') || nodeType.contains('milestone');
+  final isOptional = requirementType.contains('optional');
+  final isRecommended = requirementType.contains('recommended');
+
+  if (nodeProgress.status != 0) {
+    return (
+      fill: statusColors.fill,
+      stroke: statusColors.stroke,
+      text: statusColors.text,
+      dot: statusColors.stroke,
+    );
+  }
+
+  if (isMain) {
+    return (
+      fill: const Color(0xFFFFF200),
+      stroke: const Color(0xFF111827),
+      text: const Color(0xFF111827),
+      dot: const Color(0xFF2563EB),
+    );
+  }
+  if (isOptional) {
+    return (
+      fill: Colors.white,
+      stroke: const Color(0xFF111827),
+      text: const Color(0xFF111827),
+      dot: const Color(0xFF8B5CF6),
+    );
+  }
+  if (isRecommended) {
+    return (
+      fill: const Color(0xFFDFF7DF),
+      stroke: const Color(0xFF111827),
+      text: const Color(0xFF111827),
+      dot: const Color(0xFF22C55E),
+    );
+  }
+  return (
+    fill: const Color(0xFFFFDF8A),
+    stroke: const Color(0xFF111827),
+    text: const Color(0xFF111827),
+    dot: const Color(0xFF2563EB),
+  );
 }
 
 class _RoadmapConnectorPainter extends CustomPainter {
@@ -296,12 +488,25 @@ class _RoadmapConnectorPainter extends CustomPainter {
       final toPosition = positions[node._graphId];
       if (fromPosition == null || toPosition == null) continue;
 
-      final start = fromPosition + const Offset(140, 110);
-      final end = toPosition + const Offset(140, 0);
-      final midY = (start.dy + end.dy) / 2;
+      final isLeftBranch = toPosition.dx < fromPosition.dx;
+      final start = fromPosition +
+          Offset(
+            isLeftBranch ? 0 : _GraphNodeCard.width,
+            _GraphNodeCard.height / 2,
+          );
+      final end = toPosition +
+          Offset(
+            isLeftBranch ? _GraphNodeCard.width : 0,
+            _GraphNodeCard.height / 2,
+          );
+      final direction = isLeftBranch ? -1.0 : 1.0;
+      final branchGap = ((end.dx - start.dx).abs() * 0.28).clamp(36.0, 72.0);
+      final busX = start.dx + direction * branchGap;
       final path = Path()
         ..moveTo(start.dx, start.dy)
-        ..cubicTo(start.dx, midY, end.dx, midY, end.dx, end.dy);
+        ..lineTo(busX, start.dy)
+        ..lineTo(busX, end.dy)
+        ..lineTo(end.dx, end.dy);
       canvas.drawPath(path, paint);
     }
   }
@@ -329,56 +534,142 @@ class _RoadmapConnectorPainter extends CustomPainter {
   }
 }
 
-Map<String, Offset> _layoutRoadmapNodes(
+_RoadmapGraphLayout _layoutRoadmapNodes(
   List<NodeProgressDto> nodes,
   double canvasWidth,
 ) {
+  final byId = {
+    for (final node in nodes)
+      if (node._graphId.isNotEmpty) node._graphId: node,
+  };
+  final childrenByParent = <String, List<NodeProgressDto>>{};
+  for (final node in nodes) {
+    final parentId = node.roadmapNode?.parentRoadmapNodeId;
+    if (parentId == null || !byId.containsKey(parentId)) continue;
+    (childrenByParent[parentId] ??= []).add(node);
+  }
+  for (final children in childrenByParent.values) {
+    children.sort(_compareRoadmapNodes);
+  }
+
   final positioned = nodes
       .where((node) =>
           node.roadmapNode?.positionX != null &&
           node.roadmapNode?.positionY != null)
       .toList();
+  final minimumPositionedNodes = nodes.length < 3
+      ? nodes.length
+      : (nodes.length * 0.6).ceil().clamp(3, nodes.length);
+  final shouldUseStoredPositions = positioned.length >= minimumPositionedNodes;
 
-  if (positioned.length == nodes.length && nodes.isNotEmpty) {
+  if (shouldUseStoredPositions && nodes.isNotEmpty) {
     final xs = positioned.map((node) => node.roadmapNode!.positionX!).toList();
     final ys = positioned.map((node) => node.roadmapNode!.positionY!).toList();
     final minX = xs.reduce((a, b) => a < b ? a : b);
     final maxX = xs.reduce((a, b) => a > b ? a : b);
     final minY = ys.reduce((a, b) => a < b ? a : b);
     final maxY = ys.reduce((a, b) => a > b ? a : b);
-    final usableWidth = canvasWidth - 320;
-    final usableHeight = (nodes.length * 150).clamp(520, 1800).toDouble();
-
-    return {
-      for (final node in nodes)
-        node._graphId: Offset(
-          _scale(
-            node.roadmapNode!.positionX!,
-            minX,
-            maxX,
-            24,
-            usableWidth,
-          ),
-          _scale(
-            node.roadmapNode!.positionY!,
-            minY,
-            maxY,
-            64,
-            usableHeight,
-          ),
-        ),
-    };
+    final usableWidth = canvasWidth - _GraphNodeCard.width - 48;
+    final usableHeight = (nodes.length * 116).clamp(520, 1800).toDouble();
+    final fallback = _treeLayout(nodes, byId, childrenByParent, canvasWidth);
+    final positions = Map<String, Offset>.from(fallback);
+    for (final node in positioned) {
+      positions[node._graphId] = Offset(
+        _scale(node.roadmapNode!.positionX!, minX, maxX, 24, usableWidth),
+        _scale(node.roadmapNode!.positionY!, minY, maxY, 56, usableHeight),
+      );
+    }
+    return _RoadmapGraphLayout(
+      positions: positions,
+      usedStoredPositions: true,
+    );
   }
 
-  const left = 32.0;
-  final right = canvasWidth - 312;
-  return {
-    for (var index = 0; index < nodes.length; index++)
-      nodes[index]._graphId: Offset(
-        index.isEven ? left : right,
-        72.0 + index * 150,
-      ),
-  };
+  return _RoadmapGraphLayout(
+    positions: _treeLayout(nodes, byId, childrenByParent, canvasWidth),
+    usedStoredPositions: false,
+  );
+}
+
+Map<String, Offset> _treeLayout(
+  List<NodeProgressDto> nodes,
+  Map<String, NodeProgressDto> byId,
+  Map<String, List<NodeProgressDto>> childrenByParent,
+  double canvasWidth,
+) {
+  const startX = 264.0;
+  const startY = 48.0;
+  const xGap = 248.0;
+  const yGap = 116.0;
+  final depthById = <String, int>{};
+  final positions = <String, Offset>{};
+  var row = 0;
+
+  int resolveDepth(NodeProgressDto node, [Set<String>? visiting]) {
+    if (depthById.containsKey(node._graphId)) return depthById[node._graphId]!;
+    final seen = visiting ?? <String>{};
+    final parentId = node.roadmapNode?.parentRoadmapNodeId;
+    if (parentId == null ||
+        !byId.containsKey(parentId) ||
+        seen.contains(node._graphId)) {
+      depthById[node._graphId] = 0;
+      return 0;
+    }
+    seen.add(node._graphId);
+    final depth = resolveDepth(byId[parentId]!, seen) + 1;
+    depthById[node._graphId] = depth;
+    return depth;
+  }
+
+  Offset layoutNode(NodeProgressDto node) {
+    final existing = positions[node._graphId];
+    if (existing != null) return existing;
+
+    final children =
+        childrenByParent[node._graphId] ?? const <NodeProgressDto>[];
+    final childPositions = children.map(layoutNode).toList();
+    final depth = resolveDepth(node);
+    final y = childPositions.isNotEmpty
+        ? childPositions.map((p) => p.dy).reduce((a, b) => a + b) /
+            childPositions.length
+        : startY + row++ * yGap;
+    final direction = depth == 0 ? 0 : (depth.isEven ? 1 : -1);
+    final x = (startX + direction * ((depth + 1) ~/ 2) * xGap)
+        .clamp(24.0, canvasWidth - _GraphNodeCard.width - 24);
+    final position = Offset(x, y);
+    positions[node._graphId] = position;
+    return position;
+  }
+
+  final roots = nodes.where((node) {
+    final parentId = node.roadmapNode?.parentRoadmapNodeId;
+    return parentId == null || !byId.containsKey(parentId);
+  }).toList()
+    ..sort(_compareRoadmapNodes);
+  for (final node in roots) {
+    layoutNode(node);
+  }
+  for (final node in [...nodes]..sort(_compareRoadmapNodes)) {
+    layoutNode(node);
+  }
+  return positions;
+}
+
+int _compareRoadmapNodes(NodeProgressDto a, NodeProgressDto b) {
+  final order = (a.roadmapNode?.order ?? a.node?.order ?? 0)
+      .compareTo(b.roadmapNode?.order ?? b.node?.order ?? 0);
+  if (order != 0) return order;
+  return (a.node?.name ?? '').compareTo(b.node?.name ?? '');
+}
+
+class _RoadmapGraphLayout {
+  const _RoadmapGraphLayout({
+    required this.positions,
+    required this.usedStoredPositions,
+  });
+
+  final Map<String, Offset> positions;
+  final bool usedStoredPositions;
 }
 
 double _scale(
@@ -668,7 +959,20 @@ class _RoadmapSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        const SliverAppBar(title: Text('Roadmap')),
+        SliverAppBar(
+          title: const Text('Roadmap'),
+          leading: IconButton(
+            tooltip: 'Back',
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+                return;
+              }
+              context.go('/roadmaps');
+            },
+          ),
+        ),
         SliverList.list(
           children: const [
             Padding(
