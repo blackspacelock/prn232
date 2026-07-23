@@ -42,6 +42,17 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('E-Portfolio'),
+        actions: [
+          if (asyncState.hasValue)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: FilledButton.icon(
+                onPressed: () => _showRepoSheet(context, null),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add'),
+              ),
+            ),
+        ],
       ),
       body: asyncState.when(
         loading: () => const _PortfolioSkeleton(),
@@ -68,13 +79,6 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           onViewPublicPortfolio: _viewPublicPortfolio,
         ),
       ),
-      floatingActionButton: asyncState.hasValue
-          ? FloatingActionButton.extended(
-              onPressed: () => _showRepoSheet(context, null),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Repository'),
-            )
-          : null,
     );
   }
 
