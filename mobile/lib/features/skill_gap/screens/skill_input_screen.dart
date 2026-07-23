@@ -82,7 +82,9 @@ class _SkillInputScreenState extends ConsumerState<SkillInputScreen> {
         child: AppButton(
           label: 'Run Analysis',
           leadingIcon: const Icon(Icons.arrow_forward),
-          onPressed: () => context.go('/skill-gap/result'),
+          onPressed: () => context.go(
+            '/skill-gap/result?careerRoadmapId=${widget.careerRoadmapId}',
+          ),
         ),
       ),
       body: skills.when(

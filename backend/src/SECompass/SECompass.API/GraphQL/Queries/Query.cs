@@ -187,9 +187,9 @@ public class Query
     }
 
     // Skill Gap
-    public async Task<SkillGapAnalysisDto?> GetSkillGapAnalysis([Service] ISkillGapService service, Guid profileId)
+    public async Task<SkillGapAnalysisDto?> GetSkillGapAnalysis([Service] ISkillGapService service, Guid profileId, Guid? careerRoadmapId = null)
     {
-        var result = await service.AnalyzeSkillGapAsync(profileId);
+        var result = await service.AnalyzeSkillGapAsync(profileId, careerRoadmapId);
         return result.Success ? result.Data : null;
     }
 

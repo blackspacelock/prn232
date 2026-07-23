@@ -235,8 +235,8 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     final data = await _graphQL.queryField<Map<String, dynamic>?>(
       'skillGapAnalysis',
       r'''
-      query GetSkillGapAnalysis($profileId: UUID!) {
-        skillGapAnalysis(profileId: $profileId) {
+      query GetSkillGapAnalysis($profileId: UUID!, $careerRoadmapId: UUID) {
+        skillGapAnalysis(profileId: $profileId, careerRoadmapId: $careerRoadmapId) {
           profileId
           careerRoadmapId
           requiredSkills {
@@ -264,7 +264,10 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
         }
       }
       ''',
-      variables: {'profileId': profileId},
+      variables: {
+        'profileId': profileId,
+        if (careerRoadmapId.isNotEmpty) 'careerRoadmapId': careerRoadmapId,
+      },
     );
     return SkillGapAnalysisDto.fromJson(data ?? const {});
   }
