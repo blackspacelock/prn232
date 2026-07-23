@@ -673,8 +673,12 @@ class _CustomPersonalRoadmapSheetState
     extends ConsumerState<_CustomPersonalRoadmapSheet> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _desireController = TextEditingController();
   CareerRoleDto? _selectedRole;
-  final List<_CustomNodeDraft> _nodes = [];
+  final List<_CustomNodeDraft> _nodes = List.generate(
+    3,
+    (index) => _CustomNodeDraft.blank(order: index + 1),
+  );
   final List<_CustomEdgeDraft> _edges = [];
   bool _isSaving = false;
 
@@ -682,6 +686,7 @@ class _CustomPersonalRoadmapSheetState
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _desireController.dispose();
     super.dispose();
   }
 
@@ -696,28 +701,17 @@ class _CustomPersonalRoadmapSheetState
     setState(() => _isSaving = true);
     try {
       final profileId = await ref.read(profileIdProvider.future);
-      final roadmap = await ref
-          .read(roadmapRepositoryProvider)
-          .createCustomRoadmap(
-            CustomPersonalRoadmapRequest(
-              profileId: profileId,
-              careerRoleId: _selectedRole!.careerRoleId,
-              name: _nameController.text.trim(),
-              description: _descriptionController.text.trim(),
-              nodes: _nodes
-                  .where((node) => node.name.trim().isNotEmpty)
-                  .map((node) => node.toRequest())
-                  .toList(),
-              edges: _edges
-                  .where((edge) =>
-                      edge.fromClientId != edge.toClientId &&
-                      _nodes
-                          .any((node) => node.clientId == edge.fromClientId) &&
-                      _nodes.any((node) => node.clientId == edge.toClientId))
-                  .map((edge) => edge.toRequest())
-                  .toList(),
-            ),
-          );
+      final roadmap =
+          await ref.read(roadmapRepositoryProvider).createCustomRoadmap(
+                CustomPersonalRoadmapRequest(
+                  profileId: profileId,
+                  careerRoleId: _selectedRole!.careerRoleId,
+                  name: _nameController.text.trim(),
+                  description: _descriptionController.text.trim(),
+                  desire: _desireController.text.trim(),
+                  steps: _buildStepRequests(),
+                ),
+              );
       ref.invalidate(personalRoadmapsProvider);
       ref.invalidate(dashboardDataProvider);
       if (!mounted) return;
@@ -799,6 +793,41 @@ class _CustomPersonalRoadmapSheetState
     }
   }
 
+  List<CustomRoadmapStepRequest> _buildStepRequests() {
+    final validNodes =
+        _nodes.where((node) => node.name.trim().isNotEmpty).toList();
+    return [
+      for (var index = 0; index < validNodes.length; index++)
+        validNodes[index].toRequest(
+          previousStepIndex: _previousStepIndex(validNodes, validNodes[index]),
+          branchStepIndex: _branchStepIndex(validNodes, validNodes[index]),
+        ),
+    ];
+  }
+
+  int? _previousStepIndex(
+      List<_CustomNodeDraft> validNodes, _CustomNodeDraft node) {
+    if (node.parentClientId != null) return null;
+    for (final edge in _edges) {
+      if (edge.toClientId != node.clientId) continue;
+      final index = validNodes.indexWhere(
+        (candidate) => candidate.clientId == edge.fromClientId,
+      );
+      if (index >= 0) return index;
+    }
+    return null;
+  }
+
+  int? _branchStepIndex(
+      List<_CustomNodeDraft> validNodes, _CustomNodeDraft node) {
+    final parentClientId = node.parentClientId;
+    if (parentClientId == null) return null;
+    final index = validNodes.indexWhere(
+      (candidate) => candidate.clientId == parentClientId,
+    );
+    return index >= 0 ? index : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final roles = ref.watch(careerRolesProvider);
@@ -823,7 +852,7 @@ class _CustomPersonalRoadmapSheetState
                           style: AppTextStyles.titleLarge),
                       const SizedBox(height: 4),
                       Text(
-                        'Build a roadmap without a template by choosing the role, nodes, skills, resources, and edges.',
+                        'Shape a learning path around your own goal and steps.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.onSurfaceVariant,
                         ),
@@ -843,10 +872,20 @@ class _CustomPersonalRoadmapSheetState
                             const SizedBox(height: 10),
                             TextField(
                               controller: _descriptionController,
-                              minLines: 2,
-                              maxLines: 3,
                               decoration: const InputDecoration(
                                 labelText: 'Description',
+                                hintText: 'Short summary for your path',
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _desireController,
+                              minLines: 3,
+                              maxLines: 4,
+                              decoration: const InputDecoration(
+                                labelText: 'Your desire or goal',
+                                hintText:
+                                    'What are you trying to become or build?',
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -880,27 +919,59 @@ class _CustomPersonalRoadmapSheetState
                               ),
                             ),
                             const SizedBox(height: 18),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryContainer
+                                    .withValues(alpha: 0.45),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Start with Learning Step milestones',
+                                    style: AppTextStyles.labelLarge.copyWith(
+                                      color: AppColors.onPrimaryContainer,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Build the main roadmap path first. Add branch nodes for side topics, references, and optional details.',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 18),
                             Row(
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'Nodes',
+                                    'Learning steps',
                                     style: AppTextStyles.titleSmall,
                                   ),
                                 ),
                                 TextButton.icon(
                                   onPressed: () => _addOrEditNode(),
                                   icon: const Icon(Icons.add),
-                                  label: const Text('Add Node'),
+                                  label: const Text('Add Step'),
                                 ),
                               ],
                             ),
                             if (_nodes.isEmpty)
                               const EmptyStateView(
                                 icon: Icons.account_tree_outlined,
-                                title: 'No nodes yet',
+                                title: 'No steps yet',
                                 subtitle:
-                                    'Add parent nodes or branch nodes to define your roadmap.',
+                                    'Add learning steps or branch nodes to define your roadmap.',
                               )
                             else
                               ..._nodes.map(
@@ -968,30 +1039,39 @@ class _CustomNodeDraft {
     required this.name,
     this.description,
     required this.order,
-    this.skills = const [],
+    this.skillIds = const [],
     this.resources = const [],
   });
+
+  _CustomNodeDraft.blank({required this.order})
+      : clientId = '${DateTime.now().microsecondsSinceEpoch}$order',
+        parentClientId = null,
+        name = '',
+        description = null,
+        skillIds = const [],
+        resources = const [];
 
   final String clientId;
   String? parentClientId;
   final String name;
   final String? description;
   final int order;
-  final List<String> skills;
+  final List<String> skillIds;
   final List<_CustomResourceDraft> resources;
 
-  CustomRoadmapNodeRequest toRequest() => CustomRoadmapNodeRequest(
-        clientId: clientId,
-        parentClientId: parentClientId,
+  CustomRoadmapStepRequest toRequest({
+    int? previousStepIndex,
+    int? branchStepIndex,
+  }) =>
+      CustomRoadmapStepRequest(
         name: name.trim(),
         description: description,
-        order: order,
+        previousStepIndex: previousStepIndex,
+        branchStepIndex: branchStepIndex,
         positionX: parentClientId == null ? 120 : 360,
         positionY: order * 140,
-        technicalSkills: skills
-            .map((skill) => CustomRoadmapSkillRequest(name: skill.trim()))
-            .where((skill) => skill.name.isNotEmpty)
-            .toList(),
+        technicalSkillIds:
+            skillIds.where((skillId) => skillId.trim().isNotEmpty).toList(),
         learningResources:
             resources.map((resource) => resource.toRequest()).toList(),
       );
@@ -1023,11 +1103,6 @@ class _CustomEdgeDraft {
 
   final String fromClientId;
   final String toClientId;
-
-  CustomRoadmapEdgeRequest toRequest() => CustomRoadmapEdgeRequest(
-        fromClientId: fromClientId,
-        toClientId: toClientId,
-      );
 }
 
 class _CustomNodeEditorSheet extends ConsumerStatefulWidget {
@@ -1071,7 +1146,7 @@ class _CustomNodeEditorSheetState
     _resourceUrlController = TextEditingController();
     _resourceTypeController = TextEditingController(text: 'Article');
     _parentClientId = node?.parentClientId;
-    _selectedSkills = [...?node?.skills];
+    _selectedSkills = [...?node?.skillIds];
     _resources = [...?node?.resources];
   }
 
@@ -1086,21 +1161,21 @@ class _CustomNodeEditorSheetState
     super.dispose();
   }
 
-  void _addSkill(String skillName) {
-    final trimmed = skillName.trim();
-    if (trimmed.isEmpty) return;
-    if (_selectedSkills.any((s) => s.toLowerCase() == trimmed.toLowerCase())) {
-      return;
-    }
+  void _toggleSkill(String skillId) {
+    if (skillId.trim().isEmpty) return;
     setState(() {
-      _selectedSkills.add(trimmed);
+      if (_selectedSkills.contains(skillId)) {
+        _selectedSkills.remove(skillId);
+      } else {
+        _selectedSkills.add(skillId);
+      }
       _skillSearchController.clear();
       _skillQuery = '';
     });
   }
 
-  void _removeSkill(String skillName) {
-    setState(() => _selectedSkills.remove(skillName));
+  void _removeSkill(String skillId) {
+    setState(() => _selectedSkills.remove(skillId));
   }
 
   void _addResource() {
@@ -1134,7 +1209,7 @@ class _CustomNodeEditorSheetState
         name: name,
         description: _descriptionController.text.trim(),
         order: widget.node?.order ?? widget.order,
-        skills: _selectedSkills.toSet().toList(),
+        skillIds: _selectedSkills.toSet().toList(),
         resources: _resources,
       ),
     );
@@ -1144,14 +1219,17 @@ class _CustomNodeEditorSheetState
   Widget build(BuildContext context) {
     final technicalSkills =
         ref.watch(technicalSkillsProvider).valueOrNull ?? const [];
+    final selectedSkillItems = technicalSkills
+        .where((skill) => _selectedSkills.contains(skill.technicalSkillId))
+        .toList();
     final filteredSuggestions = _skillQuery.isEmpty
         ? const <TechnicalSkillDto>[]
         : technicalSkills
-            .where((skill) => skill.skillName
-                .toLowerCase()
-                .contains(_skillQuery.toLowerCase()))
-            .where((skill) => !_selectedSkills
-                .any((s) => s.toLowerCase() == skill.skillName.toLowerCase()))
+            .where((skill) {
+              final query = _skillQuery.toLowerCase();
+              return skill.skillName.toLowerCase().contains(query) ||
+                  skill.category.toLowerCase().contains(query);
+            })
             .take(6)
             .toList();
 
@@ -1212,15 +1290,16 @@ class _CustomNodeEditorSheetState
                     const SizedBox(height: 10),
                     Text('Technical skills', style: AppTextStyles.titleSmall),
                     const SizedBox(height: 8),
-                    if (_selectedSkills.isNotEmpty) ...[
+                    if (selectedSkillItems.isNotEmpty) ...[
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: _selectedSkills
+                        children: selectedSkillItems
                             .map(
                               (skill) => InputChip(
-                                label: Text(skill),
-                                onDeleted: () => _removeSkill(skill),
+                                label: Text(skill.skillName),
+                                onDeleted: () =>
+                                    _removeSkill(skill.technicalSkillId),
                               ),
                             )
                             .toList(),
@@ -1238,9 +1317,9 @@ class _CustomNodeEditorSheetState
                           setState(() => _skillQuery = value.trim()),
                       onSubmitted: (value) {
                         if (filteredSuggestions.length == 1) {
-                          _addSkill(filteredSuggestions.first.skillName);
-                        } else if (value.trim().isNotEmpty) {
-                          _addSkill(value);
+                          _toggleSkill(
+                            filteredSuggestions.first.technicalSkillId,
+                          );
                         }
                       },
                     ),
@@ -1257,16 +1336,23 @@ class _CustomNodeEditorSheetState
                         clipBehavior: Clip.antiAlias,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
-                          children: filteredSuggestions
-                              .map(
-                                (skill) => ListTile(
-                                  dense: true,
-                                  title: Text(skill.skillName),
-                                  subtitle: Text(skill.category),
-                                  onTap: () => _addSkill(skill.skillName),
+                          children: filteredSuggestions.map(
+                            (skill) {
+                              final selected = _selectedSkills
+                                  .contains(skill.technicalSkillId);
+                              return ListTile(
+                                dense: true,
+                                title: Text(skill.skillName),
+                                subtitle: Text(skill.category),
+                                trailing:
+                                    selected ? const Icon(Icons.check) : null,
+                                selected: selected,
+                                onTap: () => _toggleSkill(
+                                  skill.technicalSkillId,
                                 ),
-                              )
-                              .toList(),
+                              );
+                            },
+                          ).toList(),
                         ),
                       ),
                     ],
@@ -1367,11 +1453,12 @@ class _CustomNodeDraftCard extends StatelessWidget {
               ? Icons.account_tree_outlined
               : Icons.subdirectory_arrow_right,
         ),
-        title: Text(node.name),
+        title:
+            Text(node.name.trim().isEmpty ? 'Step ${node.order}' : node.name),
         subtitle: Text(
           [
             if (parentName != null) 'Branch of $parentName',
-            if (node.skills.isNotEmpty) '${node.skills.length} skills',
+            if (node.skillIds.isNotEmpty) '${node.skillIds.length} skills',
             if (node.resources.isNotEmpty) '${node.resources.length} resources',
           ].join(' · '),
         ),

@@ -199,14 +199,14 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     }
     try {
       final response = await _dio.post(
-        '${ApiConstants.personalRoadmaps}/custom',
+        ApiConstants.personalRoadmaps,
         data: request.toJson(),
       );
       return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (error) {
       if (error.response?.statusCode == 405) {
         throw const ServerException(
-          'Custom roadmap creation is not available on this server yet. Please deploy the latest backend and try again.',
+          'Personal roadmap creation is not available on this server yet. Please deploy the latest backend and try again.',
           statusCode: 405,
         );
       }
