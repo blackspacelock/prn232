@@ -178,6 +178,7 @@ class PersonalRoadmapDto {
     required this.progressPercentage,
     required this.isActive,
     required this.createdAt,
+    this.note,
     this.careerRoadmap,
     this.nodeProgresses = const [],
   });
@@ -188,6 +189,7 @@ class PersonalRoadmapDto {
   final double progressPercentage;
   final bool isActive;
   final String createdAt;
+  final String? note;
   final CareerRoadmapDto? careerRoadmap;
   final List<NodeProgressDto> nodeProgresses;
 
@@ -200,6 +202,7 @@ class PersonalRoadmapDto {
       progressPercentage: (json['progressPercentage'] as num?)?.toDouble() ?? 0,
       isActive: json['isActive'] as bool? ?? false,
       createdAt: (json['createdAt'] ?? '').toString(),
+      note: json['note'] as String?,
       careerRoadmap: json['careerRoadmap'] is Map<String, dynamic>
           ? CareerRoadmapDto.fromJson(
               json['careerRoadmap'] as Map<String, dynamic>,

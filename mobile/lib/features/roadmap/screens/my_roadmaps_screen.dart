@@ -42,14 +42,14 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
         title: const Text('My Roadmaps'),
         actions: [
           IconButton(
-            tooltip: 'Generate personal custom roadmap',
+            tooltip: 'Create personal roadmap',
             icon: const Icon(Icons.add_task_outlined),
-            onPressed: _showPersonalCustomRoadmapSheet,
+            onPressed: _showCreatePersonalRoadmapSheet,
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openGenerateRoadmapFlow,
+        onPressed: _showTemplateRoadmapSheet,
         icon: const Icon(Icons.rocket_launch_outlined),
         label: const Text('Generate Roadmap'),
       ),
@@ -64,6 +64,14 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
         ),
         data: (items) {
           final visible = _applyListControls(items);
+          final activeCount = items.where((roadmap) => roadmap.isActive).length;
+          final averageProgress = items.isEmpty
+              ? 0
+              : (items
+                          .map((roadmap) => roadmap.progressPercentage)
+                          .reduce((a, b) => a + b) /
+                      items.length)
+                  .round();
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -74,18 +82,14 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
               children: [
-                Text(
-                  'Track and manage your personalized learning paths.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
+                _RoadmapOverviewPanel(
+                  totalCount: items.length,
+                  activeCount: activeCount,
+                  averageProgress: averageProgress,
+                  onGenerateTemplate: _showTemplateRoadmapSheet,
+                  onCreatePersonal: _showCreatePersonalRoadmapSheet,
                 ),
-                const SizedBox(height: 16),
-                _RoadmapCreateActions(
-                  onGenerateRoadmap: _openGenerateRoadmapFlow,
-                  onGeneratePersonalCustom: _showPersonalCustomRoadmapSheet,
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 SearchBar(
                   controller: _searchController,
                   hintText: 'Search roadmaps...',
@@ -109,7 +113,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
                     subtitle:
                         'Generate a personalized roadmap from an available career role to begin tracking progress.',
                     actionLabel: 'Generate Roadmap',
-                    onAction: _openGenerateRoadmapFlow,
+                    onAction: _showTemplateRoadmapSheet,
                   )
                 else if (visible.isEmpty)
                   const EmptyStateView(
@@ -139,16 +143,25 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
     );
   }
 
-  void _openGenerateRoadmapFlow() {
-    context.go('/career-roles');
-  }
-
-  Future<void> _showPersonalCustomRoadmapSheet() async {
+  Future<void> _showTemplateRoadmapSheet() async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => const _GeneratePersonalCustomRoadmapSheet(),
+      builder: (_) => const _RoadmapGenerationSheet(
+        mode: _RoadmapCreateMode.fromTemplate,
+      ),
+    );
+  }
+
+  Future<void> _showCreatePersonalRoadmapSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const _RoadmapGenerationSheet(
+        mode: _RoadmapCreateMode.personal,
+      ),
     );
   }
 
@@ -167,9 +180,11 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
       final title = _title(roadmap).toLowerCase();
       final description =
           (roadmap.careerRoadmap?.description ?? '').toLowerCase();
+      final note = (roadmap.note ?? '').toLowerCase();
       final matchesSearch = _query.isEmpty ||
           title.contains(_query) ||
           description.contains(_query) ||
+          note.contains(_query) ||
           roadmap.createdAt.contains(_query);
       return matchesFilter && matchesSearch;
     }).toList();
@@ -207,7 +222,8 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
     final confirmed = await ConfirmDialog.show(
       context,
       title: 'Delete Roadmap?',
-      message: 'This roadmap will be removed from your list.',
+      message:
+          'This roadmap will be removed from your list. Your account and profile data are not affected.',
       confirmLabel: 'Delete',
       isDanger: true,
     );
@@ -229,73 +245,153 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
   }
 }
 
-class _RoadmapCreateActions extends StatelessWidget {
-  const _RoadmapCreateActions({
-    required this.onGenerateRoadmap,
-    required this.onGeneratePersonalCustom,
+class _RoadmapOverviewPanel extends StatelessWidget {
+  const _RoadmapOverviewPanel({
+    required this.totalCount,
+    required this.activeCount,
+    required this.averageProgress,
+    required this.onGenerateTemplate,
+    required this.onCreatePersonal,
   });
 
-  final VoidCallback onGenerateRoadmap;
-  final VoidCallback onGeneratePersonalCustom;
+  final int totalCount;
+  final int activeCount;
+  final int averageProgress;
+  final VoidCallback onGenerateTemplate;
+  final VoidCallback onCreatePersonal;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final generateButton = AppButton(
-          label: 'Generate Roadmap',
-          leadingIcon: const Icon(Icons.rocket_launch_outlined),
-          onPressed: onGenerateRoadmap,
-        );
-        final customButton = AppButton(
-          label: 'Personal Custom',
-          variant: AppButtonVariant.tonal,
-          leadingIcon: const Icon(Icons.add_task_outlined),
-          onPressed: onGeneratePersonalCustom,
-        );
-
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.outlineVariant),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('My Roadmaps', style: AppTextStyles.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            'Track and manage your personalized learning paths.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
-          child: constraints.maxWidth < 360
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    generateButton,
-                    const SizedBox(height: 12),
-                    customButton,
-                  ],
-                )
-              : Row(
-                  children: [
-                    Expanded(child: generateButton),
-                    const SizedBox(width: 12),
-                    Expanded(child: customButton),
-                  ],
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _RoadmapStatTile(
+                  label: 'Total',
+                  value: totalCount.toString(),
+                  icon: Icons.map_outlined,
                 ),
-        );
-      },
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _RoadmapStatTile(
+                  label: 'Active',
+                  value: activeCount.toString(),
+                  icon: Icons.check_circle_outline,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _RoadmapStatTile(
+                  label: 'Avg',
+                  value: '$averageProgress%',
+                  icon: Icons.trending_up_outlined,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          AppButton(
+            label: 'Generate From Template',
+            leadingIcon: const Icon(Icons.rocket_launch_outlined),
+            onPressed: onGenerateTemplate,
+          ),
+          const SizedBox(height: 10),
+          AppButton(
+            label: 'Create Personal Roadmap',
+            variant: AppButtonVariant.tonal,
+            leadingIcon: const Icon(Icons.add_task_outlined),
+            onPressed: onCreatePersonal,
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _GeneratePersonalCustomRoadmapSheet extends ConsumerStatefulWidget {
-  const _GeneratePersonalCustomRoadmapSheet();
+class _RoadmapStatTile extends StatelessWidget {
+  const _RoadmapStatTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
 
   @override
-  ConsumerState<_GeneratePersonalCustomRoadmapSheet> createState() =>
-      _GeneratePersonalCustomRoadmapSheetState();
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppColors.primary),
+          const SizedBox(height: 8),
+          Text(value, style: AppTextStyles.titleMedium),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _GeneratePersonalCustomRoadmapSheetState
-    extends ConsumerState<_GeneratePersonalCustomRoadmapSheet> {
+enum _RoadmapCreateMode { fromTemplate, personal }
+
+class _RoadmapGenerationSheet extends ConsumerStatefulWidget {
+  const _RoadmapGenerationSheet({required this.mode});
+
+  final _RoadmapCreateMode mode;
+
+  @override
+  ConsumerState<_RoadmapGenerationSheet> createState() =>
+      _RoadmapGenerationSheetState();
+}
+
+class _RoadmapGenerationSheetState
+    extends ConsumerState<_RoadmapGenerationSheet> {
+  final _noteController = TextEditingController();
   CareerRoleDto? _selectedRole;
   String? _selectedRoadmapId;
   bool _isGenerating = false;
+
+  bool get _isPersonal => widget.mode == _RoadmapCreateMode.personal;
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
 
   Future<void> _generate() async {
     final careerRoadmapId = _selectedRoadmapId;
@@ -304,9 +400,11 @@ class _GeneratePersonalCustomRoadmapSheetState
     setState(() => _isGenerating = true);
     try {
       final profileId = await ref.read(profileIdProvider.future);
-      final roadmap = await ref
-          .read(roadmapRepositoryProvider)
-          .generateRoadmap(profileId, careerRoadmapId);
+      final roadmap = await ref.read(roadmapRepositoryProvider).generateRoadmap(
+            profileId,
+            careerRoadmapId,
+            note: _isPersonal ? _noteController.text : null,
+          );
       ref.invalidate(personalRoadmapsProvider);
       ref.invalidate(dashboardDataProvider);
       if (!mounted) return;
@@ -343,10 +441,17 @@ class _GeneratePersonalCustomRoadmapSheetState
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Generate Roadmap', style: AppTextStyles.titleLarge),
+                      Text(
+                        _isPersonal
+                            ? 'Create Personal Roadmap'
+                            : 'Generate Roadmap',
+                        style: AppTextStyles.titleLarge,
+                      ),
                       const SizedBox(height: 4),
                       Text(
-                        'Select a career role and roadmap template to get a personalized learning path.',
+                        _isPersonal
+                            ? 'Choose a role, pick a template, and add your goals to create a personal learning path.'
+                            : 'Select a career role and roadmap template to get a personalized learning path.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.onSurfaceVariant,
                         ),
@@ -459,6 +564,24 @@ class _GeneratePersonalCustomRoadmapSheetState
                                   ),
                           ),
                         ),
+                        if (_isPersonal) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Personal note',
+                            style: AppTextStyles.titleSmall,
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _noteController,
+                            minLines: 3,
+                            maxLines: 4,
+                            textInputAction: TextInputAction.newline,
+                            decoration: const InputDecoration(
+                              hintText:
+                                  'Add specific goals, preferences, or deadlines...',
+                            ),
+                          ),
+                        ],
                       ] else
                         const Spacer(),
                       const SizedBox(height: 12),
@@ -474,7 +597,9 @@ class _GeneratePersonalCustomRoadmapSheetState
                           const SizedBox(width: 12),
                           Expanded(
                             child: AppButton(
-                              label: 'Generate Roadmap',
+                              label: _isPersonal
+                                  ? 'Create Roadmap'
+                                  : 'Generate Roadmap',
                               leadingIcon:
                                   const Icon(Icons.rocket_launch_outlined),
                               onPressed:
@@ -695,6 +820,7 @@ class _RoadmapManagementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = roadmap.progressPercentage.round();
+    final progressColor = _progressColor(progress);
     final status = progress >= 100
         ? (label: 'Completed', value: 4)
         : progress > 0
@@ -735,6 +861,37 @@ class _RoadmapManagementCard extends StatelessWidget {
                             ),
                           ),
                         ],
+                        if ((roadmap.note ?? '').isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.edit_note_outlined,
+                                  size: 18,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    roadmap.note!,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -763,11 +920,16 @@ class _RoadmapManagementCard extends StatelessWidget {
                 children: [
                   Text('Progress', style: AppTextStyles.bodySmall),
                   const Spacer(),
-                  Text('$progress%', style: AppTextStyles.titleSmall),
+                  Text(
+                    '$progress%',
+                    style: AppTextStyles.titleSmall.copyWith(
+                      color: progressColor,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
-              LinearProgressBar(value: progress / 100),
+              LinearProgressBar(value: progress / 100, color: progressColor),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -808,6 +970,12 @@ class _RoadmapManagementCard extends StatelessWidget {
       ),
     );
   }
+}
+
+Color _progressColor(int progress) {
+  if (progress >= 70) return AppColors.success;
+  if (progress >= 30) return AppColors.primary;
+  return AppColors.onSurfaceVariant;
 }
 
 class _RoadmapListSkeleton extends StatelessWidget {

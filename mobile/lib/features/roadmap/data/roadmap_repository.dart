@@ -8,8 +8,9 @@ abstract class RoadmapRepository {
   Future<PersonalRoadmapDto> getPersonalRoadmapWithProgress(String id);
   Future<PersonalRoadmapDto> generateRoadmap(
     String profileId,
-    String careerRoadmapId,
-  );
+    String careerRoadmapId, {
+    String? note,
+  });
   Future<void> toggleActiveRoadmap(String personalRoadmapId);
   Future<void> deleteRoadmap(String personalRoadmapId);
   Future<void> updateNodeStatus(

@@ -99,6 +99,7 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
           careerRoadmapId
           careerRoadmapName
           careerRoadmapDescription
+          note
           progressPercentage
           isActive
           createdAt
@@ -125,6 +126,7 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
           careerRoadmapId
           careerRoadmapName
           careerRoadmapDescription
+          note
           progressPercentage
           isActive
           createdAt
@@ -169,13 +171,15 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   @override
   Future<PersonalRoadmapDto> generateRoadmap(
     String profileId,
-    String careerRoadmapId,
-  ) async {
+    String careerRoadmapId, {
+    String? note,
+  }) async {
     final response = await _dio.post(
       '${ApiConstants.personalRoadmaps}/generate',
       data: {
         'profileId': profileId,
         'careerRoadmapId': careerRoadmapId,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
       },
     );
     return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
