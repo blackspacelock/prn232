@@ -428,27 +428,27 @@ class _SkillDemandSection extends StatelessWidget {
               ),
             )
           : Column(
-              children: rows
-                  .map(
-                    (row) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _DemandBar(row: row),
-                    ),
-                  )
-                  .toList(),
+              children: [
+                for (var i = 0; i < rows.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _DemandBar(row: rows[i], colorIndex: i),
+                  ),
+              ],
             ),
     );
   }
 }
 
 class _DemandBar extends StatelessWidget {
-  const _DemandBar({required this.row});
+  const _DemandBar({required this.row, required this.colorIndex});
 
   final _DemandRow row;
+  final int colorIndex;
 
   @override
   Widget build(BuildContext context) {
-    final color = _skillColor(row.skill).accent;
+    final color = _skillColor(colorIndex).accent;
     return Row(
       children: [
         SizedBox(
@@ -527,7 +527,7 @@ class _MarketMoversSection extends StatelessWidget {
           : Column(
               children: [
                 for (var i = 0; i < rows.length; i++)
-                  _MoverRow(index: i + 1, row: rows[i]),
+                  _MoverRow(index: i + 1, row: rows[i], colorIndex: i),
               ],
             ),
     );
@@ -535,14 +535,19 @@ class _MarketMoversSection extends StatelessWidget {
 }
 
 class _MoverRow extends StatelessWidget {
-  const _MoverRow({required this.index, required this.row});
+  const _MoverRow({
+    required this.index,
+    required this.row,
+    required this.colorIndex,
+  });
 
   final int index;
   final _MarketMoverRow row;
+  final int colorIndex;
 
   @override
   Widget build(BuildContext context) {
-    final color = _skillColor(row.skill).accent;
+    final color = _skillColor(colorIndex).accent;
     final positive = row.delta >= 0;
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -1088,7 +1093,7 @@ _MarketSummary _buildSummary(
 }
 
 ({Color background, Color border, Color text, Color accent}) _skillColor(
-  String label,
+  int index,
 ) {
   final palettes = [
     (
@@ -1151,9 +1156,56 @@ _MarketSummary _buildSummary(
       text: const Color(0xFFD81B60),
       accent: const Color(0xFFD81B60),
     ),
+    (
+      background: const Color(0xFFE0F7FA),
+      border: const Color(0xFF80DEEA),
+      text: const Color(0xFF00838F),
+      accent: const Color(0xFF00ACC1),
+    ),
+    (
+      background: const Color(0xFFE8F5E9),
+      border: const Color(0xFFA5D6A7),
+      text: const Color(0xFF2E7D32),
+      accent: const Color(0xFF43A047),
+    ),
+    (
+      background: const Color(0xFFFFF3E0),
+      border: const Color(0xFFFFCC80),
+      text: const Color(0xFFE65100),
+      accent: const Color(0xFFEF6C00),
+    ),
+    (
+      background: const Color(0xFFE3F2FD),
+      border: const Color(0xFF90CAF9),
+      text: const Color(0xFF1565C0),
+      accent: const Color(0xFF1976D2),
+    ),
+    (
+      background: const Color(0xFFF1F8E9),
+      border: const Color(0xFFC5E1A5),
+      text: const Color(0xFF558B2F),
+      accent: const Color(0xFF7CB342),
+    ),
+    (
+      background: const Color(0xFFF9FBE7),
+      border: const Color(0xFFE6EE9C),
+      text: const Color(0xFF827717),
+      accent: const Color(0xFFAFB42B),
+    ),
+    (
+      background: const Color(0xFFFFEBEE),
+      border: const Color(0xFFEF9A9A),
+      text: const Color(0xFFC62828),
+      accent: const Color(0xFFE53935),
+    ),
+    (
+      background: const Color(0xFFF3E5F5),
+      border: const Color(0xFFCE93D8),
+      text: const Color(0xFF6A1B9A),
+      accent: const Color(0xFF8E24AA),
+    ),
   ];
-  final hash = label.codeUnits.fold<int>(0, (sum, code) => sum + code);
-  return palettes[hash.abs() % palettes.length];
+  return palettes[index % palettes.length];
 }
 
 class _MarketSkeleton extends StatelessWidget {
