@@ -8,8 +8,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { AdminField, AdminFormDialog } from '../../components/admin/AdminFormDialog';
-import { AdminListToolbar, AdminPagination } from '../../components/admin/AdminListControls';
-import { useAdminList } from '../../components/admin/useAdminList';
+import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
 import { AdminRecordCard } from '../../components/admin/AdminRecordCard';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 
@@ -93,13 +92,7 @@ export function AdminLearningResourcesPage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: ResourceForm }) => {
-      const payload = {
-        name: dto.name,
-        resourceUrl: dto.resourceUrl,
-        resourceType: dto.resourceType,
-        provider: dto.provider,
-        isFree: dto.isFree,
-      };
+      const { nodeId: _nodeId, ...payload } = dto;
       return apiClient.put<LearningResource>(`/api/learning-resources/${id}`, payload).then((r) => r.data);
     },
     onSuccess: (resource) => {

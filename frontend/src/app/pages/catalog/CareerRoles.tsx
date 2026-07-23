@@ -10,8 +10,9 @@ import { Skeleton } from '../../components/Skeleton';
 import {
   AdminListToolbar,
   AdminPagination,
+  useAdminList,
+  type AdminSortOption,
 } from '../../components/admin/AdminListControls';
-import { useAdminList, type AdminSortOption } from '../../components/admin/useAdminList';
 import type { CareerRoleDto } from '@/types/api';
 import { useCatalogRoutes } from './catalogRoutes';
 

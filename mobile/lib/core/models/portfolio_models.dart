@@ -24,7 +24,7 @@ class GitHubRepositoryDto {
         githubRepoId:
             (json['githubRepoId'] ?? json['id'] ?? json['repoId'] ?? '')
                 .toString(),
-        profileId: (json['profileId'] ?? '').toString(),
+        profileId: (json['profileId'] ?? json['userId'] ?? '').toString(),
         repositoryName:
             (json['repositoryName'] ?? json['name'] ?? json['repoName'] ?? '')
                 .toString(),
@@ -92,100 +92,6 @@ class PortfolioAnalysisDto {
       );
 }
 
-class PublicPortfolioDto {
-  const PublicPortfolioDto({
-    required this.publicPortfolioId,
-    required this.profileId,
-    this.headline,
-    this.publicBio,
-    this.location,
-    this.websiteUrl,
-    this.linkedInUrl,
-    this.contactEmail,
-    this.isPublic = true,
-    this.lastAnalyzedAt,
-    this.cachedPortfolioAnalysis,
-  });
-
-  final String publicPortfolioId;
-  final String profileId;
-  final String? headline;
-  final String? publicBio;
-  final String? location;
-  final String? websiteUrl;
-  final String? linkedInUrl;
-  final String? contactEmail;
-  final bool isPublic;
-  final String? lastAnalyzedAt;
-  final PortfolioAnalysisDto? cachedPortfolioAnalysis;
-
-  factory PublicPortfolioDto.fromJson(Map<String, dynamic> json) =>
-      PublicPortfolioDto(
-        publicPortfolioId:
-            (json['publicPortfolioId'] ?? json['id'] ?? '').toString(),
-        profileId: (json['profileId'] ?? '').toString(),
-        headline: json['headline'] as String?,
-        publicBio: json['publicBio'] as String?,
-        location: json['location'] as String?,
-        websiteUrl: json['websiteUrl'] as String?,
-        linkedInUrl: json['linkedInUrl'] as String?,
-        contactEmail: json['contactEmail'] as String?,
-        isPublic: json['isPublic'] as bool? ?? true,
-        lastAnalyzedAt: json['lastAnalyzedAt']?.toString(),
-        cachedPortfolioAnalysis:
-            json['cachedPortfolioAnalysis'] is Map<String, dynamic>
-                ? PortfolioAnalysisDto.fromJson(
-                    json['cachedPortfolioAnalysis'] as Map<String, dynamic>,
-                  )
-                : null,
-      );
-}
-
-class UpdatePublicPortfolioDto {
-  const UpdatePublicPortfolioDto({
-    this.headline,
-    this.publicBio,
-    this.location,
-    this.websiteUrl,
-    this.linkedInUrl,
-    this.contactEmail,
-    this.isPublic,
-  });
-
-  final String? headline;
-  final String? publicBio;
-  final String? location;
-  final String? websiteUrl;
-  final String? linkedInUrl;
-  final String? contactEmail;
-  final bool? isPublic;
-
-  Map<String, dynamic> toJson() => {
-        'headline': headline,
-        'publicBio': publicBio,
-        'location': location,
-        'websiteUrl': websiteUrl,
-        'linkedInUrl': linkedInUrl,
-        'contactEmail': contactEmail,
-        'isPublic': isPublic,
-      }..removeWhere((_, value) => value == null);
-}
-
-class PublicPortfolioViewData {
-  const PublicPortfolioViewData({
-    required this.profile,
-    required this.repositories,
-    this.publicPortfolio,
-  });
-
-  final ProfileWithSkillsDto profile;
-  final List<GitHubRepositoryDto> repositories;
-  final PublicPortfolioDto? publicPortfolio;
-
-  List<GitHubRepositoryDto> get publicRepositories =>
-      repositories.where((repo) => !repo.isPrivate).toList();
-}
-
 class CreateRepoDto {
   const CreateRepoDto({
     required this.profileId,
@@ -235,8 +141,6 @@ class ProfileWithSkillsDto {
   const ProfileWithSkillsDto({
     required this.profileId,
     required this.userId,
-    this.fullName,
-    this.avatarUrl,
     this.bioDescription,
     this.phoneNumber,
     this.university,
@@ -247,8 +151,6 @@ class ProfileWithSkillsDto {
 
   final String profileId;
   final String userId;
-  final String? fullName;
-  final String? avatarUrl;
   final String? bioDescription;
   final String? phoneNumber;
   final String? university;
@@ -262,8 +164,6 @@ class ProfileWithSkillsDto {
       profileId:
           (json['profileId'] ?? json['id'] ?? json['userId'] ?? '').toString(),
       userId: (json['userId'] ?? '').toString(),
-      fullName: json['fullName'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
       bioDescription: json['bioDescription'] as String?,
       phoneNumber: json['phoneNumber'] as String?,
       university: json['university'] as String?,

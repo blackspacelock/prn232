@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import {
   LayoutDashboard,
   Map,
@@ -16,15 +16,24 @@ import {
   Database,
   Telescope,
   Users,
+  ClipboardList,
   SlidersHorizontal,
-  LogOut,
 } from 'lucide-react';
+import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
+import { GET_USER_BY_ID } from '@/graphql/queries';
 
 interface NavItem {
   icon: React.ElementType;
   label: string;
   path: string;
+}
+
+interface UserByIdQuery {
+  userById?: {
+    fullName?: string | null;
+    avatarUrl?: string | null;
+  } | null;
 }
 
 const navItems: NavItem[] = [
@@ -47,22 +56,37 @@ const adminItems: NavItem[] = [
   { icon: BookOpen, label: 'Resources', path: '/admin/learning-resources' },
   { icon: Database, label: 'Trends', path: '/admin/job-trends' },
   { icon: SlidersHorizontal, label: 'Config', path: '/admin/config' },
+  { icon: ClipboardList, label: 'Reports', path: '/admin/reports' },
 ];
+
+function getInitials(fullName: string | null | undefined, email: string | null | undefined): string {
+  if (fullName) {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0][0].toUpperCase();
+  }
+  return (email?.[0] ?? '?').toUpperCase();
+}
 
 export function NavigationRail() {
   const location = useLocation();
-  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const userId = user?.id ?? '';
+
+  const { data: userData } = useQuery(GET_USER_BY_ID, {
+    variables: { userId },
+    skip: !userId,
+  });
+
+  const fullName: string | null = (userData as UserByIdQuery | undefined)?.userById?.fullName ?? null;
+  const avatarUrl: string | null = (userData as UserByIdQuery | undefined)?.userById?.avatarUrl ?? null;
+  const displayName = fullName ?? user?.email ?? '';
+  const initials = getInitials(fullName, user?.email);
   const role = user?.role ?? '';
   const isAdmin = role === 'Admin';
   const isAdminSection = location.pathname.startsWith('/admin');
 
   const visibleItems = isAdmin && isAdminSection ? adminItems : navItems;
-  const handleLogout = () => {
-    clearAuth();
-    navigate('/login', { replace: true });
-  };
 
   return (
     <aside className="fixed left-0 top-0 z-50 hidden h-full w-56 flex-col border-r border-[var(--md3-outline-variant)] bg-white px-4 py-4 md:flex">
@@ -113,7 +137,7 @@ export function NavigationRail() {
         })}
       </nav>
 
-      {/* Settings & Logout */}
+      {/* User Avatar & Settings */}
       <div className="flex flex-col gap-2 border-t border-[var(--md3-outline-variant)] pt-4">
         {!isAdminSection && (
           <Link
@@ -132,16 +156,18 @@ export function NavigationRail() {
             <span className="text-sm font-medium">Settings</span>
           </Link>
         )}
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex min-h-11 w-full items-center gap-3 rounded-full px-3 py-2 text-[var(--md3-error)] transition-colors hover:bg-[var(--md3-error-container)]"
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/70">
-            <LogOut className="h-5 w-5" />
-          </span>
-          <span className="text-sm font-medium">Log out</span>
-        </button>
+        <div className="flex items-center gap-3 rounded-xl bg-[var(--md3-surface-container)] px-3 py-3">
+          <div className="w-9 h-9 rounded-full bg-[var(--md3-primary-container)] flex shrink-0 items-center justify-center overflow-hidden">
+            {avatarUrl
+              ? <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              : <span className="text-sm font-medium text-[var(--md3-primary)]">{initials}</span>
+            }
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-[var(--md3-on-surface)]">{displayName}</p>
+            <p className="truncate text-[11px] text-[var(--md3-on-surface-variant)]">{role}</p>
+          </div>
+        </div>
       </div>
     </aside>
   );

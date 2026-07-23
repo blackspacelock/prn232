@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/profile_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_text_field.dart';
@@ -75,20 +76,19 @@ class _SkillInputScreenState extends ConsumerState<SkillInputScreen> {
   Widget build(BuildContext context) {
     final skills = ref.watch(skillInputProvider);
     final technicalSkills = ref.watch(technicalSkillsProvider);
-    final roadmapId = _resolvedRoadmapId(ref);
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Your Skills')),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('Your Skills'),
+      ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: AppButton(
-          label: 'Run Analysis',
+          label: 'Analyze Skill Gap',
           leadingIcon: const Icon(Icons.arrow_forward),
-          onPressed: roadmapId == null
-              ? null
-              : () => context.go(
-                    '/skill-gap/result?careerRoadmapId=$roadmapId',
-                  ),
+          onPressed: () => context.go(
+            '/skill-gap/result?careerRoadmapId=${widget.careerRoadmapId}&autoAnalyze=true',
+          ),
         ),
       ),
       body: skills.when(
@@ -192,13 +192,6 @@ class _SkillInputScreenState extends ConsumerState<SkillInputScreen> {
         },
       ),
     );
-  }
-
-  String? _resolvedRoadmapId(WidgetRef ref) {
-    if (widget.careerRoadmapId.isNotEmpty) return widget.careerRoadmapId;
-    final options = ref.watch(roadmapsBySelectedRoleProvider).valueOrNull;
-    if (options == null || options.isEmpty) return widget.careerRoleId;
-    return options.first.careerRoadmapId;
   }
 
   Color _skillColor(String skillName) {

@@ -1,3 +1,7 @@
+import 'dart:math' as math;
+
+import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -10,6 +14,27 @@ import '../../../core/widgets/linear_progress_bar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../roadmap/providers/roadmap_providers.dart';
+import '../../settings/providers/settings_provider.dart';
+
+final _announcementProvider = FutureProvider<String>((ref) async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return '';
+
+  final config = FirebaseRemoteConfig.instance;
+  await config.setDefaults(const {'dashboard_announcement': ''});
+  await config.setConfigSettings(
+    RemoteConfigSettings(
+      fetchTimeout: const Duration(seconds: 10),
+      minimumFetchInterval:
+          kDebugMode ? Duration.zero : const Duration(hours: 1),
+    ),
+  );
+  try {
+    await config.fetchAndActivate();
+  } catch (_) {
+    // Keep the in-app default when Remote Config is unavailable.
+  }
+  return config.getString('dashboard_announcement').trim();
+});
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -17,6 +42,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(dashboardDataProvider);
+    final announcement = ref.watch(_announcementProvider).valueOrNull ?? '';
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -31,10 +57,7 @@ class DashboardScreen extends ConsumerWidget {
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: AppColors.primaryContainer,
-              child: Icon(Icons.person, color: Colors.white),
-            ),
+            child: _DashboardUserAvatar(),
           ),
         ],
       ),
@@ -48,11 +71,22 @@ class DashboardScreen extends ConsumerWidget {
           onAction: () => ref.invalidate(dashboardDataProvider),
         ),
         data: (data) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(dashboardDataProvider),
+          onRefresh: () async {
+            ref.invalidate(dashboardDataProvider);
+            ref.invalidate(_announcementProvider);
+            await Future.wait([
+              ref.read(dashboardDataProvider.future),
+              ref.read(_announcementProvider.future),
+            ]);
+          },
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _StatsScroller(data: data),
+              if (announcement.isNotEmpty) ...[
+                _AnnouncementBanner(message: announcement),
+                const SizedBox(height: 16),
+              ],
+              _StatsGrid(data: data),
               const SizedBox(height: 24),
               _RoadmapsSection(roadmaps: data.roadmaps),
               const SizedBox(height: 24),
@@ -74,36 +108,107 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _StatsScroller extends StatelessWidget {
-  const _StatsScroller({required this.data});
+class _DashboardUserAvatar extends ConsumerWidget {
+  const _DashboardUserAvatar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(settingsProvider).valueOrNull?.user;
+    final avatarUrl = user?.avatarUrl?.trim();
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+    final initials = _dashboardInitials(user?.fullName ?? user?.email ?? '');
+
+    return CircleAvatar(
+      backgroundColor: AppColors.primaryContainer,
+      backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+      child: hasAvatar
+          ? null
+          : initials.isNotEmpty
+              ? Text(
+                  initials,
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+              : const Icon(Icons.person, color: Colors.white),
+    );
+  }
+}
+
+String _dashboardInitials(String source) {
+  final parts = source
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '';
+  if (parts.length == 1) {
+    final value = parts.first;
+    return value.length >= 2
+        ? value.substring(0, 2).toUpperCase()
+        : value.toUpperCase();
+  }
+  return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+}
+
+class _AnnouncementBanner extends StatelessWidget {
+  const _AnnouncementBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryContainer.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primaryContainer),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.campaign_outlined, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(child: Text(message, style: AppTextStyles.bodyMedium)),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsGrid extends StatelessWidget {
+  const _StatsGrid({required this.data});
 
   final DashboardData data;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 112,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _StatCard(
-              icon: Icons.map_outlined,
-              value: '${data.roadmapCount}',
-              label: 'My Roadmaps'),
-          _StatCard(
-              icon: Icons.show_chart,
-              value: '${data.averageProgress.round()}%',
-              label: 'Avg Progress'),
-          _StatCard(
-              icon: Icons.psychology_outlined,
-              value: '${data.skillsCount}',
-              label: 'My Skills'),
-          _StatCard(
-              icon: Icons.folder_special_outlined,
-              value: '${data.repositoryCount}',
-              label: 'GitHub Repos'),
-        ],
-      ),
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.55,
+      children: [
+        _StatCard(
+            icon: Icons.map_outlined,
+            value: '${data.roadmapCount}',
+            label: 'My Roadmaps'),
+        _StatCard(
+            icon: Icons.show_chart,
+            value: '${data.averageProgress.round()}%',
+            label: 'Avg Progress'),
+        _StatCard(
+            icon: Icons.psychology_outlined,
+            value: '${data.skillsCount}',
+            label: 'My Skills'),
+        _StatCard(
+            icon: Icons.folder_special_outlined,
+            value: '${data.repositoryCount}',
+            label: 'GitHub Repos'),
+      ],
     );
   }
 }
@@ -119,8 +224,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 148,
-      margin: const EdgeInsets.only(right: 12),
+      width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
@@ -209,7 +313,7 @@ class _RoadmapSummaryCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    roadmap.displayName,
+                    roadmap.careerRoadmap?.name ?? 'Personal Roadmap',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.titleSmall,
@@ -221,8 +325,8 @@ class _RoadmapSummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              roadmap.displayDescription ?? 'Personal roadmap',
-              maxLines: 2,
+              roadmap.careerRoadmap?.careerRole?.name ?? 'Software Engineering',
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.onSurfaceVariant,
@@ -267,6 +371,9 @@ class _SkillGapSnapshot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final chartCategories = categories.isEmpty
+        ? const [SkillGapCategory('Skills', 0, 1)]
+        : categories;
     return _Panel(
       title: 'Skill Gap Snapshot',
       child: activeRoadmap == null
@@ -275,97 +382,192 @@ class _SkillGapSnapshot extends StatelessWidget {
               title: 'Set an active roadmap',
               subtitle: 'Generate a roadmap to unlock skill-gap analysis.',
               actionLabel: 'Choose Role',
-              onAction: () => context.go('/career-roles'),
+              onAction: () => context.go('/roadmaps'),
             )
-          : categories.isEmpty
-              ? EmptyStateView(
-                  icon: Icons.radar,
-                  title: 'No skill-gap data yet',
-                  subtitle:
-                      'Add skills or refresh your active roadmap analysis.',
-                  actionLabel: 'Analyze',
-                  onAction: () => context.go('/skill-gap/select'),
-                )
-              : InkWell(
-                  onTap: () => context.go('/skill-gap/select'),
-                  child: Column(
+          : InkWell(
+              onTap: () => context.go('/skill-gap/select'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 320,
+                    child: _BoundedSkillGapRadar(categories: chartCategories),
+                  ),
+                  const SizedBox(height: 8),
+                  const Row(
                     children: [
-                      SizedBox(
-                        height: 220,
-                        child: RadarChart(
-                          RadarChartData(
-                            radarShape: RadarShape.polygon,
-                            tickCount: 4,
-                            ticksTextStyle: const TextStyle(
-                              color: Colors.transparent,
-                              fontSize: 0,
-                            ),
-                            getTitle: (index, angle) {
-                              final category = categories[index];
-                              return RadarChartTitle(
-                                text: category.name,
-                                angle: angle,
-                              );
-                            },
-                            titleTextStyle: AppTextStyles.labelSmall.copyWith(
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                            dataSets: [
-                              RadarDataSet(
-                                fillColor:
-                                    AppColors.primary.withValues(alpha: 0.22),
-                                borderColor: AppColors.primary,
-                                entryRadius: 2,
-                                dataEntries: categories
-                                    .map((category) =>
-                                        RadarEntry(value: category.current))
-                                    .toList(),
-                              ),
-                              RadarDataSet(
-                                fillColor:
-                                    AppColors.warning.withValues(alpha: 0.12),
-                                borderColor: AppColors.warning,
-                                entryRadius: 2,
-                                dataEntries: categories
-                                    .map((category) =>
-                                        RadarEntry(value: category.required))
-                                    .toList(),
-                              ),
-                            ],
-                          ),
-                        ),
+                      _LegendDot(
+                        color: Color(0xFF1A73E8),
+                        label: 'Your Skills',
                       ),
-                      const SizedBox(height: 12),
-                      const _LegendRow(),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Tap to inspect missing skills for your active roadmap.',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                      SizedBox(width: 16),
+                      _LegendDot(color: Color(0xFFFBBC04), label: 'Required'),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap to inspect missing skills for your active roadmap.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
 
-class _LegendRow extends StatelessWidget {
-  const _LegendRow();
+class _BoundedSkillGapRadar extends StatelessWidget {
+  const _BoundedSkillGapRadar({required this.categories});
+
+  final List<SkillGapCategory> categories;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _LegendDot(color: AppColors.primary, label: 'Your Skills'),
-        SizedBox(width: 16),
-        _LegendDot(color: AppColors.warning, label: 'Required'),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = math.min(constraints.maxWidth, constraints.maxHeight);
+        const labelWidth = 86.0;
+        const labelHeight = 42.0;
+        final chartSize = math.max(180.0, size - 112);
+        final center = size / 2;
+        final labelRadius = chartSize / 2 + 34;
+
+        return Center(
+          child: SizedBox.square(
+            dimension: size,
+            child: Stack(
+              clipBehavior: Clip.hardEdge,
+              children: [
+                Center(
+                  child: SizedBox.square(
+                    dimension: chartSize,
+                    child: RadarChart(
+                      RadarChartData(
+                        radarShape: RadarShape.polygon,
+                        radarBorderData: const BorderSide(
+                          color: AppColors.outlineVariant,
+                        ),
+                        tickBorderData: const BorderSide(
+                          color: AppColors.outlineVariant,
+                        ),
+                        gridBorderData: const BorderSide(
+                          color: AppColors.outlineVariant,
+                        ),
+                        tickCount: 4,
+                        ticksTextStyle:
+                            const TextStyle(color: Colors.transparent),
+                        titleTextStyle:
+                            const TextStyle(color: Colors.transparent),
+                        getTitle: (_, __) => const RadarChartTitle(text: ''),
+                        dataSets: [
+                          RadarDataSet(
+                            dataEntries: categories
+                                .map((category) =>
+                                    RadarEntry(value: category.current))
+                                .toList(),
+                            fillColor:
+                                const Color(0xFF1A73E8).withValues(alpha: 0.2),
+                            borderColor: const Color(0xFF1A73E8),
+                            borderWidth: 2,
+                          ),
+                          RadarDataSet(
+                            dataEntries: categories
+                                .map((category) =>
+                                    RadarEntry(value: category.required))
+                                .toList(),
+                            fillColor:
+                                const Color(0xFFFBBC04).withValues(alpha: 0.15),
+                            borderColor: const Color(0xFFFBBC04),
+                            borderWidth: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                for (var index = 0; index < categories.length; index++)
+                  _RadarLabel(
+                    label: categories[index].name,
+                    left: _clampLabelPosition(
+                      center +
+                          math.cos(_radarLabelAngle(index, categories.length)) *
+                              labelRadius -
+                          labelWidth / 2,
+                      size - labelWidth,
+                    ),
+                    top: _clampLabelPosition(
+                      center +
+                          math.sin(_radarLabelAngle(index, categories.length)) *
+                              labelRadius -
+                          labelHeight / 2,
+                      size - labelHeight,
+                    ),
+                    width: labelWidth,
+                    height: labelHeight,
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
+}
+
+class _RadarLabel extends StatelessWidget {
+  const _RadarLabel({
+    required this.label,
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+  });
+
+  final String label;
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: width,
+            child: Text(
+              label,
+              maxLines: 3,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 10,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+double _radarLabelAngle(int index, int count) {
+  if (count <= 0) return -math.pi / 2;
+  return -math.pi / 2 + (math.pi * 2 * index / count);
+}
+
+double _clampLabelPosition(double value, double max) {
+  return value.clamp(0, math.max(0, max)).toDouble();
 }
 
 class _LegendDot extends StatelessWidget {
@@ -402,83 +604,74 @@ class _TrendingSkills extends StatelessWidget {
       title: 'Trending Skills',
       actionLabel: 'View all',
       onAction: () => context.go('/market-pulse'),
-      child: skills.isEmpty
-          ? EmptyStateView(
-              icon: Icons.trending_up_outlined,
-              title: 'No market data yet',
-              subtitle:
-                  'Trending skills will appear when the backend has job trend snapshots.',
-              actionLabel: 'View Market',
-              onAction: () => context.go('/market-pulse'),
-            )
-          : SizedBox(
-              height: 220,
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  maxY: 100,
-                  minY: 0,
-                  gridData: FlGridData(
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) => const FlLine(
-                      color: AppColors.outlineVariant,
-                      strokeWidth: 0.6,
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 48,
-                        getTitlesWidget: (value, meta) {
-                          final index = value.toInt();
-                          if (index < 0 || index >= skills.length) {
-                            return const SizedBox.shrink();
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: SizedBox(
-                              width: 54,
-                              child: Text(
-                                skills[index].name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: AppTextStyles.labelSmall,
-                              ),
-                            ),
-                          );
-                        },
+      child: SizedBox(
+        height: 220,
+        child: BarChart(
+          BarChartData(
+            alignment: BarChartAlignment.spaceAround,
+            maxY: 1,
+            minY: 0,
+            gridData: FlGridData(
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (_) => const FlLine(
+                color: AppColors.outlineVariant,
+                strokeWidth: 0.6,
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            titlesData: FlTitlesData(
+              leftTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 48,
+                  getTitlesWidget: (value, meta) {
+                    final index = value.toInt();
+                    if (index < 0 || index >= skills.length) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: SizedBox(
+                        width: 54,
+                        child: Text(
+                          skills[index].name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.labelSmall,
+                        ),
                       ),
-                    ),
-                  ),
-                  barGroups: [
-                    for (var i = 0; i < skills.length; i++)
-                      BarChartGroupData(
-                        x: i,
-                        barRods: [
-                          BarChartRodData(
-                            toY: skills[i].score.clamp(0, 100),
-                            width: 18,
-                            borderRadius: BorderRadius.circular(6),
-                            color: _rankColor(i),
-                          ),
-                        ],
-                      ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ),
+            barGroups: [
+              for (var i = 0; i < skills.length; i++)
+                BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: skills[i].score,
+                      width: 18,
+                      borderRadius: BorderRadius.circular(6),
+                      color: _rankColor(i),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -502,43 +695,34 @@ class _RecentMentorSessions extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Panel(
       title: 'Recent AI Mentor Sessions',
-      child: sessions.isEmpty
-          ? EmptyStateView(
-              icon: Icons.smart_toy_outlined,
-              title: 'No mentor sessions yet',
-              subtitle:
-                  'Start a chat when you need help planning your next move.',
-              actionLabel: 'Ask Mentor',
-              onAction: () => context.go('/mentor'),
+      child: Column(
+        children: sessions
+            .take(2)
+            .map(
+              (session) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFE8F0FE),
+                  child:
+                      Icon(Icons.smart_toy_outlined, color: AppColors.primary),
+                ),
+                title: Text(session.title),
+                subtitle: Text(
+                  session.preview,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Text(
+                  session.dateLabel,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                onTap: () => context.go('/mentor'),
+              ),
             )
-          : Column(
-              children: sessions
-                  .take(2)
-                  .map(
-                    (session) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFFE8F0FE),
-                        child: Icon(Icons.smart_toy_outlined,
-                            color: AppColors.primary),
-                      ),
-                      title: Text(session.title),
-                      subtitle: Text(
-                        session.preview,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: Text(
-                        session.dateLabel,
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                      onTap: () => context.go('/mentor'),
-                    ),
-                  )
-                  .toList(),
-            ),
+            .toList(),
+      ),
     );
   }
 }

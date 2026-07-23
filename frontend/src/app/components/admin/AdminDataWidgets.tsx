@@ -1,6 +1,8 @@
 import type { ElementType } from 'react';
 import type { UserDto } from '@/types/api';
 
+export const CHART_COLORS = ['#2563EB', '#0F766E', '#D97706', '#7C3AED', '#DB2777', '#EA580C'];
+
 const ROLE_LABEL: Record<number, string> = { 0: 'Admin', 1: 'Mentor', 2: 'Student' };
 
 /** Large metric card with icon — used in Overview */

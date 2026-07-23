@@ -7,8 +7,7 @@ import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
 import { Plus, Pencil, Trash2, TrendingUp, RefreshCw } from 'lucide-react';
-import { AdminListToolbar, AdminPagination } from '../../components/admin/AdminListControls';
-import { useAdminList } from '../../components/admin/useAdminList';
+import { AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
 import { AdminField, AdminFormDialog } from '../../components/admin/AdminFormDialog';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
@@ -166,7 +165,7 @@ export function AdminJobTrendsPage() {
   });
 
   const deleteSourceMutation = useMutation({
-    mutationFn: (id: string) => deleteWithCascadeMode(`/api/job-scraping-sources/${id}`),
+    mutationFn: (id: string) => apiClient.delete(`/api/job-scraping-sources/${id}`),
     onSuccess: (_data, id) => {
       queryClient.setQueryData<JobScrapingSourceDto[]>(['job-scraping-sources'], (old) => (old ?? []).filter((s) => s.id !== id));
       setDeleteSourceId(null);

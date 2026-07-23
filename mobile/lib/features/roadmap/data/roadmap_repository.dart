@@ -3,53 +3,18 @@ import '../../../core/models/roadmap_models.dart';
 abstract class RoadmapRepository {
   Future<List<CareerRoleDto>> getCareerRoles();
   Future<List<CareerRoadmapDto>> getRoadmapsByRole(String careerRoleId);
-  Future<CareerRoadmapWithNodesDto> getCareerRoadmapWithNodes(
-    String careerRoadmapId,
-  );
-  Future<RoadmapTemplateNodeDto> assignRoadmapNode(
-    String careerRoadmapId,
-    CreateRoadmapNodeDto dto,
-  );
-  Future<RoadmapTemplateNodeDto> updateRoadmapNode(
-    String careerRoadmapId,
-    String roadmapNodeId,
-    UpdateRoadmapNodeDto dto,
-  );
-  Future<void> deleteRoadmapNode(String careerRoadmapId, String roadmapNodeId);
+  Future<List<RoadmapNodeEdgeDto>> getRoadmapNodeEdges(String careerRoadmapId);
   Future<List<PersonalRoadmapDto>> getPersonalRoadmaps(String profileId);
-  Future<List<PersonalRoadmapDto>> getSharedRoadmaps();
   Future<PersonalRoadmapDto> getPersonalRoadmapWithProgress(String id);
   Future<PersonalRoadmapDto> generateRoadmap(
     String profileId,
     String careerRoadmapId,
   );
-  Future<PersonalRoadmapDto> copySharedRoadmap(
-    String profileId,
-    String sharedPersonalRoadmapId,
+  Future<PersonalRoadmapDto> createCustomRoadmap(
+    CustomPersonalRoadmapRequest request,
   );
-  Future<PersonalRoadmapDto> createPersonalRoadmap({
-    required String profileId,
-    required String careerRoleId,
-    required String name,
-    String? description,
-    String? desire,
-    required List<Map<String, String>> steps,
-  });
-  Future<void> deleteRoadmap(String personalRoadmapId);
   Future<void> toggleActiveRoadmap(String personalRoadmapId);
-  Future<void> toggleSharedRoadmap(String personalRoadmapId);
-  Future<RoadmapTagDto> addTag(
-    String personalRoadmapId,
-    String name, {
-    String? color,
-  });
-  Future<RoadmapTagDto> updateTag(
-    String personalRoadmapId,
-    String tagId, {
-    String? name,
-    String? color,
-  });
-  Future<void> deleteTag(String personalRoadmapId, String tagId);
+  Future<void> deleteRoadmap(String personalRoadmapId);
   Future<void> updateNodeStatus(
     String nodeProgressId,
     int status, {
@@ -65,4 +30,96 @@ abstract class RoadmapRepository {
     String careerRoadmapId,
   );
   Future<List<String>> getTrendingSkillRecommendations(String profileId);
+}
+
+class CustomPersonalRoadmapRequest {
+  const CustomPersonalRoadmapRequest({
+    required this.profileId,
+    required this.careerRoleId,
+    required this.name,
+    this.description,
+    this.desire,
+    required this.steps,
+  });
+
+  final String profileId;
+  final String careerRoleId;
+  final String name;
+  final String? description;
+  final String? desire;
+  final List<CustomRoadmapStepRequest> steps;
+
+  Map<String, dynamic> toJson() => {
+        'profileId': profileId,
+        'careerRoleId': careerRoleId,
+        'name': name,
+        if (description != null && description!.trim().isNotEmpty)
+          'description': description!.trim(),
+        if (desire != null && desire!.trim().isNotEmpty)
+          'desire': desire!.trim(),
+        'steps': steps.map((step) => step.toJson()).toList(),
+      };
+}
+
+class CustomRoadmapStepRequest {
+  const CustomRoadmapStepRequest({
+    required this.name,
+    this.description,
+    this.previousStepIndex,
+    this.parentStepIndex,
+    this.branchStepIndex,
+    this.positionX,
+    this.positionY,
+    this.technicalSkillIds = const [],
+    this.learningResources = const [],
+  });
+
+  final String name;
+  final String? description;
+  final int? previousStepIndex;
+  final int? parentStepIndex;
+  final int? branchStepIndex;
+  final int? positionX;
+  final int? positionY;
+  final List<String> technicalSkillIds;
+  final List<CustomRoadmapResourceRequest> learningResources;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        if (description != null && description!.trim().isNotEmpty)
+          'description': description!.trim(),
+        if (previousStepIndex != null) 'previousStepIndex': previousStepIndex,
+        if (parentStepIndex != null) 'parentStepIndex': parentStepIndex,
+        if (branchStepIndex != null) 'branchStepIndex': branchStepIndex,
+        if (positionX != null) 'positionX': positionX,
+        if (positionY != null) 'positionY': positionY,
+        'technicalSkillIds': technicalSkillIds,
+        'learningResources':
+            learningResources.map((resource) => resource.toJson()).toList(),
+      };
+}
+
+class CustomRoadmapResourceRequest {
+  const CustomRoadmapResourceRequest({
+    required this.name,
+    required this.resourceUrl,
+    this.resourceType = 'Article',
+    this.provider,
+    this.isFree = true,
+  });
+
+  final String name;
+  final String resourceUrl;
+  final String resourceType;
+  final String? provider;
+  final bool isFree;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'resourceUrl': resourceUrl,
+        'resourceType': resourceType,
+        if (provider != null && provider!.trim().isNotEmpty)
+          'provider': provider!.trim(),
+        'isFree': isFree,
+      };
 }

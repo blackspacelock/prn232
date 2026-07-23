@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "293334359217",
+    "project_id": "secompass-5e1cb",
+    "storage_bucket": "secompass-5e1cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:293334359217:android:9424a59cf2f8e87266d690",
+        "android_client_info": {
+          "package_name": "com.secompass.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "293334359217-flsbgs6kuo02nhlnh9fopf9cbt1hjg3g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.secompass.mobile",
+            "certificate_hash": "62243851ff8fd7cef798832d998dcdd6a00a1e99"
+          }
+        },
+        {
+          "client_id": "293334359217-rcg79p1gbirtoe0s18iq53mvchru237j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrUcGS0flLUGbodnflSpGSJ2AAC9AQcsQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "293334359217-rcg79p1gbirtoe0s18iq53mvchru237j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

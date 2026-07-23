@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../providers/roadmap_providers.dart';
@@ -57,6 +58,10 @@ class _RoleSelectionLoadingScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        leading: const AppBackButton(fallbackLocation: '/career-roles'),
+        title: const Text('Generate Roadmap'),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
