@@ -14,6 +14,7 @@ import '../../../core/widgets/linear_progress_bar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../roadmap/providers/roadmap_providers.dart';
+import '../../settings/providers/settings_provider.dart';
 
 final _announcementProvider = FutureProvider<String>((ref) async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return '';
@@ -56,10 +57,7 @@ class DashboardScreen extends ConsumerWidget {
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: AppColors.primaryContainer,
-              child: Icon(Icons.person, color: Colors.white),
-            ),
+            child: _DashboardUserAvatar(),
           ),
         ],
       ),
@@ -108,6 +106,50 @@ class DashboardScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _DashboardUserAvatar extends ConsumerWidget {
+  const _DashboardUserAvatar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(settingsProvider).valueOrNull?.user;
+    final avatarUrl = user?.avatarUrl?.trim();
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+    final initials = _dashboardInitials(user?.fullName ?? user?.email ?? '');
+
+    return CircleAvatar(
+      backgroundColor: AppColors.primaryContainer,
+      backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+      child: hasAvatar
+          ? null
+          : initials.isNotEmpty
+              ? Text(
+                  initials,
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+              : const Icon(Icons.person, color: Colors.white),
+    );
+  }
+}
+
+String _dashboardInitials(String source) {
+  final parts = source
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '';
+  if (parts.length == 1) {
+    final value = parts.first;
+    return value.length >= 2
+        ? value.substring(0, 2).toUpperCase()
+        : value.toUpperCase();
+  }
+  return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
 }
 
 class _AnnouncementBanner extends StatelessWidget {
