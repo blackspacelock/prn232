@@ -1246,12 +1246,15 @@ class _CustomNodeEditorSheetState
                     ),
                     if (filteredSuggestions.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLowest,
+                      Material(
+                        color: AppColors.surfaceContainerLowest,
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.outlineVariant),
+                          side: const BorderSide(
+                            color: AppColors.outlineVariant,
+                          ),
                         ),
+                        clipBehavior: Clip.antiAlias,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: filteredSuggestions

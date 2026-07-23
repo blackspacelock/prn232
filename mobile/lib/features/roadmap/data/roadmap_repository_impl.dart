@@ -197,11 +197,21 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
         'Profile ID and Career Role ID are required.',
       );
     }
-    final response = await _dio.post(
-      '${ApiConstants.personalRoadmaps}/custom',
-      data: request.toJson(),
-    );
-    return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
+    try {
+      final response = await _dio.post(
+        '${ApiConstants.personalRoadmaps}/custom',
+        data: request.toJson(),
+      );
+      return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 405) {
+        throw const ServerException(
+          'Custom roadmap creation is not available on this server yet. Please deploy the latest backend and try again.',
+          statusCode: 405,
+        );
+      }
+      rethrow;
+    }
   }
 
   @override
