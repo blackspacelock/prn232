@@ -106,6 +106,33 @@ class RoadmapNodeDto {
       );
 }
 
+class RoadmapNodeEdgeDto {
+  const RoadmapNodeEdgeDto({
+    required this.roadmapNodeEdgeId,
+    required this.careerRoadmapId,
+    required this.fromRoadmapNodeId,
+    required this.toRoadmapNodeId,
+    this.edgeType,
+  });
+
+  final String roadmapNodeEdgeId;
+  final String careerRoadmapId;
+  final String fromRoadmapNodeId;
+  final String toRoadmapNodeId;
+  final String? edgeType;
+
+  factory RoadmapNodeEdgeDto.fromJson(Map<String, dynamic> json) =>
+      RoadmapNodeEdgeDto(
+        roadmapNodeEdgeId:
+            (json['roadmapNodeEdgeId'] ?? json['edgeId'] ?? json['id'])
+                .toString(),
+        careerRoadmapId: (json['careerRoadmapId'] ?? '').toString(),
+        fromRoadmapNodeId: (json['fromRoadmapNodeId'] ?? '').toString(),
+        toRoadmapNodeId: (json['toRoadmapNodeId'] ?? '').toString(),
+        edgeType: json['edgeType'] as String?,
+      );
+}
+
 class NodeProgressDto {
   const NodeProgressDto({
     required this.nodeProgressId,

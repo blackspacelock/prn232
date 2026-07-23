@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -57,6 +59,8 @@ class RoadmapViewerScreen extends ConsumerWidget {
                   .compareTo(b.roadmapNode?.order ?? b.node?.order ?? 0),
             );
           final completed = nodes.where((node) => node.status == 4).length;
+          final edges =
+              ref.watch(roadmapNodeEdgesProvider(data.careerRoadmapId));
 
           return CustomScrollView(
             slivers: [
@@ -99,6 +103,7 @@ class RoadmapViewerScreen extends ConsumerWidget {
                     padding: const EdgeInsets.fromLTRB(0, 16, 0, 24),
                     child: _RoadmapGraphSection(
                       nodes: nodes,
+                      edges: edges.valueOrNull ?? const [],
                       onNodeTap: (node) => _showNodeSheet(context, ref, node),
                     ),
                   ),
@@ -191,14 +196,29 @@ class _RoadmapHeader extends StatelessWidget {
   }
 }
 
-class _RoadmapGraphSection extends StatelessWidget {
+class _RoadmapGraphSection extends StatefulWidget {
   const _RoadmapGraphSection({
     required this.nodes,
+    required this.edges,
     required this.onNodeTap,
   });
 
   final List<NodeProgressDto> nodes;
+  final List<RoadmapNodeEdgeDto> edges;
   final ValueChanged<NodeProgressDto> onNodeTap;
+
+  @override
+  State<_RoadmapGraphSection> createState() => _RoadmapGraphSectionState();
+}
+
+class _RoadmapGraphSectionState extends State<_RoadmapGraphSection> {
+  static const _minZoom = 0.72;
+  static const _maxZoom = 1.35;
+  double _zoom = 1;
+
+  void _changeZoom(double delta) {
+    setState(() => _zoom = (_zoom + delta).clamp(_minZoom, _maxZoom));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -206,46 +226,77 @@ class _RoadmapGraphSection extends StatelessWidget {
       builder: (context, constraints) {
         final viewportWidth = constraints.maxWidth;
         final canvasWidth = viewportWidth < 640 ? 760.0 : viewportWidth;
-        final layout = _layoutRoadmapNodes(nodes, canvasWidth);
+        final layout = _layoutRoadmapNodes(widget.nodes, canvasWidth);
         final positions = layout.positions;
-        final canvasHeight = positions.values.fold<double>(
+        final baseCanvasHeight = positions.values.fold<double>(
           520,
           (height, position) =>
               position.dy + _GraphNodeCard.height + 80 > height
                   ? position.dy + _GraphNodeCard.height + 80
                   : height,
         );
+        final scaledWidth = canvasWidth * _zoom;
+        final scaledHeight = baseCanvasHeight * _zoom;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.outlineVariant),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.swipe, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        layout.usedStoredPositions
-                            ? 'Template layout'
-                            : 'Generated roadmap layout',
-                        style: AppTextStyles.labelSmall,
+              child: Row(
+                children: [
+                  Flexible(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.outlineVariant),
                       ),
-                    ],
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.swipe, size: 16),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                layout.usedStoredPositions
+                                    ? 'Template layout'
+                                    : 'Generated roadmap layout',
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.labelSmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  _ZoomButton(
+                    icon: Icons.remove,
+                    tooltip: 'Zoom out',
+                    onPressed:
+                        _zoom <= _minZoom ? null : () => _changeZoom(-0.12),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      '${(_zoom * 100).round()}%',
+                      style: AppTextStyles.labelMedium,
+                    ),
+                  ),
+                  _ZoomButton(
+                    icon: Icons.add,
+                    tooltip: 'Zoom in',
+                    onPressed:
+                        _zoom >= _maxZoom ? null : () => _changeZoom(0.12),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
@@ -253,38 +304,70 @@ class _RoadmapGraphSection extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SizedBox(
-                width: canvasWidth,
-                height: canvasHeight,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _RoadmapConnectorPainter(
-                          nodes: nodes,
-                          positions: positions,
+                width: scaledWidth,
+                height: scaledHeight,
+                child: Transform.scale(
+                  scale: _zoom,
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: canvasWidth,
+                    height: baseCanvasHeight,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _RoadmapConnectorPainter(
+                              nodes: widget.nodes,
+                              edges: widget.edges,
+                              positions: positions,
+                            ),
+                          ),
                         ),
-                      ),
+                        ...widget.nodes.map((node) {
+                          final position =
+                              positions[node._graphId] ?? Offset.zero;
+                          return Positioned(
+                            left: position.dx,
+                            top: position.dy,
+                            width: _GraphNodeCard.width,
+                            height: _GraphNodeCard.height,
+                            child: _GraphNodeCard(
+                              nodeProgress: node,
+                              onTap: () => widget.onNodeTap(node),
+                            ),
+                          );
+                        }),
+                      ],
                     ),
-                    ...nodes.map((node) {
-                      final position = positions[node._graphId] ?? Offset.zero;
-                      return Positioned(
-                        left: position.dx,
-                        top: position.dy,
-                        width: _GraphNodeCard.width,
-                        height: _GraphNodeCard.height,
-                        child: _GraphNodeCard(
-                          nodeProgress: node,
-                          onTap: () => onNodeTap(node),
-                        ),
-                      );
-                    }),
-                  ],
+                  ),
                 ),
               ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+class _ZoomButton extends StatelessWidget {
+  const _ZoomButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton.filledTonal(
+      tooltip: tooltip,
+      icon: Icon(icon),
+      onPressed: onPressed,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
     );
   }
 }
@@ -458,10 +541,12 @@ class _ConnectorDot extends StatelessWidget {
 class _RoadmapConnectorPainter extends CustomPainter {
   const _RoadmapConnectorPainter({
     required this.nodes,
+    required this.edges,
     required this.positions,
   });
 
   final List<NodeProgressDto> nodes;
+  final List<RoadmapNodeEdgeDto> edges;
   final Map<String, Offset> positions;
 
   @override
@@ -472,42 +557,44 @@ class _RoadmapConnectorPainter extends CustomPainter {
           node.roadmapNode!.roadmapNodeId: node,
     };
     final byNodeId = {for (final node in nodes) node.nodeId: node};
-    final paint = Paint()
-      ..color = AppColors.outlineVariant
+    final parentPaint = Paint()
+      ..color = const Color(0xFF2563EB)
+      ..strokeWidth = 2.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final edgePaint = Paint()
+      ..color = const Color(0xFF2563EB)
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    for (var index = 0; index < nodes.length; index++) {
-      final node = nodes[index];
-      final from = _parentFor(node, byRoadmapNodeId, byNodeId) ??
-          (index > 0 ? nodes[index - 1] : null);
+    for (final node in nodes) {
+      final from = _parentFor(node, byRoadmapNodeId, byNodeId);
       if (from == null) continue;
 
       final fromPosition = positions[from._graphId];
       final toPosition = positions[node._graphId];
       if (fromPosition == null || toPosition == null) continue;
 
-      final isLeftBranch = toPosition.dx < fromPosition.dx;
-      final start = fromPosition +
-          Offset(
-            isLeftBranch ? 0 : _GraphNodeCard.width,
-            _GraphNodeCard.height / 2,
-          );
-      final end = toPosition +
-          Offset(
-            isLeftBranch ? _GraphNodeCard.width : 0,
-            _GraphNodeCard.height / 2,
-          );
-      final direction = isLeftBranch ? -1.0 : 1.0;
-      final branchGap = ((end.dx - start.dx).abs() * 0.28).clamp(36.0, 72.0);
-      final busX = start.dx + direction * branchGap;
-      final path = Path()
-        ..moveTo(start.dx, start.dy)
-        ..lineTo(busX, start.dy)
-        ..lineTo(busX, end.dy)
-        ..lineTo(end.dx, end.dy);
-      canvas.drawPath(path, paint);
+      _drawDashedPath(
+        canvas,
+        _branchPath(fromPosition, toPosition),
+        parentPaint,
+      );
+    }
+
+    for (final edge in edges) {
+      final from = byRoadmapNodeId[edge.fromRoadmapNodeId];
+      final to = byRoadmapNodeId[edge.toRoadmapNodeId];
+      if (from == null || to == null) continue;
+
+      final fromPosition = positions[from._graphId];
+      final toPosition = positions[to._graphId];
+      if (fromPosition == null || toPosition == null) continue;
+
+      final path = _edgePath(fromPosition, toPosition);
+      canvas.drawPath(path, edgePaint);
+      _drawArrowHead(canvas, fromPosition, toPosition, edgePaint);
     }
   }
 
@@ -528,9 +615,88 @@ class _RoadmapConnectorPainter extends CustomPainter {
     return null;
   }
 
+  Path _branchPath(Offset fromPosition, Offset toPosition) {
+    final isLeftBranch = toPosition.dx < fromPosition.dx;
+    final start = fromPosition +
+        Offset(
+          isLeftBranch ? 0 : _GraphNodeCard.width,
+          _GraphNodeCard.height / 2,
+        );
+    final end = toPosition +
+        Offset(
+          isLeftBranch ? _GraphNodeCard.width : 0,
+          _GraphNodeCard.height / 2,
+        );
+    final direction = isLeftBranch ? -1.0 : 1.0;
+    final branchGap = ((end.dx - start.dx).abs() * 0.28).clamp(36.0, 72.0);
+    final busX = start.dx + direction * branchGap;
+    return Path()
+      ..moveTo(start.dx, start.dy)
+      ..lineTo(busX, start.dy)
+      ..lineTo(busX, end.dy)
+      ..lineTo(end.dx, end.dy);
+  }
+
+  Path _edgePath(Offset fromPosition, Offset toPosition) {
+    final start = fromPosition +
+        const Offset(_GraphNodeCard.width / 2, _GraphNodeCard.height);
+    final end = toPosition + const Offset(_GraphNodeCard.width / 2, 0);
+    final midY = (start.dy + end.dy) / 2;
+    return Path()
+      ..moveTo(start.dx, start.dy)
+      ..cubicTo(start.dx, midY, end.dx, midY, end.dx, end.dy);
+  }
+
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    const dashLength = 2.0;
+    const gapLength = 6.0;
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = math.min(distance + dashLength, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance = next + gapLength;
+      }
+    }
+  }
+
+  void _drawArrowHead(
+    Canvas canvas,
+    Offset fromPosition,
+    Offset toPosition,
+    Paint paint,
+  ) {
+    final end = toPosition + const Offset(_GraphNodeCard.width / 2, 0);
+    final control = fromPosition +
+        Offset(
+          _GraphNodeCard.width / 2,
+          ((toPosition.dy - fromPosition.dy) / 2).clamp(28.0, 96.0),
+        );
+    final angle = math.atan2(end.dy - control.dy, end.dx - control.dx);
+    const arrowSize = 11.0;
+    final left = end -
+        Offset(
+          math.cos(angle - math.pi / 6) * arrowSize,
+          math.sin(angle - math.pi / 6) * arrowSize,
+        );
+    final right = end -
+        Offset(
+          math.cos(angle + math.pi / 6) * arrowSize,
+          math.sin(angle + math.pi / 6) * arrowSize,
+        );
+    final path = Path()
+      ..moveTo(end.dx, end.dy)
+      ..lineTo(left.dx, left.dy)
+      ..moveTo(end.dx, end.dy)
+      ..lineTo(right.dx, right.dy);
+    canvas.drawPath(path, paint);
+  }
+
   @override
   bool shouldRepaint(covariant _RoadmapConnectorPainter oldDelegate) {
-    return oldDelegate.nodes != nodes || oldDelegate.positions != positions;
+    return oldDelegate.nodes != nodes ||
+        oldDelegate.edges != edges ||
+        oldDelegate.positions != positions;
   }
 }
 

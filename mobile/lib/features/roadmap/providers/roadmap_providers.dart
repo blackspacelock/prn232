@@ -48,6 +48,14 @@ final personalRoadmapDetailProvider =
       .getPersonalRoadmapWithProgress(id);
 });
 
+final roadmapNodeEdgesProvider =
+    FutureProvider.family<List<RoadmapNodeEdgeDto>, String>(
+        (ref, careerRoadmapId) {
+  return ref.watch(roadmapRepositoryProvider).getRoadmapNodeEdges(
+        careerRoadmapId,
+      );
+});
+
 final learningResourcesProvider =
     FutureProvider.family<List<LearningResourceDto>, String>((ref, nodeId) {
   return ref.watch(roadmapRepositoryProvider).getResourcesByNode(nodeId);

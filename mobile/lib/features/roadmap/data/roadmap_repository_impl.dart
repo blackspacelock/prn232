@@ -57,6 +57,36 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   }
 
   @override
+  Future<List<RoadmapNodeEdgeDto>> getRoadmapNodeEdges(
+    String careerRoadmapId,
+  ) async {
+    if (careerRoadmapId.isEmpty) return const [];
+    final data = await _graphQL.queryField<Map<String, dynamic>?>(
+      'careerRoadmapWithNodes',
+      r'''
+      query GetCareerRoadmapEdges($roadmapId: UUID!) {
+        careerRoadmapWithNodes(roadmapId: $roadmapId) {
+          edges {
+            id
+            careerRoadmapId
+            fromRoadmapNodeId
+            toRoadmapNodeId
+            edgeType
+          }
+        }
+      }
+      ''',
+      variables: {'roadmapId': careerRoadmapId},
+    );
+    final edges = data?['edges'];
+    if (edges is! List) return const [];
+    return edges
+        .whereType<Map<String, dynamic>>()
+        .map(RoadmapNodeEdgeDto.fromJson)
+        .toList();
+  }
+
+  @override
   Future<List<PersonalRoadmapDto>> getPersonalRoadmaps(String profileId) async {
     if (profileId.isEmpty) return const [];
     final data = await _graphQL.queryField<List<dynamic>>(
