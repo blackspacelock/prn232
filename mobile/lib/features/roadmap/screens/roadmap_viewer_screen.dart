@@ -200,10 +200,48 @@ class _RoadmapGraphSection extends StatefulWidget {
 class _RoadmapGraphSectionState extends State<_RoadmapGraphSection> {
   static const _minZoom = 0.72;
   static const _maxZoom = 1.35;
+  final TransformationController _transformationController =
+      TransformationController();
+  final Map<String, Offset> _nodePositionOverrides = {};
   double _zoom = 1;
 
   void _changeZoom(double delta) {
-    setState(() => _zoom = (_zoom + delta).clamp(_minZoom, _maxZoom));
+    final nextZoom = (_zoom + delta).clamp(_minZoom, _maxZoom).toDouble();
+    final scaleDelta = nextZoom / _zoom;
+    _transformationController.value = _transformationController.value.clone()
+      ..scaleByDouble(scaleDelta, scaleDelta, 1, 1);
+    setState(() => _zoom = nextZoom);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RoadmapGraphSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_graphSignature(oldWidget.nodes) != _graphSignature(widget.nodes)) {
+      _nodePositionOverrides.clear();
+      _transformationController.value = Matrix4.identity();
+      _zoom = 1;
+    }
+  }
+
+  @override
+  void dispose() {
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  String _graphSignature(List<NodeProgressDto> nodes) {
+    return nodes.map((node) => node._graphId).join('|');
+  }
+
+  Offset _clampNodePosition(
+    Offset position,
+    double canvasWidth,
+    double canvasHeight,
+  ) {
+    return Offset(
+      position.dx.clamp(0, canvasWidth - _GraphNodeCard.width).toDouble(),
+      position.dy.clamp(0, canvasHeight - _GraphNodeCard.height).toDouble(),
+    );
   }
 
   @override
@@ -213,7 +251,10 @@ class _RoadmapGraphSectionState extends State<_RoadmapGraphSection> {
         final viewportWidth = constraints.maxWidth;
         final canvasWidth = viewportWidth < 640 ? 760.0 : viewportWidth;
         final layout = _layoutRoadmapNodes(widget.nodes, canvasWidth);
-        final positions = layout.positions;
+        final positions = {
+          ...layout.positions,
+          ..._nodePositionOverrides,
+        };
         final baseCanvasHeight = positions.values.fold<double>(
           520,
           (height, position) =>
@@ -221,8 +262,10 @@ class _RoadmapGraphSectionState extends State<_RoadmapGraphSection> {
                   ? position.dy + _GraphNodeCard.height + 80
                   : height,
         );
-        final scaledWidth = canvasWidth * _zoom;
-        final scaledHeight = baseCanvasHeight * _zoom;
+        final graphViewportHeight = math.min(
+          640.0,
+          math.max(420.0, MediaQuery.sizeOf(context).height * 0.58),
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,8 +294,8 @@ class _RoadmapGraphSectionState extends State<_RoadmapGraphSection> {
                             Flexible(
                               child: Text(
                                 layout.usedStoredPositions
-                                    ? 'Template layout'
-                                    : 'Generated roadmap layout',
+                                    ? 'Drag canvas or nodes'
+                                    : 'Drag to explore',
                                 overflow: TextOverflow.ellipsis,
                                 style: AppTextStyles.labelSmall,
                               ),
@@ -286,49 +329,79 @@ class _RoadmapGraphSectionState extends State<_RoadmapGraphSection> {
               ),
             ),
             const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: SizedBox(
-                  width: scaledWidth + 32,
-                  height: scaledHeight + 32,
-                  child: Transform.scale(
-                    scale: _zoom,
-                    alignment: Alignment.topLeft,
-                    child: SizedBox(
-                      width: canvasWidth + 32,
-                      height: baseCanvasHeight + 32,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Positioned.fill(
-                              child: CustomPaint(
-                                painter: _RoadmapConnectorPainter(
-                                  nodes: widget.nodes,
-                                  edges: widget.edges,
-                                  positions: positions,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLowest,
+                    border: Border.all(color: AppColors.outlineVariant),
+                  ),
+                  child: SizedBox(
+                    height: graphViewportHeight,
+                    child: InteractiveViewer(
+                      transformationController: _transformationController,
+                      minScale: _minZoom,
+                      maxScale: _maxZoom,
+                      boundaryMargin: const EdgeInsets.all(220),
+                      constrained: false,
+                      onInteractionUpdate: (_) {
+                        final nextZoom = _transformationController.value
+                            .getMaxScaleOnAxis()
+                            .clamp(_minZoom, _maxZoom)
+                            .toDouble();
+                        if ((nextZoom - _zoom).abs() > 0.01) {
+                          setState(() => _zoom = nextZoom);
+                        }
+                      },
+                      child: SizedBox(
+                        width: canvasWidth + 32,
+                        height: baseCanvasHeight + 32,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned.fill(
+                                child: CustomPaint(
+                                  painter: _RoadmapConnectorPainter(
+                                    nodes: widget.nodes,
+                                    edges: widget.edges,
+                                    positions: positions,
+                                  ),
                                 ),
                               ),
-                            ),
-                            ...widget.nodes.map((node) {
-                              final position =
-                                  positions[node._graphId] ?? Offset.zero;
-                              return Positioned(
-                                left: position.dx,
-                                top: position.dy,
-                                width: _GraphNodeCard.width,
-                                height: _GraphNodeCard.height,
-                                child: _GraphNodeCard(
-                                  nodeProgress: node,
-                                  onTap: () => widget.onNodeTap(node),
-                                ),
-                              );
-                            }),
-                          ],
+                              ...widget.nodes.map((node) {
+                                final id = node._graphId;
+                                final position = positions[id] ?? Offset.zero;
+                                return Positioned(
+                                  left: position.dx,
+                                  top: position.dy,
+                                  width: _GraphNodeCard.width,
+                                  height: _GraphNodeCard.height,
+                                  child: GestureDetector(
+                                    onPanUpdate: (details) {
+                                      final current =
+                                          positions[id] ?? Offset.zero;
+                                      setState(() {
+                                        _nodePositionOverrides[id] =
+                                            _clampNodePosition(
+                                          current + details.delta / _zoom,
+                                          canvasWidth,
+                                          baseCanvasHeight,
+                                        );
+                                      });
+                                    },
+                                    child: _GraphNodeCard(
+                                      nodeProgress: node,
+                                      onTap: () => widget.onNodeTap(node),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
                         ),
                       ),
                     ),
