@@ -372,7 +372,7 @@ class _GraphNodeCard extends StatelessWidget {
   });
 
   static const width = 232.0;
-  static const height = 86.0;
+  static const height = 92.0;
 
   final NodeProgressDto nodeProgress;
   final VoidCallback onTap;
