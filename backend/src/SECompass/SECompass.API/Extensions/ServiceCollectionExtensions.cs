@@ -28,11 +28,15 @@ public static class ServiceCollectionExtensions
             {
                 if (allowedOrigins.Length > 0)
                     policy.WithOrigins(allowedOrigins);
+                else
+                    policy.AllowAnyOrigin();
 
                 policy
-                    .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                    .WithHeaders("Authorization", "Content-Type", "X-Requested-With")
-                    .AllowCredentials();
+                    .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+                    .AllowAnyHeader();
+
+                if (allowedOrigins.Length > 0)
+                    policy.AllowCredentials();
             });
         });
 
@@ -60,7 +64,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICareerRoleService, CareerRoleService>();
         services.AddScoped<ICareerRoadmapService, CareerRoadmapService>();
         services.AddScoped<IPersonalRoadmapService, PersonalRoadmapService>();
-        services.AddScoped<IRoadmapTagService, RoadmapTagService>();
         services.AddScoped<INodeService, NodeService>();
         services.AddScoped<INodeProgressService, NodeProgressService>();
         services.AddScoped<ILearningResourceService, LearningResourceService>();

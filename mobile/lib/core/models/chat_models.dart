@@ -62,7 +62,10 @@ class ChatMessageDto {
   final String messageContent;
   final String createdAt;
 
-  bool get isAi => sender.toUpperCase() == 'AI';
+  bool get isAi {
+    final normalized = sender.trim().toUpperCase();
+    return normalized == 'AI' || normalized == 'ASSISTANT';
+  }
 
   factory ChatMessageDto.fromJson(Map<String, dynamic> json) => ChatMessageDto(
         chatMessageId: (json['chatMessageId'] ?? json['id']).toString(),

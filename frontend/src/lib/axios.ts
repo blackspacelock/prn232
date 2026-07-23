@@ -8,7 +8,7 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-export const deleteWithCascadeMode = (url: string, useDelete = true) =>
+export const deleteWithCascadeMode = (url: string, useDelete = false) =>
   apiClient.delete(url, { params: useDelete ? { delete: true } : undefined });
 
 apiClient.interceptors.request.use((config) => {

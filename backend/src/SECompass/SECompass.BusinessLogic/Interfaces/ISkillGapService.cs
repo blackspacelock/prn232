@@ -5,5 +5,5 @@ namespace SECompass.BusinessLogic.Interfaces;
 
 public interface ISkillGapService
 {
-    Task<ServiceResult<SkillGapAnalysisDto>> AnalyzeSkillGapAsync(Guid profileId);
+    Task<ServiceResult<SkillGapAnalysisDto>> AnalyzeSkillGapAsync(Guid profileId, Guid? careerRoadmapId = null);
 }

@@ -1,5 +1,3 @@
-using SECompass.BusinessLogic.DTOs.Skill;
-
 namespace SECompass.BusinessLogic.DTOs.Node;
 
 public class NodeDto
@@ -10,5 +8,4 @@ public class NodeDto
     public string? Description { get; set; }
     public int Order { get; set; }
     public DateTime CreatedAt { get; set; }
-    public List<TechnicalSkillDto> TechnicalSkills { get; set; } = new();
 }

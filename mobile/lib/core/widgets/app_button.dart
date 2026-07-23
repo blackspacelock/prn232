@@ -27,13 +27,24 @@ class AppButton extends StatelessWidget {
         ? const SizedBox(
             width: 20,
             height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            child:
+                CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
           )
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (leadingIcon != null) ...[leadingIcon!, const SizedBox(width: 8)],
-              Text(label),
+              if (leadingIcon != null) ...[
+                leadingIcon!,
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                ),
+              ),
             ],
           );
 

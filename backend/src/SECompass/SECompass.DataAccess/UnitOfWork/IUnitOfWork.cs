@@ -27,6 +27,5 @@ public interface IUnitOfWork : IDisposable
     IPersonalRoadmapRepository PersonalRoadmaps { get; }
     INodeProgressRepository NodeProgresses { get; }
     IChatRepository Chat { get; }
-    IRepository<RoadmapTag> RoadmapTags { get; }
     Task<int> SaveChangesAsync();
 }

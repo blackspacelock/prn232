@@ -10,4 +10,5 @@ abstract class ChatRepository {
     String content,
   );
   Future<ChatSessionDto> renameSession(String sessionId, String newTitle);
+  Future<void> deleteSession(String sessionId);
 }

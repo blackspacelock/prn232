@@ -25,13 +25,13 @@ class AppBottomNav extends ConsumerWidget {
   final String location;
 
   int get _currentIndex {
-    if (location.startsWith('/career-roles') ||
-        location.startsWith('/roadmaps') ||
+    if (location.startsWith('/roadmaps') ||
+        location.startsWith('/career-roles') ||
         location.startsWith('/roadmap')) {
       return 1;
     }
-    if (location.startsWith('/mentor')) return 2;
-    if (location.startsWith('/market')) return 3;
+    if (location.startsWith('/skill-gap')) return 2;
+    if (location.startsWith('/mentor')) return 3;
     if (location.startsWith('/portfolio') || location.startsWith('/settings')) {
       return 4;
     }
@@ -56,14 +56,14 @@ class AppBottomNav extends ConsumerWidget {
           label: 'Roadmap',
         ),
         NavigationDestination(
+          icon: Icon(Icons.analytics_outlined),
+          selectedIcon: Icon(Icons.analytics),
+          label: 'Skill Gap',
+        ),
+        NavigationDestination(
           icon: Icon(Icons.smart_toy_outlined),
           selectedIcon: Icon(Icons.smart_toy),
           label: 'Mentor',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.trending_up_outlined),
-          selectedIcon: Icon(Icons.trending_up),
-          label: 'Market',
         ),
         NavigationDestination(
           icon: Icon(Icons.more_horiz),
@@ -78,9 +78,9 @@ class AppBottomNav extends ConsumerWidget {
           case 1:
             context.go('/roadmaps');
           case 2:
-            context.go('/mentor');
+            context.go('/skill-gap/result');
           case 3:
-            context.go('/market');
+            context.go('/mentor');
           case 4:
             _showMoreSheet(context, ref);
         }
@@ -96,6 +96,14 @@ class AppBottomNav extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.trending_up_outlined),
+              title: const Text('Market Pulse'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.go('/market');
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.folder_special_outlined),
               title: const Text('Portfolio'),

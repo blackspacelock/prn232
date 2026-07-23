@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/chat_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_text_field.dart';
@@ -56,6 +57,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
+  Future<void> _createSessionAndNavigate(BuildContext navigationContext) async {
+    try {
+      await ref
+          .read(mentorChatProvider(widget.sessionId).notifier)
+          .createSession();
+      final created =
+          ref.read(mentorChatProvider(widget.sessionId)).valueOrNull;
+      final id = created?.activeSession?.chatSessionId;
+      if (!navigationContext.mounted || id == null) return;
+      navigationContext.go('/mentor/$id');
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final chat = ref.watch(mentorChatProvider(widget.sessionId));
@@ -64,36 +80,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: state == null ? null : () => _showSessionsSheet(state),
-        ),
+        leading: widget.sessionId == null
+            ? null
+            : const AppBackButton(fallbackLocation: '/mentor'),
         title: Text(active?.title ?? 'AI Mentor'),
         actions: [
           IconButton(
+            tooltip: 'Sessions',
+            icon: const Icon(Icons.menu),
+            onPressed: state == null ? null : () => _showSessionsSheet(state),
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
-            onPressed: state == null
-                ? null
-                : () async {
-                    await ref
-                        .read(mentorChatProvider(widget.sessionId).notifier)
-                        .createSession();
-                    final created = ref
-                        .read(mentorChatProvider(widget.sessionId))
-                        .valueOrNull;
-                    final id = created?.activeSession?.chatSessionId;
-                    if (!mounted || id == null) return;
-                    GoRouter.of(this.context).go('/mentor/$id');
-                  },
+            onPressed:
+                state == null ? null : () => _createSessionAndNavigate(context),
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'rename' && active != null) {
                 _showRenameDialog(active);
               }
+              if (value == 'delete' && active != null) {
+                _deleteSession(active);
+              }
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'rename', child: Text('Rename')),
+              PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
         ],
@@ -120,9 +133,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         subtitle:
                             'Create or select a chat to get guidance on your roadmap.',
                         actionLabel: 'New Chat',
-                        onAction: () => ref
-                            .read(mentorChatProvider(widget.sessionId).notifier)
-                            .createSession(),
+                        onAction: () => _createSessionAndNavigate(context),
                       )
                     : ListView.builder(
                         controller: _scrollController,
@@ -160,16 +171,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         state: state,
         onNewChat: () async {
           Navigator.of(sheetContext).pop();
-          await ref
-              .read(mentorChatProvider(widget.sessionId).notifier)
-              .createSession();
-          final id = ref
-              .read(mentorChatProvider(widget.sessionId))
-              .valueOrNull
-              ?.activeSession
-              ?.chatSessionId;
-          if (!rootContext.mounted || id == null) return;
-          rootContext.go('/mentor/$id');
+          await _createSessionAndNavigate(rootContext);
         },
         onSelect: (session) async {
           Navigator.of(sheetContext).pop();
@@ -180,38 +182,129 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           rootContext.go('/mentor/${session.chatSessionId}');
         },
         onRename: _showRenameDialog,
+        onDelete: (session) async {
+          final activeDeleted =
+              await _deleteSession(session, navigateOnActive: false);
+          if (!sheetContext.mounted) return;
+          Navigator.of(sheetContext).pop();
+          if (activeDeleted && rootContext.mounted) {
+            rootContext.go('/mentor');
+          }
+        },
       ),
     );
   }
 
   Future<void> _showRenameDialog(ChatSessionDto session) async {
-    final controller = TextEditingController(text: session.title);
     final title = await showDialog<String>(
       context: context,
+      builder: (_) => _RenameSessionDialog(initialTitle: session.title),
+    );
+    if (!mounted || title == null || title.isEmpty) return;
+    try {
+      await ref
+          .read(mentorChatProvider(widget.sessionId).notifier)
+          .renameSession(session.chatSessionId, title);
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+    }
+  }
+
+  Future<bool> _deleteSession(
+    ChatSessionDto session, {
+    bool navigateOnActive = true,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rename session'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Title'),
-        ),
+        title: const Text('Delete session'),
+        content: Text(
+            'Delete "${session.title}"? This chat history will be removed.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
-    controller.dispose();
-    if (title == null || title.isEmpty) return;
-    await ref
-        .read(mentorChatProvider(widget.sessionId).notifier)
-        .renameSession(session.chatSessionId, title);
+    if (!mounted || confirmed != true) return false;
+
+    try {
+      final activeDeleted = await ref
+          .read(mentorChatProvider(widget.sessionId).notifier)
+          .deleteSession(session.chatSessionId);
+      if (!mounted) return activeDeleted;
+      AppSnackbar.showSuccess(context, 'Session deleted');
+      if (activeDeleted && navigateOnActive) {
+        context.go('/mentor');
+      }
+      return activeDeleted;
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+      return false;
+    }
+  }
+}
+
+class _RenameSessionDialog extends StatefulWidget {
+  const _RenameSessionDialog({required this.initialTitle});
+
+  final String initialTitle;
+
+  @override
+  State<_RenameSessionDialog> createState() => _RenameSessionDialogState();
+}
+
+class _RenameSessionDialogState extends State<_RenameSessionDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rename session'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(labelText: 'Title'),
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    Navigator.of(context).pop(_controller.text.trim());
   }
 }
 
@@ -221,12 +314,14 @@ class _SessionsSheet extends StatelessWidget {
     required this.onNewChat,
     required this.onSelect,
     required this.onRename,
+    required this.onDelete,
   });
 
   final ChatState state;
   final VoidCallback onNewChat;
   final ValueChanged<ChatSessionDto> onSelect;
   final ValueChanged<ChatSessionDto> onRename;
+  final ValueChanged<ChatSessionDto> onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -258,6 +353,22 @@ class _SessionsSheet extends StatelessWidget {
                 ),
                 subtitle: Text(_dateLabel(session.createdAt)),
                 leading: const Icon(Icons.chat_bubble_outline),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Rename',
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => onRename(session),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete',
+                      icon: const Icon(Icons.delete_outline),
+                      color: AppColors.error,
+                      onPressed: () => onDelete(session),
+                    ),
+                  ],
+                ),
                 onTap: () => onSelect(session),
                 onLongPress: () => onRename(session),
               );

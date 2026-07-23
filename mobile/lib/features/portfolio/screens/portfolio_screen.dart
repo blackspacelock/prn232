@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/api/api_constants.dart';
 import '../../../core/models/app_exception.dart';
 import '../../../core/models/portfolio_models.dart';
 import '../../../core/storage/token_storage.dart';
@@ -42,13 +42,6 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('E-Portfolio'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            tooltip: 'Share portfolio',
-            onPressed: _sharePortfolio,
-          ),
-        ],
       ),
       body: asyncState.when(
         loading: () => const _PortfolioSkeleton(),
@@ -71,9 +64,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           onDeleteRepo: (repo) => _deleteRepo(repo),
           onOpenUrl: _openUrl,
           onRunAnalysis: _runAnalysis,
-          onViewPublicPortfolio: _viewPublicPortfolio,
-          onEditPublicSettings: () => _showPublicSettingsSheet(state),
           onSharePortfolio: _sharePortfolio,
+          onViewPublicPortfolio: _viewPublicPortfolio,
         ),
       ),
       floatingActionButton: asyncState.hasValue
@@ -87,34 +79,31 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
   }
 
   void _sharePortfolio() {
-    final user = ref.read(authProvider).valueOrNull;
-    final userId = user?.id ?? '';
-    Share.share(
-        'Check out my SECompass portfolio: https://secompass.app/portfolio/$userId');
+    final url = _publicPortfolioUrl();
+    Share.share('Check out my SECompass portfolio: $url');
   }
 
-  Future<void> _viewPublicPortfolio() async {
+  Future<void> _viewPublicPortfolio() => _openUrl(_publicPortfolioUrl());
+
+  String _publicPortfolioUrl() {
     final user = ref.read(authProvider).valueOrNull;
-    final userId = user?.id ?? await TokenStorage.getUserId() ?? '';
-    if (userId.isEmpty) {
-      if (mounted) {
-        AppSnackbar.showError(context, 'Could not find your portfolio link');
-      }
-      return;
-    }
-    if (mounted) {
-      context.push('/portfolio/$userId');
-    }
+    final userId = user?.id ?? user?.profileId ?? '';
+    final base = ApiConstants.webBaseUrl.replaceFirst(RegExp(r'/$'), '');
+    return '$base/portfolio/$userId';
   }
 
   Future<void> _openUrl(String url) async {
     final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    if (uri == null || !uri.hasScheme) {
       if (mounted) {
         AppSnackbar.showError(context, 'Could not open URL');
       }
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      AppSnackbar.showError(context, 'Could not open URL');
     }
   }
 
@@ -123,36 +112,6 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
       await ref.read(portfolioProvider.notifier).runAnalysis();
       if (mounted) {
         AppSnackbar.showSuccess(context, 'Portfolio analysis complete');
-      }
-    } on AppException catch (e) {
-      if (mounted) AppSnackbar.showError(context, e.message);
-    }
-  }
-
-  void _showPublicSettingsSheet(PortfolioState state) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (sheetCtx) => _PublicPortfolioSettingsSheet(
-        publicPortfolio: state.publicPortfolio,
-        isSaving: state.isSavingPublicSettings,
-        onSaved: (dto) async {
-          Navigator.of(sheetCtx).pop();
-          await _savePublicSettings(dto);
-        },
-      ),
-    );
-  }
-
-  Future<void> _savePublicSettings(UpdatePublicPortfolioDto dto) async {
-    try {
-      await ref.read(portfolioProvider.notifier).updatePublicPortfolio(dto);
-      if (mounted) {
-        AppSnackbar.showSuccess(context, 'Public portfolio settings saved');
       }
     } on AppException catch (e) {
       if (mounted) AppSnackbar.showError(context, e.message);
@@ -244,9 +203,8 @@ class _PortfolioBody extends StatelessWidget {
     required this.onDeleteRepo,
     required this.onOpenUrl,
     required this.onRunAnalysis,
-    required this.onViewPublicPortfolio,
-    required this.onEditPublicSettings,
     required this.onSharePortfolio,
+    required this.onViewPublicPortfolio,
   });
 
   final PortfolioState state;
@@ -260,9 +218,8 @@ class _PortfolioBody extends StatelessWidget {
   final ValueChanged<GitHubRepositoryDto> onDeleteRepo;
   final ValueChanged<String> onOpenUrl;
   final VoidCallback onRunAnalysis;
-  final VoidCallback onViewPublicPortfolio;
-  final VoidCallback onEditPublicSettings;
   final VoidCallback onSharePortfolio;
+  final VoidCallback onViewPublicPortfolio;
 
   List<GitHubRepositoryDto> get _filteredRepos {
     var list = state.repos;
@@ -299,11 +256,8 @@ class _PortfolioBody extends StatelessWidget {
         children: [
           const SizedBox(height: 12),
           _PortfolioHeaderCard(
-            publicPortfolio: state.publicPortfolio,
-            isSavingSettings: state.isSavingPublicSettings,
-            onViewPublic: onViewPublicPortfolio,
-            onEditSettings: onEditPublicSettings,
             onShare: onSharePortfolio,
+            onViewPublicPortfolio: onViewPublicPortfolio,
           ),
           const SizedBox(height: 16),
           _AnalysisSection(
@@ -356,21 +310,14 @@ class _PortfolioBody extends StatelessWidget {
 
 class _PortfolioHeaderCard extends StatelessWidget {
   const _PortfolioHeaderCard({
-    required this.publicPortfolio,
-    required this.isSavingSettings,
-    required this.onViewPublic,
-    required this.onEditSettings,
     required this.onShare,
+    required this.onViewPublicPortfolio,
   });
-  final PublicPortfolioDto? publicPortfolio;
-  final bool isSavingSettings;
-  final VoidCallback onViewPublic;
-  final VoidCallback onEditSettings;
   final VoidCallback onShare;
+  final VoidCallback onViewPublicPortfolio;
 
   @override
   Widget build(BuildContext context) {
-    final isPublic = publicPortfolio?.isPublic ?? true;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -390,16 +337,6 @@ class _PortfolioHeaderCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _PublicStatusBadge(isPublic: isPublic),
-                if (publicPortfolio?.headline?.trim().isNotEmpty ?? false)
-                  _HeaderChip(label: publicPortfolio!.headline!.trim()),
-              ],
-            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -408,71 +345,21 @@ class _PortfolioHeaderCard extends StatelessWidget {
                     label: 'View Public Portfolio',
                     variant: AppButtonVariant.tonal,
                     leadingIcon: const Icon(Icons.open_in_new, size: 18),
-                    onPressed: onViewPublic,
+                    onPressed: onViewPublicPortfolio,
                   ),
                 ),
                 const SizedBox(width: 8),
                 AppButton(
-                  label: 'Settings',
+                  label: 'Share',
                   variant: AppButtonVariant.outlined,
-                  leadingIcon: isSavingSettings
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.tune, size: 18),
-                  onPressed: isSavingSettings ? null : onEditSettings,
-                  width: 126,
+                  leadingIcon: const Icon(Icons.share, size: 18),
+                  onPressed: onShare,
+                  width: 110,
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            AppButton(
-              label: 'Share Portfolio',
-              variant: AppButtonVariant.text,
-              leadingIcon: const Icon(Icons.share, size: 18),
-              onPressed: onShare,
-            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PublicStatusBadge extends StatelessWidget {
-  const _PublicStatusBadge({required this.isPublic});
-
-  final bool isPublic;
-
-  @override
-  Widget build(BuildContext context) {
-    return _HeaderChip(
-      label: isPublic ? 'Public' : 'Private',
-      color: isPublic ? AppColors.success : AppColors.warning,
-    );
-  }
-}
-
-class _HeaderChip extends StatelessWidget {
-  const _HeaderChip({required this.label, this.color});
-
-  final String label;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveColor = color ?? AppColors.onSurfaceVariant;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: effectiveColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(color: effectiveColor),
       ),
     );
   }
@@ -550,203 +437,6 @@ class _AnalysisSection extends StatelessWidget {
               ],
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PublicPortfolioSettingsSheet extends StatefulWidget {
-  const _PublicPortfolioSettingsSheet({
-    required this.publicPortfolio,
-    required this.isSaving,
-    required this.onSaved,
-  });
-
-  final PublicPortfolioDto? publicPortfolio;
-  final bool isSaving;
-  final ValueChanged<UpdatePublicPortfolioDto> onSaved;
-
-  @override
-  State<_PublicPortfolioSettingsSheet> createState() =>
-      _PublicPortfolioSettingsSheetState();
-}
-
-class _PublicPortfolioSettingsSheetState
-    extends State<_PublicPortfolioSettingsSheet> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _headlineCtrl;
-  late final TextEditingController _bioCtrl;
-  late final TextEditingController _locationCtrl;
-  late final TextEditingController _websiteCtrl;
-  late final TextEditingController _linkedInCtrl;
-  late final TextEditingController _contactEmailCtrl;
-  late bool _isPublic;
-  bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final portfolio = widget.publicPortfolio;
-    _headlineCtrl = TextEditingController(text: portfolio?.headline ?? '');
-    _bioCtrl = TextEditingController(text: portfolio?.publicBio ?? '');
-    _locationCtrl = TextEditingController(text: portfolio?.location ?? '');
-    _websiteCtrl = TextEditingController(text: portfolio?.websiteUrl ?? '');
-    _linkedInCtrl = TextEditingController(text: portfolio?.linkedInUrl ?? '');
-    _contactEmailCtrl =
-        TextEditingController(text: portfolio?.contactEmail ?? '');
-    _isPublic = portfolio?.isPublic ?? true;
-  }
-
-  @override
-  void dispose() {
-    _headlineCtrl.dispose();
-    _bioCtrl.dispose();
-    _locationCtrl.dispose();
-    _websiteCtrl.dispose();
-    _linkedInCtrl.dispose();
-    _contactEmailCtrl.dispose();
-    super.dispose();
-  }
-
-  String? _optionalUrlValidator(String? value) {
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return null;
-    final uri = Uri.tryParse(text);
-    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      return 'Enter a valid URL';
-    }
-    return null;
-  }
-
-  String? _optionalEmailValidator(String? value) {
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return null;
-    final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailPattern.hasMatch(text)) return 'Enter a valid email';
-    return null;
-  }
-
-  String _trimmed(TextEditingController controller) => controller.text.trim();
-
-  Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() => _isSaving = true);
-    try {
-      widget.onSaved(
-        UpdatePublicPortfolioDto(
-          headline: _trimmed(_headlineCtrl),
-          publicBio: _trimmed(_bioCtrl),
-          location: _trimmed(_locationCtrl),
-          websiteUrl: _trimmed(_websiteCtrl),
-          linkedInUrl: _trimmed(_linkedInCtrl),
-          contactEmail: _trimmed(_contactEmailCtrl),
-          isPublic: _isPublic,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final saving = _isSaving || widget.isSaving;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        0,
-        16,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Public Portfolio Settings',
-                  style: AppTextStyles.titleLarge),
-              const SizedBox(height: 8),
-              Text(
-                'Control what visitors see on your public portfolio page.',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Publish portfolio'),
-                subtitle: Text(
-                  _isPublic
-                      ? 'Your public portfolio can be viewed by link.'
-                      : 'Visitors will see a private portfolio message.',
-                ),
-                value: _isPublic,
-                onChanged: saving
-                    ? null
-                    : (value) => setState(() => _isPublic = value),
-                contentPadding: EdgeInsets.zero,
-              ),
-              const SizedBox(height: 12),
-              AppTextField(
-                label: 'Headline',
-                controller: _headlineCtrl,
-                prefixIcon: const Icon(Icons.badge_outlined),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-              AppTextField(
-                label: 'Public bio',
-                controller: _bioCtrl,
-                minLines: 3,
-                maxLines: 5,
-                textInputAction: TextInputAction.newline,
-              ),
-              const SizedBox(height: 12),
-              AppTextField(
-                label: 'Location',
-                controller: _locationCtrl,
-                prefixIcon: const Icon(Icons.place_outlined),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-              AppTextField(
-                label: 'Website URL',
-                controller: _websiteCtrl,
-                keyboardType: TextInputType.url,
-                prefixIcon: const Icon(Icons.language_outlined),
-                validator: _optionalUrlValidator,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-              AppTextField(
-                label: 'LinkedIn URL',
-                controller: _linkedInCtrl,
-                keyboardType: TextInputType.url,
-                prefixIcon: const Icon(Icons.work_outline),
-                validator: _optionalUrlValidator,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-              AppTextField(
-                label: 'Contact email',
-                controller: _contactEmailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                prefixIcon: const Icon(Icons.mail_outline),
-                validator: _optionalEmailValidator,
-                textInputAction: TextInputAction.done,
-              ),
-              const SizedBox(height: 20),
-              AppButton(
-                label: 'Save Settings',
-                isLoading: saving,
-                leadingIcon: const Icon(Icons.save_outlined),
-                onPressed: saving ? null : _save,
-              ),
-            ],
-          ),
         ),
       ),
     );

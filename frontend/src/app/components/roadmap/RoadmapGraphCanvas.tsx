@@ -88,7 +88,6 @@ interface RoadmapGraphCanvasProps {
   selectedNodeId?: string;
   useStatusColors?: boolean;
   onNodeSelect?: (node: RoadmapGraphNode) => void;
-  onNodePositionChange?: (nodeId: string, position: { x: number; y: number }) => void;
 }
 
 function getNodeDepths(nodes: RoadmapGraphNode[]) {
@@ -134,6 +133,13 @@ function mapToFlow(
     children.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
   });
 
+  const siblingIndexById = new Map<string, { index: number; total: number }>();
+  childrenByParent.forEach((children) => {
+    children.forEach((child, index) => {
+      siblingIndexById.set(child.id, { index, total: children.length });
+    });
+  });
+
   const X_GAP = 320;
   const Y_GAP = 96;
   const START_X = 540;
@@ -147,10 +153,13 @@ function mapToFlow(
   const shouldUseStoredPositions = storedPositionNodes.length >= Math.max(3, nodes.length * 0.6);
 
   if (shouldUseStoredPositions) {
+    const minX = Math.min(...storedPositionNodes.map((node) => node.positionX ?? 0));
+    const minY = Math.min(...storedPositionNodes.map((node) => node.positionY ?? 0));
+
     storedPositionNodes.forEach((node) => {
       positions.set(node.id, {
-        x: node.positionX ?? 0,
-        y: node.positionY ?? 0,
+        x: (node.positionX ?? 0) - minX + 120,
+        y: (node.positionY ?? 0) - minY + 120,
       });
       visited.add(node.id);
     });
@@ -213,13 +222,6 @@ function mapToFlow(
     });
   });
 
-  const siblingIndexById = new Map<string, { index: number; total: number }>();
-  childrenByParent.forEach((children) => {
-    children.forEach((child, index) => {
-      siblingIndexById.set(child.id, { index, total: children.length });
-    });
-  });
-
   const parentEdges: RoadmapBranchEdge[] = nodes
     .filter((node) => node.parentRoadmapNodeId && byId.has(node.parentRoadmapNodeId))
     .map((node) => {
@@ -259,25 +261,32 @@ function mapToFlow(
 
   const explicitEdges: Edge[] = graphEdges
     .filter((edge) => byId.has(edge.fromRoadmapNodeId) && byId.has(edge.toRoadmapNodeId))
-    .map((edge) => ({
-      id: edge.id,
-      source: edge.fromRoadmapNodeId,
-      target: edge.toRoadmapNodeId,
-      sourceHandle: 'bottom-source',
-      targetHandle: 'top-target',
-      type: 'smoothstep',
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        width: 16,
-        height: 16,
-        color: '#2563eb',
-      },
-      style: {
-        stroke: '#2563eb',
-        strokeWidth: 3,
-        strokeLinecap: 'round',
-      },
-    }));
+    .map((edge) => {
+      const isSequence = edge.edgeType === 'Next';
+      return {
+        id: edge.id,
+        source: edge.fromRoadmapNodeId,
+        target: edge.toRoadmapNodeId,
+        sourceHandle: 'bottom-source',
+        targetHandle: 'top-target',
+        type: 'smoothstep',
+        label: edge.edgeType && !isSequence ? edge.edgeType : undefined,
+        markerEnd: isSequence
+          ? {
+              type: MarkerType.ArrowClosed,
+              width: 16,
+              height: 16,
+              color: '#2563eb',
+            }
+          : undefined,
+        style: {
+          stroke: '#2563eb',
+          strokeWidth: isSequence ? 3 : 2,
+          strokeLinecap: 'round',
+          strokeDasharray: isSequence ? undefined : '6 5',
+        },
+      };
+    });
 
   return { flowNodes, flowEdges: [...parentEdges, ...explicitEdges] };
 }
@@ -288,7 +297,6 @@ export function RoadmapGraphCanvas({
   selectedNodeId,
   useStatusColors = false,
   onNodeSelect,
-  onNodePositionChange,
 }: RoadmapGraphCanvasProps) {
   const { flowNodes, flowEdges } = useMemo(
     () => mapToFlow(graphNodes, graphEdges, selectedNodeId, useStatusColors),
@@ -299,7 +307,6 @@ export function RoadmapGraphCanvas({
       [
         graphNodes.map((node) => node.id).join('|'),
         graphNodes.map((node) => `${node.id}:${node.status ?? 'none'}`).join('|'),
-        graphNodes.map((node) => `${node.id}:${node.positionX ?? 'auto'},${node.positionY ?? 'auto'}`).join('|'),
         graphEdges.map((edge) => edge.id).join('|'),
         useStatusColors ? 'status-colors' : 'structure-colors',
       ].join('::'),
@@ -317,12 +324,6 @@ export function RoadmapGraphCanvas({
       onNodeClick={(_, node) => {
         const graphNode = nodeById.get(node.id);
         if (graphNode) onNodeSelect?.(graphNode);
-      }}
-      onNodeDragStop={(_, node) => {
-        onNodePositionChange?.(node.id, {
-          x: Math.round(node.position.x),
-          y: Math.round(node.position.y),
-        });
       }}
       fitView
       fitViewOptions={{ padding: 0.08, maxZoom: 0.82 }}

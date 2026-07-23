@@ -43,12 +43,6 @@ public class JobTrendService : IJobTrendService
 
     public async Task<ServiceResult<List<JobTrendDto>>> GetByRegionAsync(string region)
     {
-        if (string.Equals(region, "Global", StringComparison.OrdinalIgnoreCase))
-        {
-            var all = await _uow.JobTrends.GetAllAsync();
-            return ServiceResult<List<JobTrendDto>>.Ok(_mapper.Map<List<JobTrendDto>>(all));
-        }
-
         var trends = await _uow.JobTrends.FindAsync(t => t.Region == region);
         return ServiceResult<List<JobTrendDto>>.Ok(_mapper.Map<List<JobTrendDto>>(trends));
     }

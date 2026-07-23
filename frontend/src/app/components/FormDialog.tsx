@@ -52,13 +52,8 @@ export function FormDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="flex w-full max-w-[560px] flex-col rounded-[28px] bg-white shadow-2xl"
-        style={{ maxHeight: 'calc(100vh - 48px)' }}
-      >
-        {/* Header — always visible */}
-        <div className="shrink-0 px-6 pt-6 pb-5 flex items-start justify-between gap-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-[560px] rounded-[28px] bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold text-[var(--md3-on-surface)]">{title}</h2>
             {description && (
@@ -73,15 +68,13 @@ export function FormDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)]"
+            className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)]"
             aria-label="Close dialog"
           >
             <X className="h-5 w-5 text-[var(--md3-on-surface-variant)]" />
           </button>
         </div>
 
-        {/* Scrollable fields area */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {fields.map((field) => {
             const colSpan = field.colSpan === 2 ? 'md:col-span-2' : '';
@@ -156,10 +149,8 @@ export function FormDialog({
             );
           })}
         </div>
-        </div>
 
-        {/* Footer — always visible */}
-        <div className="shrink-0 px-6 pb-6 pt-4 flex justify-end gap-3">
+        <div className="mt-6 flex justify-end gap-3">
           <ActionButton type="button" icon={X} label="Cancel" variant="text" onClick={onCancel} />
           <ActionButton type="submit" icon={Check} label={submitLabel} variant="primary" size="md" />
         </div>

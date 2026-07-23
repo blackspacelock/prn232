@@ -6,6 +6,7 @@ import '../../../core/storage/token_storage.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../profile/data/profile_repository_impl.dart';
+import '../../roadmap/providers/roadmap_providers.dart';
 
 final settingsProfileRepositoryProvider = Provider<ProfileRepository>(
   (_) => ProfileRepositoryImpl(),
@@ -46,8 +47,10 @@ class SettingsNotifier extends AsyncNotifier<SettingsData> {
     final repo = ref.read(settingsProfileRepositoryProvider);
 
     final profileFuture = repo.getProfileByUserId(userId);
+    final userFuture = repo.getUserById(userId);
     final techSkillsFuture = repo.getTechnicalSkills();
     final profile = await profileFuture;
+    final fetchedUser = await userFuture;
     final techSkills = await techSkillsFuture;
 
     final profileId = profile.profileId.isNotEmpty
@@ -57,13 +60,8 @@ class SettingsNotifier extends AsyncNotifier<SettingsData> {
     final skills = await repo.getSkillsByProfile(profileId);
 
     final authUser = ref.read(authProvider).valueOrNull;
-    final user = UserDto(
-      id: userId,
-      email: authUser?.email ?? '',
-      fullName: authUser?.fullName,
-      role: authUser?.role ?? 0,
+    final user = fetchedUser.copyWith(
       hasProfile: authUser?.hasProfile ?? true,
-      avatarUrl: authUser?.avatarUrl,
       profileId: profileId,
     );
 
@@ -81,7 +79,8 @@ class SettingsNotifier extends AsyncNotifier<SettingsData> {
     final userId = current.user.id;
     final updated = await ref
         .read(settingsProfileRepositoryProvider)
-        .updateUser(userId, UpdateUserDto(fullName: fullName, avatarUrl: avatarUrl));
+        .updateUser(
+            userId, UpdateUserDto(fullName: fullName, avatarUrl: avatarUrl));
     state = AsyncData(current.copyWith(
       user: current.user.copyWith(
         fullName: updated.fullName ?? fullName,
@@ -109,6 +108,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsData> {
     final skill = await ref
         .read(settingsProfileRepositoryProvider)
         .addSkill(profileId, skillName);
+    clearSkillGapAnalysisCache();
     state = AsyncData(current.copyWith(skills: [...current.skills, skill]));
   }
 
@@ -116,6 +116,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsData> {
     final current = state.valueOrNull;
     if (current == null) return;
     await ref.read(settingsProfileRepositoryProvider).deleteSkill(skillId);
+    clearSkillGapAnalysisCache();
     state = AsyncData(current.copyWith(
       skills: current.skills.where((s) => s.skillId != skillId).toList(),
     ));
@@ -125,9 +126,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsData> {
     final current = state.valueOrNull;
     if (current == null) return;
     final userId = current.user.id;
-    await ref
-        .read(settingsProfileRepositoryProvider)
-        .deactivateAccount(userId);
+    await ref.read(settingsProfileRepositoryProvider).deactivateAccount(userId);
     await TokenStorage.clearTokens();
     ref.read(authProvider.notifier).logout();
   }
@@ -139,7 +138,6 @@ class SettingsNotifier extends AsyncNotifier<SettingsData> {
   }
 }
 
-final settingsProvider =
-    AsyncNotifierProvider<SettingsNotifier, SettingsData>(
+final settingsProvider = AsyncNotifierProvider<SettingsNotifier, SettingsData>(
   SettingsNotifier.new,
 );
