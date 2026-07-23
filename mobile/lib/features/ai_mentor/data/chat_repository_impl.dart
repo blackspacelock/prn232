@@ -90,7 +90,15 @@ class ChatRepositoryImpl implements ChatRepository {
       '${ApiConstants.chatSessions}/$sessionId/messages',
       data: {'sender': sender, 'messageContent': content},
     );
-    return ChatMessageDto.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final assistantMessage = data['assistantMessage'];
+      if (assistantMessage is Map<String, dynamic>) {
+        return ChatMessageDto.fromJson(assistantMessage);
+      }
+      return ChatMessageDto.fromJson(data);
+    }
+    throw const ServerException('Invalid mentor response from server.');
   }
 
   @override
