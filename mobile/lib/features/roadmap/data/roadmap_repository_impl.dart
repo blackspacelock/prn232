@@ -171,16 +171,25 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   @override
   Future<PersonalRoadmapDto> generateRoadmap(
     String profileId,
-    String careerRoadmapId, {
-    String? note,
-  }) async {
+    String careerRoadmapId,
+  ) async {
     final response = await _dio.post(
       '${ApiConstants.personalRoadmaps}/generate',
       data: {
         'profileId': profileId,
         'careerRoadmapId': careerRoadmapId,
-        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
       },
+    );
+    return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<PersonalRoadmapDto> createCustomRoadmap(
+    CustomPersonalRoadmapRequest request,
+  ) async {
+    final response = await _dio.post(
+      '${ApiConstants.personalRoadmaps}/custom',
+      data: request.toJson(),
     );
     return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
   }

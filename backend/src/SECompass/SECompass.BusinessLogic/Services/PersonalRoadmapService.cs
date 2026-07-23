@@ -54,6 +54,166 @@ public class PersonalRoadmapService : IPersonalRoadmapService
         return ServiceResult<PersonalRoadmapDetailDto>.Ok(_mapper.Map<PersonalRoadmapDetailDto>(result));
     }
 
+    public async Task<ServiceResult<PersonalRoadmapDetailDto>> CreateCustomAsync(CreateCustomPersonalRoadmapRequestDto dto)
+    {
+        var profileExists = await _uow.Profiles.ExistsAsync(p => p.UserId == dto.ProfileId);
+        if (!profileExists) return ServiceResult<PersonalRoadmapDetailDto>.Fail("Profile not found.");
+
+        var roleExists = await _uow.CareerRoles.ExistsAsync(r => r.Id == dto.CareerRoleId);
+        if (!roleExists) return ServiceResult<PersonalRoadmapDetailDto>.Fail("Career role not found.");
+
+        var name = dto.Name.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return ServiceResult<PersonalRoadmapDetailDto>.Fail("Roadmap name is required.");
+
+        var validNodes = dto.Nodes
+            .Where(n => !string.IsNullOrWhiteSpace(n.ClientId) && !string.IsNullOrWhiteSpace(n.Name))
+            .ToList();
+        if (validNodes.Count == 0) return ServiceResult<PersonalRoadmapDetailDto>.Fail("At least one roadmap node is required.");
+
+        if (validNodes.Select(n => n.ClientId).Distinct(StringComparer.OrdinalIgnoreCase).Count() != validNodes.Count)
+            return ServiceResult<PersonalRoadmapDetailDto>.Fail("Roadmap node client IDs must be unique.");
+
+        var roadmap = new CareerRoadmap
+        {
+            Id = Guid.NewGuid(),
+            CareerRoleId = dto.CareerRoleId,
+            Name = name,
+            Description = dto.Description,
+            IsCustom = true
+        };
+        await _uow.CareerRoadmaps.AddAsync(roadmap);
+
+        var nodesByClientId = new Dictionary<string, Node>(StringComparer.OrdinalIgnoreCase);
+        var roadmapNodesByClientId = new Dictionary<string, RoadmapNode>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var requestNode in validNodes.OrderBy(n => n.ParentClientId == null ? 0 : 1).ThenBy(n => n.Order))
+        {
+            Guid? parentNodeId = null;
+            Guid? parentRoadmapNodeId = null;
+            if (!string.IsNullOrWhiteSpace(requestNode.ParentClientId))
+            {
+                if (!nodesByClientId.TryGetValue(requestNode.ParentClientId, out var parentNode) ||
+                    !roadmapNodesByClientId.TryGetValue(requestNode.ParentClientId, out var parentRoadmapNode))
+                {
+                    return ServiceResult<PersonalRoadmapDetailDto>.Fail("Parent node must be created before its branch nodes.");
+                }
+                parentNodeId = parentNode.Id;
+                parentRoadmapNodeId = parentRoadmapNode.Id;
+            }
+
+            var node = new Node
+            {
+                Id = Guid.NewGuid(),
+                ParentNodeId = parentNodeId,
+                Name = requestNode.Name.Trim(),
+                Description = requestNode.Description,
+                Order = requestNode.Order
+            };
+            await _uow.Nodes.AddAsync(node);
+            nodesByClientId[requestNode.ClientId] = node;
+
+            foreach (var requestSkill in requestNode.TechnicalSkills.Where(s => !string.IsNullOrWhiteSpace(s.Name)))
+            {
+                var skillName = requestSkill.Name.Trim();
+                var skillCategory = string.IsNullOrWhiteSpace(requestSkill.Category) ? "General" : requestSkill.Category.Trim();
+                var skill = (await _uow.TechnicalSkills.FindAsync(s => s.Name == skillName)).FirstOrDefault();
+                if (skill == null)
+                {
+                    skill = new TechnicalSkill
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = skillName,
+                        Category = skillCategory
+                    };
+                    await _uow.TechnicalSkills.AddAsync(skill);
+                }
+
+                await _uow.NodeTechnicalSkills.AddAsync(new NodeTechnicalSkill
+                {
+                    Id = Guid.NewGuid(),
+                    NodeId = node.Id,
+                    TechnicalSkillId = skill.Id
+                });
+            }
+
+            foreach (var requestResource in requestNode.LearningResources.Where(r => !string.IsNullOrWhiteSpace(r.Name)))
+            {
+                await _uow.LearningResources.AddAsync(new LearningResource
+                {
+                    Id = Guid.NewGuid(),
+                    NodeId = node.Id,
+                    Name = requestResource.Name.Trim(),
+                    ResourceUrl = requestResource.ResourceUrl,
+                    ResourceType = string.IsNullOrWhiteSpace(requestResource.ResourceType) ? "Article" : requestResource.ResourceType,
+                    Provider = requestResource.Provider,
+                    IsFree = requestResource.IsFree
+                });
+            }
+
+            var roadmapNode = new RoadmapNode
+            {
+                Id = Guid.NewGuid(),
+                CareerRoadmapId = roadmap.Id,
+                NodeId = node.Id,
+                ParentRoadmapNodeId = parentRoadmapNodeId,
+                Order = requestNode.Order,
+                NodeType = string.IsNullOrWhiteSpace(requestNode.NodeType) ? "Topic" : requestNode.NodeType,
+                RequirementType = string.IsNullOrWhiteSpace(requestNode.RequirementType) ? "Required" : requestNode.RequirementType,
+                PositionX = requestNode.PositionX,
+                PositionY = requestNode.PositionY,
+                Node = node
+            };
+            await _uow.RoadmapNodes.AddAsync(roadmapNode);
+            roadmapNodesByClientId[requestNode.ClientId] = roadmapNode;
+        }
+
+        foreach (var requestEdge in dto.Edges.Where(e => !string.IsNullOrWhiteSpace(e.FromClientId) && !string.IsNullOrWhiteSpace(e.ToClientId)))
+        {
+            if (!roadmapNodesByClientId.TryGetValue(requestEdge.FromClientId, out var fromNode) ||
+                !roadmapNodesByClientId.TryGetValue(requestEdge.ToClientId, out var toNode))
+            {
+                return ServiceResult<PersonalRoadmapDetailDto>.Fail("Roadmap edges must reference existing nodes.");
+            }
+
+            if (fromNode.Id == toNode.Id) return ServiceResult<PersonalRoadmapDetailDto>.Fail("An edge cannot connect a roadmap node to itself.");
+
+            await _uow.RoadmapNodeEdges.AddAsync(new RoadmapNodeEdge
+            {
+                Id = Guid.NewGuid(),
+                CareerRoadmapId = roadmap.Id,
+                FromRoadmapNodeId = fromNode.Id,
+                ToRoadmapNodeId = toNode.Id,
+                EdgeType = string.IsNullOrWhiteSpace(requestEdge.EdgeType) ? "Next" : requestEdge.EdgeType
+            });
+        }
+
+        var personalRoadmap = new PersonalRoadmap
+        {
+            Id = Guid.NewGuid(),
+            ProfileId = dto.ProfileId,
+            CareerRoadmapId = roadmap.Id,
+            ProgressPercentage = 0,
+            IsActive = false
+        };
+        await _uow.PersonalRoadmaps.AddAsync(personalRoadmap);
+
+        foreach (var roadmapNode in roadmapNodesByClientId.Values.OrderBy(rn => rn.Order))
+        {
+            await _uow.NodeProgresses.AddAsync(new NodeProgress
+            {
+                Id = Guid.NewGuid(),
+                PersonalRoadmapId = personalRoadmap.Id,
+                RoadmapNodeId = roadmapNode.Id,
+                Status = NodeProgressStatus.NotStarted
+            });
+        }
+
+        await _uow.SaveChangesAsync();
+
+        var result = await _uow.PersonalRoadmaps.GetWithNodesAndProgressAsync(personalRoadmap.Id);
+        return ServiceResult<PersonalRoadmapDetailDto>.Ok(_mapper.Map<PersonalRoadmapDetailDto>(result));
+    }
+
     private async Task<List<Guid>> GetRoadmapNodeIdsAsync(Guid careerRoadmapId)
     {
         var roadmapNodes = await _uow.RoadmapNodes.FindAsync(rn => rn.CareerRoadmapId == careerRoadmapId);

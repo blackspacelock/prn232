@@ -24,6 +24,16 @@ public class PersonalRoadmapsController : ControllerBase
         return CreatedAtAction(nameof(Generate), result.Data);
     }
 
+    [HttpPost("custom")]
+    [ProducesResponseType(typeof(PersonalRoadmapDetailDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateCustom([FromBody] CreateCustomPersonalRoadmapRequestDto dto)
+    {
+        var result = await _service.CreateCustomAsync(dto);
+        if (!result.Success) return BadRequest(result.Error);
+        return CreatedAtAction(nameof(CreateCustom), result.Data);
+    }
+
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

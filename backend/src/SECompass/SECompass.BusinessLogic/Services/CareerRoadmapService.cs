@@ -52,7 +52,7 @@ public class CareerRoadmapService : ICareerRoadmapService
 
     public async Task<ServiceResult<List<CareerRoadmapDto>>> GetByCareerRoleAsync(Guid careerRoleId)
     {
-        var roadmaps = await _uow.CareerRoadmaps.FindAsync(r => r.CareerRoleId == careerRoleId);
+        var roadmaps = await _uow.CareerRoadmaps.FindAsync(r => r.CareerRoleId == careerRoleId && !r.IsCustom);
         return ServiceResult<List<CareerRoadmapDto>>.Ok(_mapper.Map<List<CareerRoadmapDto>>(roadmaps));
     }
 

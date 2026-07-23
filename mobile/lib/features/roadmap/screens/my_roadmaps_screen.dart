@@ -11,6 +11,7 @@ import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/linear_progress_bar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../data/roadmap_repository.dart';
 import '../providers/roadmap_providers.dart';
 
 class MyRoadmapsScreen extends ConsumerStatefulWidget {
@@ -146,9 +147,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => const _RoadmapGenerationSheet(
-        mode: _RoadmapCreateMode.fromTemplate,
-      ),
+      builder: (_) => const _RoadmapGenerationSheet(),
     );
   }
 
@@ -157,9 +156,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => const _RoadmapGenerationSheet(
-        mode: _RoadmapCreateMode.personal,
-      ),
+      builder: (_) => const _CustomPersonalRoadmapSheet(),
     );
   }
 
@@ -392,14 +389,8 @@ class _RoadmapStatTile extends StatelessWidget {
   }
 }
 
-enum _RoadmapCreateMode { fromTemplate, personal }
-
-enum _PersonalRoadmapStep { selectRole, confirm }
-
 class _RoadmapGenerationSheet extends ConsumerStatefulWidget {
-  const _RoadmapGenerationSheet({required this.mode});
-
-  final _RoadmapCreateMode mode;
+  const _RoadmapGenerationSheet();
 
   @override
   ConsumerState<_RoadmapGenerationSheet> createState() =>
@@ -410,32 +401,21 @@ class _RoadmapGenerationSheetState
     extends ConsumerState<_RoadmapGenerationSheet> {
   final _roleSearchController = TextEditingController();
   final _templateSearchController = TextEditingController();
-  final _noteController = TextEditingController();
   CareerRoleDto? _selectedRole;
   String? _selectedRoadmapId;
   String _roleQuery = '';
   String _templateQuery = '';
-  _PersonalRoadmapStep _personalStep = _PersonalRoadmapStep.selectRole;
   bool _isGenerating = false;
-
-  bool get _isPersonal => widget.mode == _RoadmapCreateMode.personal;
 
   @override
   void dispose() {
     _roleSearchController.dispose();
     _templateSearchController.dispose();
-    _noteController.dispose();
     super.dispose();
   }
 
   Future<void> _generate() async {
-    final personalTemplates = _isPersonal
-        ? ref.read(roadmapsBySelectedRoleProvider).valueOrNull
-        : null;
-    final careerRoadmapId = _selectedRoadmapId ??
-        (personalTemplates == null || personalTemplates.isEmpty
-            ? null
-            : personalTemplates.first.careerRoadmapId);
+    final careerRoadmapId = _selectedRoadmapId;
     if (careerRoadmapId == null || _isGenerating) return;
 
     setState(() => _isGenerating = true);
@@ -444,7 +424,6 @@ class _RoadmapGenerationSheetState
       final roadmap = await ref.read(roadmapRepositoryProvider).generateRoadmap(
             profileId,
             careerRoadmapId,
-            note: _isPersonal ? _noteController.text : null,
           );
       ref.invalidate(personalRoadmapsProvider);
       ref.invalidate(dashboardDataProvider);
@@ -478,9 +457,7 @@ class _RoadmapGenerationSheetState
             height: MediaQuery.sizeOf(context).height * 0.78,
             child: _isGenerating
                 ? const _GeneratingRoadmapView()
-                : _isPersonal
-                    ? _buildPersonalFlow(roles, roadmaps)
-                    : _buildTemplateFlow(roles, roadmaps),
+                : _buildTemplateFlow(roles, roadmaps),
           ),
         ),
       ),
@@ -541,130 +518,6 @@ class _RoadmapGenerationSheetState
                 label: 'Generate Roadmap',
                 leadingIcon: const Icon(Icons.rocket_launch_outlined),
                 onPressed: _selectedRoadmapId == null ? null : _generate,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPersonalFlow(
-    AsyncValue<List<CareerRoleDto>> roles,
-    AsyncValue<List<CareerRoadmapDto>> roadmaps,
-  ) {
-    final selectedRole = _selectedRole;
-    final roadmapCount = roadmaps.valueOrNull?.length;
-    final canGenerate = selectedRole != null &&
-        (roadmaps.isLoading || (roadmaps.valueOrNull?.isNotEmpty ?? false));
-
-    if (_personalStep == _PersonalRoadmapStep.confirm && selectedRole != null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SheetHeader(
-            title: 'Create Personal Roadmap',
-            subtitle: 'Review and confirm your selection',
-            onClose: () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(height: 16),
-          const _StepIndicator(confirming: true),
-          const SizedBox(height: 16),
-          _SelectedPersonalRoleCard(
-            role: selectedRole,
-            roadmapCount: roadmapCount,
-          ),
-          const SizedBox(height: 16),
-          Text('Personal note (optional)', style: AppTextStyles.titleSmall),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _noteController,
-            minLines: 4,
-            maxLines: 5,
-            textInputAction: TextInputAction.newline,
-            decoration: const InputDecoration(
-              hintText: 'Add any specific goals or preferences...',
-            ),
-          ),
-          if (roadmaps.hasError) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Could not load roadmap templates for this role.',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
-            ),
-          ] else if (roadmaps.valueOrNull?.isEmpty ?? false) ...[
-            const SizedBox(height: 8),
-            Text(
-              'No roadmap templates for this role.',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
-            ),
-          ],
-          const Spacer(),
-          Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  label: 'Back',
-                  variant: AppButtonVariant.text,
-                  leadingIcon: const Icon(Icons.arrow_back),
-                  onPressed: () => setState(
-                    () => _personalStep = _PersonalRoadmapStep.selectRole,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AppButton(
-                  label: roadmaps.isLoading ? 'Loading...' : 'Generate Roadmap',
-                  leadingIcon: const Icon(Icons.rocket_launch_outlined),
-                  onPressed:
-                      canGenerate && !roadmaps.isLoading ? _generate : null,
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SheetHeader(
-          title: 'Create Personal Roadmap',
-          subtitle: 'Select a career role to get started',
-          onClose: () => Navigator.of(context).pop(),
-        ),
-        const SizedBox(height: 16),
-        const _StepIndicator(confirming: false),
-        const SizedBox(height: 16),
-        _SearchField(
-          controller: _roleSearchController,
-          hintText: 'Search career roles...',
-          onChanged: (value) => setState(() => _roleQuery = value),
-        ),
-        const SizedBox(height: 12),
-        Expanded(child: _buildRoleGrid(roles, showRoadmapCount: true)),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: AppButton(
-                label: 'Cancel',
-                variant: AppButtonVariant.text,
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: AppButton(
-                label: 'Next',
-                leadingIcon: const Icon(Icons.chevron_right),
-                onPressed: selectedRole == null
-                    ? null
-                    : () => setState(
-                          () => _personalStep = _PersonalRoadmapStep.confirm,
-                        ),
               ),
             ),
           ],
@@ -807,128 +660,743 @@ class _RoadmapGenerationSheetState
   }
 }
 
-class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({
-    required this.title,
-    required this.subtitle,
-    required this.onClose,
-  });
+class _CustomPersonalRoadmapSheet extends ConsumerStatefulWidget {
+  const _CustomPersonalRoadmapSheet();
 
-  final String title;
-  final String subtitle;
-  final VoidCallback onClose;
+  @override
+  ConsumerState<_CustomPersonalRoadmapSheet> createState() =>
+      _CustomPersonalRoadmapSheetState();
+}
+
+class _CustomPersonalRoadmapSheetState
+    extends ConsumerState<_CustomPersonalRoadmapSheet> {
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  CareerRoleDto? _selectedRole;
+  final List<_CustomNodeDraft> _nodes = [];
+  final List<_CustomEdgeDraft> _edges = [];
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  bool get _canCreate =>
+      !_isSaving &&
+      _selectedRole != null &&
+      _nameController.text.trim().isNotEmpty &&
+      _nodes.any((node) => node.name.trim().isNotEmpty);
+
+  Future<void> _save() async {
+    if (!_canCreate) return;
+    setState(() => _isSaving = true);
+    try {
+      final profileId = await ref.read(profileIdProvider.future);
+      final roadmap = await ref
+          .read(roadmapRepositoryProvider)
+          .createCustomRoadmap(
+            CustomPersonalRoadmapRequest(
+              profileId: profileId,
+              careerRoleId: _selectedRole!.careerRoleId,
+              name: _nameController.text.trim(),
+              description: _descriptionController.text.trim(),
+              nodes: _nodes
+                  .where((node) => node.name.trim().isNotEmpty)
+                  .map((node) => node.toRequest())
+                  .toList(),
+              edges: _edges
+                  .where((edge) =>
+                      edge.fromClientId != edge.toClientId &&
+                      _nodes
+                          .any((node) => node.clientId == edge.fromClientId) &&
+                      _nodes.any((node) => node.clientId == edge.toClientId))
+                  .map((edge) => edge.toRequest())
+                  .toList(),
+            ),
+          );
+      ref.invalidate(personalRoadmapsProvider);
+      ref.invalidate(dashboardDataProvider);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      context.go('/roadmap/${roadmap.personalRoadmapId}');
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _addOrEditNode({_CustomNodeDraft? node}) async {
+    final existingIndex = node == null ? -1 : _nodes.indexOf(node);
+    final result = await showModalBottomSheet<_CustomNodeDraft>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _CustomNodeEditorSheet(
+        node: node,
+        availableParents: _nodes.where((item) => item != node).toList(),
+        order: existingIndex >= 0 ? node!.order : _nodes.length + 1,
+      ),
+    );
+    if (result == null) return;
+
+    setState(() {
+      if (existingIndex >= 0) {
+        _nodes[existingIndex] = result;
+        _edges.removeWhere((edge) =>
+            edge.fromClientId == result.clientId &&
+            edge.toClientId == result.clientId);
+      } else {
+        _nodes.add(result);
+        _CustomNodeDraft? previousRoot;
+        for (final item in _nodes) {
+          if (item.clientId != result.clientId && item.parentClientId == null) {
+            previousRoot = item;
+          }
+        }
+        if (result.parentClientId == null && previousRoot != null) {
+          _edges.add(_CustomEdgeDraft(
+            fromClientId: previousRoot.clientId,
+            toClientId: result.clientId,
+          ));
+        }
+      }
+    });
+  }
+
+  void _removeNode(_CustomNodeDraft node) {
+    setState(() {
+      _nodes.remove(node);
+      _edges.removeWhere((edge) =>
+          edge.fromClientId == node.clientId ||
+          edge.toClientId == node.clientId);
+      for (final draft
+          in _nodes.where((item) => item.parentClientId == node.clientId)) {
+        draft.parentClientId = null;
+      }
+    });
+  }
+
+  void _addEdge(String? fromClientId, String? toClientId) {
+    if (fromClientId == null ||
+        toClientId == null ||
+        fromClientId == toClientId) {
+      return;
+    }
+    final exists = _edges.any(
+      (edge) =>
+          edge.fromClientId == fromClientId && edge.toClientId == toClientId,
+    );
+    if (!exists) {
+      setState(() => _edges.add(
+            _CustomEdgeDraft(
+                fromClientId: fromClientId, toClientId: toClientId),
+          ));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
+    final roles = ref.watch(careerRolesProvider);
+    return PopScope(
+      canPop: !_isSaving,
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            0,
+            16,
+            MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.82,
+            child: _isSaving
+                ? const _GeneratingRoadmapView()
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Create Personal Roadmap',
+                          style: AppTextStyles.titleLarge),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Build a roadmap without a template by choosing the role, nodes, skills, resources, and edges.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Expanded(
+                        child: ListView(
+                          children: [
+                            TextField(
+                              controller: _nameController,
+                              onChanged: (_) => setState(() {}),
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: 'Roadmap name',
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _descriptionController,
+                              minLines: 2,
+                              maxLines: 3,
+                              decoration: const InputDecoration(
+                                labelText: 'Description',
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text('Career role',
+                                style: AppTextStyles.titleSmall),
+                            const SizedBox(height: 8),
+                            roles.when(
+                              loading: () => const SkeletonCard(height: 56),
+                              error: (error, _) => EmptyStateView(
+                                icon: Icons.error_outline,
+                                title: 'Could not load career roles',
+                                subtitle: error.toString(),
+                                actionLabel: 'Retry',
+                                onAction: () =>
+                                    ref.invalidate(careerRolesProvider),
+                              ),
+                              data: (items) => DropdownMenu<CareerRoleDto>(
+                                width: double.infinity,
+                                initialSelection: _selectedRole,
+                                label: const Text('Select role'),
+                                onSelected: (value) =>
+                                    setState(() => _selectedRole = value),
+                                dropdownMenuEntries: items
+                                    .map(
+                                      (role) => DropdownMenuEntry(
+                                        value: role,
+                                        label: role.name,
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Nodes',
+                                    style: AppTextStyles.titleSmall,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () => _addOrEditNode(),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Add Node'),
+                                ),
+                              ],
+                            ),
+                            if (_nodes.isEmpty)
+                              const EmptyStateView(
+                                icon: Icons.account_tree_outlined,
+                                title: 'No nodes yet',
+                                subtitle:
+                                    'Add parent nodes or branch nodes to define your roadmap.',
+                              )
+                            else
+                              ..._nodes.map(
+                                (node) => _CustomNodeDraftCard(
+                                  node: node,
+                                  parentName: _parentName(node.parentClientId),
+                                  onEdit: () => _addOrEditNode(node: node),
+                                  onDelete: () => _removeNode(node),
+                                ),
+                              ),
+                            if (_nodes.length >= 2) ...[
+                              const SizedBox(height: 12),
+                              _EdgeComposer(
+                                nodes: _nodes,
+                                edges: _edges,
+                                onAdd: _addEdge,
+                                onRemove: (edge) =>
+                                    setState(() => _edges.remove(edge)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppButton(
+                              label: 'Cancel',
+                              variant: AppButtonVariant.text,
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: AppButton(
+                              label: 'Create Roadmap',
+                              leadingIcon: const Icon(Icons.add_task_outlined),
+                              onPressed: _canCreate ? _save : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? _parentName(String? parentClientId) {
+    if (parentClientId == null) return null;
+    for (final node in _nodes) {
+      if (node.clientId == parentClientId) return node.name;
+    }
+    return null;
+  }
+}
+
+class _CustomNodeDraft {
+  _CustomNodeDraft({
+    required this.clientId,
+    this.parentClientId,
+    required this.name,
+    this.description,
+    required this.order,
+    this.skills = const [],
+    this.resources = const [],
+  });
+
+  final String clientId;
+  String? parentClientId;
+  final String name;
+  final String? description;
+  final int order;
+  final List<String> skills;
+  final List<_CustomResourceDraft> resources;
+
+  CustomRoadmapNodeRequest toRequest() => CustomRoadmapNodeRequest(
+        clientId: clientId,
+        parentClientId: parentClientId,
+        name: name.trim(),
+        description: description,
+        order: order,
+        positionX: parentClientId == null ? 120 : 360,
+        positionY: order * 140,
+        technicalSkills: skills
+            .map((skill) => CustomRoadmapSkillRequest(name: skill.trim()))
+            .where((skill) => skill.name.isNotEmpty)
+            .toList(),
+        learningResources:
+            resources.map((resource) => resource.toRequest()).toList(),
+      );
+}
+
+class _CustomResourceDraft {
+  const _CustomResourceDraft({
+    required this.name,
+    required this.url,
+    this.type = 'Article',
+  });
+
+  final String name;
+  final String url;
+  final String type;
+
+  CustomRoadmapResourceRequest toRequest() => CustomRoadmapResourceRequest(
+        name: name.trim(),
+        resourceUrl: url.trim(),
+        resourceType: type.trim().isEmpty ? 'Article' : type.trim(),
+      );
+}
+
+class _CustomEdgeDraft {
+  const _CustomEdgeDraft({
+    required this.fromClientId,
+    required this.toClientId,
+  });
+
+  final String fromClientId;
+  final String toClientId;
+
+  CustomRoadmapEdgeRequest toRequest() => CustomRoadmapEdgeRequest(
+        fromClientId: fromClientId,
+        toClientId: toClientId,
+      );
+}
+
+class _CustomNodeEditorSheet extends StatefulWidget {
+  const _CustomNodeEditorSheet({
+    required this.availableParents,
+    required this.order,
+    this.node,
+  });
+
+  final _CustomNodeDraft? node;
+  final List<_CustomNodeDraft> availableParents;
+  final int order;
+
+  @override
+  State<_CustomNodeEditorSheet> createState() => _CustomNodeEditorSheetState();
+}
+
+class _CustomNodeEditorSheetState extends State<_CustomNodeEditorSheet> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _skillsController;
+  late final TextEditingController _resourceNameController;
+  late final TextEditingController _resourceUrlController;
+  late final TextEditingController _resourceTypeController;
+  String? _parentClientId;
+  late List<_CustomResourceDraft> _resources;
+
+  @override
+  void initState() {
+    super.initState();
+    final node = widget.node;
+    _nameController = TextEditingController(text: node?.name ?? '');
+    _descriptionController =
+        TextEditingController(text: node?.description ?? '');
+    _skillsController =
+        TextEditingController(text: node?.skills.join(', ') ?? '');
+    _resourceNameController = TextEditingController();
+    _resourceUrlController = TextEditingController();
+    _resourceTypeController = TextEditingController(text: 'Article');
+    _parentClientId = node?.parentClientId;
+    _resources = [...?node?.resources];
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _skillsController.dispose();
+    _resourceNameController.dispose();
+    _resourceUrlController.dispose();
+    _resourceTypeController.dispose();
+    super.dispose();
+  }
+
+  void _addResource() {
+    final name = _resourceNameController.text.trim();
+    final url = _resourceUrlController.text.trim();
+    if (name.isEmpty) return;
+    setState(() {
+      _resources.add(
+        _CustomResourceDraft(
+          name: name,
+          url: url,
+          type: _resourceTypeController.text.trim().isEmpty
+              ? 'Article'
+              : _resourceTypeController.text.trim(),
+        ),
+      );
+      _resourceNameController.clear();
+      _resourceUrlController.clear();
+      _resourceTypeController.text = 'Article';
+    });
+  }
+
+  void _save() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+    final skills = _skillsController.text
+        .split(',')
+        .map((skill) => skill.trim())
+        .where((skill) => skill.isNotEmpty)
+        .toSet()
+        .toList();
+    Navigator.of(context).pop(
+      _CustomNodeDraft(
+        clientId: widget.node?.clientId ??
+            DateTime.now().microsecondsSinceEpoch.toString(),
+        parentClientId: _parentClientId,
+        name: name,
+        description: _descriptionController.text.trim(),
+        order: widget.node?.order ?? widget.order,
+        skills: skills,
+        resources: _resources,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          0,
+          16,
+          MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.76,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: AppTextStyles.titleLarge),
-              const SizedBox(height: 4),
               Text(
-                subtitle,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                widget.node == null ? 'Add Node' : 'Edit Node',
+                style: AppTextStyles.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView(
+                  children: [
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'Node name'),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _descriptionController,
+                      minLines: 2,
+                      maxLines: 3,
+                      decoration:
+                          const InputDecoration(labelText: 'Description'),
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownMenu<String?>(
+                      width: double.infinity,
+                      initialSelection: _parentClientId,
+                      label: const Text('Parent node'),
+                      onSelected: (value) =>
+                          setState(() => _parentClientId = value),
+                      dropdownMenuEntries: [
+                        const DropdownMenuEntry<String?>(
+                          value: null,
+                          label: 'No parent',
+                        ),
+                        ...widget.availableParents.map(
+                          (node) => DropdownMenuEntry<String?>(
+                            value: node.clientId,
+                            label: node.name,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _skillsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Technical skills',
+                        hintText: 'C#, ASP.NET Core, SQL',
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text('Learning resources', style: AppTextStyles.titleSmall),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _resourceNameController,
+                      decoration:
+                          const InputDecoration(labelText: 'Resource name'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _resourceUrlController,
+                      keyboardType: TextInputType.url,
+                      decoration:
+                          const InputDecoration(labelText: 'Resource URL'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _resourceTypeController,
+                      decoration:
+                          const InputDecoration(labelText: 'Resource type'),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _addResource,
+                        icon: const Icon(Icons.add_link),
+                        label: const Text('Add Resource'),
+                      ),
+                    ),
+                    ..._resources.map(
+                      (resource) => ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.link),
+                        title: Text(resource.name),
+                        subtitle: Text(resource.url),
+                        trailing: IconButton(
+                          tooltip: 'Remove resource',
+                          icon: const Icon(Icons.close),
+                          onPressed: () =>
+                              setState(() => _resources.remove(resource)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppButton(
+                      label: 'Cancel',
+                      variant: AppButtonVariant.text,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AppButton(
+                      label: 'Save Node',
+                      onPressed:
+                          _nameController.text.trim().isEmpty ? null : _save,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        IconButton(
-          tooltip: 'Close',
-          onPressed: onClose,
-          icon: const Icon(Icons.close),
-        ),
-      ],
+      ),
     );
   }
 }
 
-class _StepIndicator extends StatelessWidget {
-  const _StepIndicator({required this.confirming});
-
-  final bool confirming;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _StepPill(
-          label: 'Select Role',
-          value: confirming ? Icons.check : null,
-          active: true,
-          complete: confirming,
-        ),
-        Expanded(
-          child: Container(
-            height: 1,
-            color: confirming ? AppColors.success : AppColors.outlineVariant,
-          ),
-        ),
-        _StepPill(
-          label: 'Confirm',
-          value: null,
-          active: confirming,
-          complete: false,
-          number: 2,
-        ),
-      ],
-    );
-  }
-}
-
-class _StepPill extends StatelessWidget {
-  const _StepPill({
-    required this.label,
-    required this.active,
-    required this.complete,
-    this.value,
-    this.number = 1,
+class _CustomNodeDraftCard extends StatelessWidget {
+  const _CustomNodeDraftCard({
+    required this.node,
+    required this.onEdit,
+    required this.onDelete,
+    this.parentName,
   });
 
-  final String label;
-  final bool active;
-  final bool complete;
-  final IconData? value;
-  final int number;
+  final _CustomNodeDraft node;
+  final String? parentName;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final color = complete
-        ? AppColors.success
-        : active
-            ? AppColors.primary
-            : AppColors.outline;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active || complete ? color : Colors.transparent,
-            shape: BoxShape.circle,
-            border: Border.all(color: color, width: 2),
-          ),
-          child: value == null
-              ? Text(
-                  number.toString(),
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: active || complete ? Colors.white : color,
-                  ),
-                )
-              : Icon(value, size: 16, color: Colors.white),
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          parentName == null
+              ? Icons.account_tree_outlined
+              : Icons.subdirectory_arrow_right,
         ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: AppTextStyles.labelSmall.copyWith(
-            color: active || complete ? color : AppColors.onSurfaceVariant,
+        title: Text(node.name),
+        subtitle: Text(
+          [
+            if (parentName != null) 'Branch of $parentName',
+            if (node.skills.isNotEmpty) '${node.skills.length} skills',
+            if (node.resources.isNotEmpty) '${node.resources.length} resources',
+          ].join(' · '),
+        ),
+        trailing: Wrap(
+          spacing: 4,
+          children: [
+            IconButton(
+              tooltip: 'Edit node',
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined),
+            ),
+            IconButton(
+              tooltip: 'Delete node',
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EdgeComposer extends StatefulWidget {
+  const _EdgeComposer({
+    required this.nodes,
+    required this.edges,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final List<_CustomNodeDraft> nodes;
+  final List<_CustomEdgeDraft> edges;
+  final void Function(String? fromClientId, String? toClientId) onAdd;
+  final ValueChanged<_CustomEdgeDraft> onRemove;
+
+  @override
+  State<_EdgeComposer> createState() => _EdgeComposerState();
+}
+
+class _EdgeComposerState extends State<_EdgeComposer> {
+  String? _fromClientId;
+  String? _toClientId;
+
+  String _nodeName(String clientId) {
+    for (final node in widget.nodes) {
+      if (node.clientId == clientId) return node.name;
+    }
+    return 'Node';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = widget.nodes
+        .map(
+          (node) => DropdownMenuEntry<String>(
+            value: node.clientId,
+            label: node.name,
+          ),
+        )
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Roadmap edges', style: AppTextStyles.titleSmall),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownMenu<String>(
+                width: double.infinity,
+                label: const Text('From'),
+                initialSelection: _fromClientId,
+                onSelected: (value) => setState(() => _fromClientId = value),
+                dropdownMenuEntries: entries,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownMenu<String>(
+                width: double.infinity,
+                label: const Text('To'),
+                initialSelection: _toClientId,
+                onSelected: (value) => setState(() => _toClientId = value),
+                dropdownMenuEntries: entries,
+              ),
+            ),
+            IconButton.filledTonal(
+              tooltip: 'Add edge',
+              onPressed: () => widget.onAdd(_fromClientId, _toClientId),
+              icon: const Icon(Icons.add),
+            ),
+          ],
+        ),
+        ...widget.edges.map(
+          (edge) => ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.arrow_forward),
+            title: Text(
+                '${_nodeName(edge.fromClientId)} -> ${_nodeName(edge.toClientId)}'),
+            trailing: IconButton(
+              tooltip: 'Remove edge',
+              onPressed: () => widget.onRemove(edge),
+              icon: const Icon(Icons.close),
+            ),
           ),
         ),
       ],
@@ -958,79 +1426,6 @@ class _SearchField extends StatelessWidget {
         prefixIcon: const Icon(Icons.search),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      ),
-    );
-  }
-}
-
-class _SelectedPersonalRoleCard extends StatelessWidget {
-  const _SelectedPersonalRoleCard({
-    required this.role,
-    required this.roadmapCount,
-  });
-
-  final CareerRoleDto role;
-  final int? roadmapCount;
-
-  @override
-  Widget build(BuildContext context) {
-    const phases = ['Fundamentals', 'Core Skills', 'Projects'];
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primaryContainer.withValues(alpha: 0.24),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.work_outline, color: AppColors.primary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  role.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.titleSmall.copyWith(
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            roadmapCount == null
-                ? 'Loading roadmap options...'
-                : '$roadmapCount roadmap template${roadmapCount == 1 ? '' : 's'} available',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: phases
-                .map(
-                  (phase) => Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainer,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.outlineVariant),
-                    ),
-                    child: Text(phase, style: AppTextStyles.labelSmall),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
       ),
     );
   }
