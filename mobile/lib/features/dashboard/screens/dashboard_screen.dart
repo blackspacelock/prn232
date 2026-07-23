@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -327,6 +329,9 @@ class _SkillGapSnapshot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final chartCategories = categories.isEmpty
+        ? const [SkillGapCategory('Skills', 0, 1)]
+        : categories;
     return _Panel(
       title: 'Skill Gap Snapshot',
       child: activeRoadmap == null
@@ -344,57 +349,7 @@ class _SkillGapSnapshot extends StatelessWidget {
                 children: [
                   SizedBox(
                     height: 320,
-                    child: RadarChart(
-                      RadarChartData(
-                        radarShape: RadarShape.polygon,
-                        radarBorderData:
-                            const BorderSide(color: AppColors.outlineVariant),
-                        tickBorderData:
-                            const BorderSide(color: AppColors.outlineVariant),
-                        gridBorderData:
-                            const BorderSide(color: AppColors.outlineVariant),
-                        tickCount: 4,
-                        ticksTextStyle:
-                            const TextStyle(color: Colors.transparent),
-                        titlePositionPercentageOffset: 0.2,
-                        getTitle: (index, angle) {
-                          final label = categories[index].name;
-                          final displayLabel = label.length > 14
-                              ? '${label.substring(0, 12)}…'
-                              : label;
-                          return RadarChartTitle(
-                            text: displayLabel,
-                            angle: angle + 90,
-                          );
-                        },
-                        titleTextStyle: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                          fontSize: 10,
-                        ),
-                        dataSets: [
-                          RadarDataSet(
-                            dataEntries: categories
-                                .map((category) =>
-                                    RadarEntry(value: category.current))
-                                .toList(),
-                            fillColor:
-                                const Color(0xFF1A73E8).withValues(alpha: 0.2),
-                            borderColor: const Color(0xFF1A73E8),
-                            borderWidth: 2,
-                          ),
-                          RadarDataSet(
-                            dataEntries: categories
-                                .map((category) =>
-                                    RadarEntry(value: category.required))
-                                .toList(),
-                            fillColor:
-                                const Color(0xFFFBBC04).withValues(alpha: 0.15),
-                            borderColor: const Color(0xFFFBBC04),
-                            borderWidth: 2,
-                          ),
-                        ],
-                      ),
-                    ),
+                    child: _BoundedSkillGapRadar(categories: chartCategories),
                   ),
                   const SizedBox(height: 8),
                   const Row(
@@ -420,6 +375,157 @@ class _SkillGapSnapshot extends StatelessWidget {
             ),
     );
   }
+}
+
+class _BoundedSkillGapRadar extends StatelessWidget {
+  const _BoundedSkillGapRadar({required this.categories});
+
+  final List<SkillGapCategory> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = math.min(constraints.maxWidth, constraints.maxHeight);
+        const labelWidth = 86.0;
+        const labelHeight = 42.0;
+        final chartSize = math.max(180.0, size - 112);
+        final center = size / 2;
+        final labelRadius = chartSize / 2 + 34;
+
+        return Center(
+          child: SizedBox.square(
+            dimension: size,
+            child: Stack(
+              clipBehavior: Clip.hardEdge,
+              children: [
+                Center(
+                  child: SizedBox.square(
+                    dimension: chartSize,
+                    child: RadarChart(
+                      RadarChartData(
+                        radarShape: RadarShape.polygon,
+                        radarBorderData: const BorderSide(
+                          color: AppColors.outlineVariant,
+                        ),
+                        tickBorderData: const BorderSide(
+                          color: AppColors.outlineVariant,
+                        ),
+                        gridBorderData: const BorderSide(
+                          color: AppColors.outlineVariant,
+                        ),
+                        tickCount: 4,
+                        ticksTextStyle:
+                            const TextStyle(color: Colors.transparent),
+                        titleTextStyle:
+                            const TextStyle(color: Colors.transparent),
+                        getTitle: (_, __) => const RadarChartTitle(text: ''),
+                        dataSets: [
+                          RadarDataSet(
+                            dataEntries: categories
+                                .map((category) =>
+                                    RadarEntry(value: category.current))
+                                .toList(),
+                            fillColor:
+                                const Color(0xFF1A73E8).withValues(alpha: 0.2),
+                            borderColor: const Color(0xFF1A73E8),
+                            borderWidth: 2,
+                          ),
+                          RadarDataSet(
+                            dataEntries: categories
+                                .map((category) =>
+                                    RadarEntry(value: category.required))
+                                .toList(),
+                            fillColor:
+                                const Color(0xFFFBBC04).withValues(alpha: 0.15),
+                            borderColor: const Color(0xFFFBBC04),
+                            borderWidth: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                for (var index = 0; index < categories.length; index++)
+                  _RadarLabel(
+                    label: categories[index].name,
+                    left: _clampLabelPosition(
+                      center +
+                          math.cos(_radarLabelAngle(index, categories.length)) *
+                              labelRadius -
+                          labelWidth / 2,
+                      size - labelWidth,
+                    ),
+                    top: _clampLabelPosition(
+                      center +
+                          math.sin(_radarLabelAngle(index, categories.length)) *
+                              labelRadius -
+                          labelHeight / 2,
+                      size - labelHeight,
+                    ),
+                    width: labelWidth,
+                    height: labelHeight,
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RadarLabel extends StatelessWidget {
+  const _RadarLabel({
+    required this.label,
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+  });
+
+  final String label;
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: width,
+            child: Text(
+              label,
+              maxLines: 3,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+                fontSize: 10,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+double _radarLabelAngle(int index, int count) {
+  if (count <= 0) return -math.pi / 2;
+  return -math.pi / 2 + (math.pi * 2 * index / count);
+}
+
+double _clampLabelPosition(double value, double max) {
+  return value.clamp(0, math.max(0, max)).toDouble();
 }
 
 class _LegendDot extends StatelessWidget {
