@@ -167,29 +167,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return showModalBottomSheet<void>(
       context: rootContext,
       showDragHandle: true,
-      builder: (sheetContext) => _SessionsSheet(
-        state: state,
-        onNewChat: () async {
-          Navigator.of(sheetContext).pop();
-          await _createSessionAndNavigate(rootContext);
-        },
-        onSelect: (session) async {
-          Navigator.of(sheetContext).pop();
-          await ref
-              .read(mentorChatProvider(widget.sessionId).notifier)
-              .selectSession(session.chatSessionId);
-          if (!rootContext.mounted) return;
-          rootContext.go('/mentor/${session.chatSessionId}');
-        },
-        onRename: _showRenameDialog,
-        onDelete: (session) async {
-          final activeDeleted =
-              await _deleteSession(session, navigateOnActive: false);
-          if (!sheetContext.mounted) return;
-          Navigator.of(sheetContext).pop();
-          if (activeDeleted && rootContext.mounted) {
-            rootContext.go('/mentor');
-          }
+      builder: (sheetContext) => Consumer(
+        builder: (context, ref, _) {
+          final liveState =
+              ref.watch(mentorChatProvider(widget.sessionId)).valueOrNull ??
+                  state;
+          return _SessionsSheet(
+            state: liveState,
+            onNewChat: () async {
+              Navigator.of(sheetContext).pop();
+              await _createSessionAndNavigate(rootContext);
+            },
+            onSelect: (session) async {
+              Navigator.of(sheetContext).pop();
+              await ref
+                  .read(mentorChatProvider(widget.sessionId).notifier)
+                  .selectSession(session.chatSessionId);
+              if (!rootContext.mounted) return;
+              rootContext.go('/mentor/${session.chatSessionId}');
+            },
+            onRename: _showRenameDialog,
+            onDelete: (session) async {
+              final activeDeleted =
+                  await _deleteSession(session, navigateOnActive: false);
+              if (!sheetContext.mounted) return;
+              Navigator.of(sheetContext).pop();
+              if (activeDeleted && rootContext.mounted) {
+                rootContext.go('/mentor');
+              }
+            },
+          );
         },
       ),
     );
@@ -205,6 +212,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await ref
           .read(mentorChatProvider(widget.sessionId).notifier)
           .renameSession(session.chatSessionId, title);
+      if (mounted) AppSnackbar.showSuccess(context, 'Session renamed');
     } catch (error) {
       if (mounted) AppSnackbar.showError(context, error.toString());
     }
