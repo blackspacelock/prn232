@@ -44,12 +44,12 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
           IconButton(
             tooltip: 'Create personal roadmap',
             icon: const Icon(Icons.add_task_outlined),
-            onPressed: _showCreatePersonalRoadmapSheet,
+            onPressed: _showRoadmapActionSheet,
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showTemplateRoadmapSheet,
+        onPressed: _showRoadmapActionSheet,
         icon: const Icon(Icons.rocket_launch_outlined),
         label: const Text('Generate Roadmap'),
       ),
@@ -86,8 +86,6 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
                   totalCount: items.length,
                   activeCount: activeCount,
                   averageProgress: averageProgress,
-                  onGenerateTemplate: _showTemplateRoadmapSheet,
-                  onCreatePersonal: _showCreatePersonalRoadmapSheet,
                 ),
                 const SizedBox(height: 14),
                 SearchBar(
@@ -161,6 +159,51 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
       showDragHandle: true,
       builder: (_) => const _RoadmapGenerationSheet(
         mode: _RoadmapCreateMode.personal,
+      ),
+    );
+  }
+
+  Future<void> _showRoadmapActionSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Generate Roadmap', style: AppTextStyles.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                'Choose how you want to start your next roadmap.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppButton(
+                label: 'Generate From Template',
+                leadingIcon: const Icon(Icons.rocket_launch_outlined),
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  _showTemplateRoadmapSheet();
+                },
+              ),
+              const SizedBox(height: 10),
+              AppButton(
+                label: 'Create Personal Roadmap',
+                variant: AppButtonVariant.tonal,
+                leadingIcon: const Icon(Icons.add_task_outlined),
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  _showCreatePersonalRoadmapSheet();
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -250,15 +293,11 @@ class _RoadmapOverviewPanel extends StatelessWidget {
     required this.totalCount,
     required this.activeCount,
     required this.averageProgress,
-    required this.onGenerateTemplate,
-    required this.onCreatePersonal,
   });
 
   final int totalCount;
   final int activeCount;
   final int averageProgress;
-  final VoidCallback onGenerateTemplate;
-  final VoidCallback onCreatePersonal;
 
   @override
   Widget build(BuildContext context) {
@@ -307,19 +346,6 @@ class _RoadmapOverviewPanel extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 14),
-          AppButton(
-            label: 'Generate From Template',
-            leadingIcon: const Icon(Icons.rocket_launch_outlined),
-            onPressed: onGenerateTemplate,
-          ),
-          const SizedBox(height: 10),
-          AppButton(
-            label: 'Create Personal Roadmap',
-            variant: AppButtonVariant.tonal,
-            leadingIcon: const Icon(Icons.add_task_outlined),
-            onPressed: onCreatePersonal,
           ),
         ],
       ),
