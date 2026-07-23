@@ -105,6 +105,17 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
             status
             note
             createdAt
+            roadmapNode {
+              id
+              careerRoadmapId
+              nodeId
+              parentRoadmapNodeId
+              order
+              nodeType
+              requirementType
+              positionX
+              positionY
+            }
             node {
               id
               parentNodeId
@@ -137,6 +148,18 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
       },
     );
     return PersonalRoadmapDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> toggleActiveRoadmap(String personalRoadmapId) async {
+    await _dio.put(
+      '${ApiConstants.personalRoadmaps}/$personalRoadmapId/toggle-active',
+    );
+  }
+
+  @override
+  Future<void> deleteRoadmap(String personalRoadmapId) async {
+    await _dio.delete('${ApiConstants.personalRoadmaps}/$personalRoadmapId');
   }
 
   @override
@@ -214,6 +237,13 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
       r'''
       query GetSkillGapAnalysis($profileId: UUID!) {
         skillGapAnalysis(profileId: $profileId) {
+          profileId
+          careerRoadmapId
+          requiredSkills {
+            id
+            name
+            category
+          }
           coveragePercentage
           matchedSkills {
             id
@@ -230,6 +260,7 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
             yourLevel
             requiredLevel
           }
+          summary
         }
       }
       ''',

@@ -10,6 +10,7 @@ import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/profile_setup_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/roadmap/screens/career_role_selection_screen.dart';
+import '../../features/roadmap/screens/my_roadmaps_screen.dart';
 import '../../features/roadmap/screens/role_selection_loading_screen.dart';
 import '../../features/roadmap/screens/roadmap_viewer_screen.dart';
 import '../../features/roadmap/screens/learning_resources_screen.dart';
@@ -35,6 +36,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         : const [],
     initialLocation: '/',
     redirect: (context, state) async {
+      if (authState.isLoading) return null;
+
       final isAuthenticated = authState.valueOrNull != null;
       final location = state.matchedLocation;
 
@@ -61,6 +64,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) =>
             AppShell(location: state.matchedLocation, child: child),
         routes: [
+          GoRoute(
+            path: '/roadmaps',
+            builder: (_, __) => const MyRoadmapsScreen(),
+          ),
           GoRoute(
             path: '/dashboard',
             builder: (_, __) => const DashboardScreen(),

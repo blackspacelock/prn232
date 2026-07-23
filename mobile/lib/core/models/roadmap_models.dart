@@ -68,6 +68,44 @@ class NodeDto {
       );
 }
 
+class RoadmapNodeDto {
+  const RoadmapNodeDto({
+    required this.roadmapNodeId,
+    required this.nodeId,
+    required this.order,
+    this.parentRoadmapNodeId,
+    this.nodeType,
+    this.requirementType,
+    this.positionX,
+    this.positionY,
+    this.node,
+  });
+
+  final String roadmapNodeId;
+  final String nodeId;
+  final int order;
+  final String? parentRoadmapNodeId;
+  final String? nodeType;
+  final String? requirementType;
+  final double? positionX;
+  final double? positionY;
+  final NodeDto? node;
+
+  factory RoadmapNodeDto.fromJson(Map<String, dynamic> json) => RoadmapNodeDto(
+        roadmapNodeId: (json['roadmapNodeId'] ?? json['id']).toString(),
+        nodeId: (json['nodeId'] ?? json['node']?['id'] ?? '').toString(),
+        order: json['order'] as int? ?? 0,
+        parentRoadmapNodeId: json['parentRoadmapNodeId'] as String?,
+        nodeType: json['nodeType'] as String?,
+        requirementType: json['requirementType'] as String?,
+        positionX: (json['positionX'] as num?)?.toDouble(),
+        positionY: (json['positionY'] as num?)?.toDouble(),
+        node: json['node'] is Map<String, dynamic>
+            ? NodeDto.fromJson(json['node'] as Map<String, dynamic>)
+            : null,
+      );
+}
+
 class NodeProgressDto {
   const NodeProgressDto({
     required this.nodeProgressId,
@@ -76,6 +114,7 @@ class NodeProgressDto {
     required this.status,
     this.note,
     this.node,
+    this.roadmapNode,
   });
 
   final String nodeProgressId;
@@ -84,6 +123,7 @@ class NodeProgressDto {
   final int status;
   final String? note;
   final NodeDto? node;
+  final RoadmapNodeDto? roadmapNode;
 
   factory NodeProgressDto.fromJson(Map<String, dynamic> json) =>
       NodeProgressDto(
@@ -94,6 +134,11 @@ class NodeProgressDto {
         note: json['note'] as String?,
         node: json['node'] is Map<String, dynamic>
             ? NodeDto.fromJson(json['node'] as Map<String, dynamic>)
+            : null,
+        roadmapNode: json['roadmapNode'] is Map<String, dynamic>
+            ? RoadmapNodeDto.fromJson(
+                json['roadmapNode'] as Map<String, dynamic>,
+              )
             : null,
       );
 }
@@ -187,20 +232,27 @@ class LearningResourceDto {
 class SkillGapAnalysisDto {
   const SkillGapAnalysisDto({
     required this.coveragePercentage,
+    required this.requiredSkills,
     required this.matchedSkills,
     required this.missingSkills,
     required this.categoryBreakdown,
+    this.summary,
   });
 
   final double coveragePercentage;
+  final List<String> requiredSkills;
   final List<String> matchedSkills;
   final List<String> missingSkills;
   final List<CategoryBreakdownDto> categoryBreakdown;
+  final String? summary;
 
   factory SkillGapAnalysisDto.fromJson(Map<String, dynamic> json) =>
       SkillGapAnalysisDto(
         coveragePercentage:
             (json['coveragePercentage'] as num?)?.toDouble() ?? 0,
+        requiredSkills:
+            (json['requiredSkills'] as List?)?.map(_skillName).toList() ??
+                const [],
         matchedSkills:
             (json['matchedSkills'] as List?)?.map(_skillName).toList() ??
                 const [],
@@ -212,6 +264,7 @@ class SkillGapAnalysisDto {
                 .map(CategoryBreakdownDto.fromJson)
                 .toList() ??
             const [],
+        summary: json['summary'] as String?,
       );
 
   static String _skillName(Object? skill) {
@@ -237,16 +290,20 @@ class CategoryBreakdownDto {
   factory CategoryBreakdownDto.fromJson(Map<String, dynamic> json) =>
       CategoryBreakdownDto(
         category: (json['category'] ?? json['name'] ?? 'General').toString(),
-        currentScore: (json['currentScore'] ??
-                    json['current'] ??
-                    json['yourScore'] ??
-                    json['yourLevel'] as num?)
-                ?.toDouble() ??
-            0,
-        requiredScore: (json['requiredScore'] ??
-                    json['required'] ??
-                    json['requiredLevel'] as num?)
-                ?.toDouble() ??
-            1,
+        currentScore: _number(
+          json['currentScore'] ??
+              json['current'] ??
+              json['yourScore'] ??
+              json['yourLevel'],
+        ),
+        requiredScore: _number(
+          json['requiredScore'] ?? json['required'] ?? json['requiredLevel'],
+          fallback: 100,
+        ),
       );
+
+  static double _number(Object? value, {double fallback = 0}) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? fallback;
+  }
 }

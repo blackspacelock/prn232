@@ -57,12 +57,14 @@ class SkillGapAnalysisScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
-              _CoverageCard(data: data, roleName: roleName),
-              const SizedBox(height: 16),
               _RadarSection(data: data),
+              const SizedBox(height: 16),
+              _CoverageCard(data: data, roleName: roleName),
               const SizedBox(height: 20),
               _SkillChipSection(
                 title: 'Skills You Have',
+                subtitle:
+                    '${data.matchedSkills.length} of ${data.requiredSkills.length} required skills covered',
                 skills: data.matchedSkills,
                 background: AppColors.successContainer,
                 foreground: AppColors.success,
@@ -153,6 +155,15 @@ class _CoverageCard extends StatelessWidget {
             height: 8,
             color: AppColors.success,
           ),
+          if (data.summary != null && data.summary!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              data.summary!,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -199,19 +210,22 @@ class _RadarSection extends StatelessWidget {
                     const BorderSide(color: AppColors.outlineVariant),
                 gridBorderData:
                     const BorderSide(color: AppColors.outlineVariant),
+                tickCount: 4,
                 ticksTextStyle: const TextStyle(color: Colors.transparent),
                 getTitle: (index, angle) => RadarChartTitle(
                   text: breakdown[index].category,
                   angle: angle,
+                ),
+                titleTextStyle: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
                 ),
                 dataSets: [
                   RadarDataSet(
                     dataEntries: breakdown
                         .map((item) => RadarEntry(value: item.currentScore))
                         .toList(),
-                    fillColor:
-                        AppColors.primaryContainer.withValues(alpha: 0.2),
-                    borderColor: AppColors.primaryContainer,
+                    fillColor: const Color(0xFF1A73E8).withValues(alpha: 0.2),
+                    borderColor: const Color(0xFF1A73E8),
                     borderWidth: 2,
                   ),
                   RadarDataSet(
@@ -229,8 +243,7 @@ class _RadarSection extends StatelessWidget {
           const SizedBox(height: 8),
           const Row(
             children: [
-              _LegendDot(
-                  color: AppColors.primaryContainer, label: 'Your Skills'),
+              _LegendDot(color: Color(0xFF1A73E8), label: 'Your Skills'),
               SizedBox(width: 16),
               _LegendDot(color: Color(0xFFFBBC04), label: 'Required'),
             ],

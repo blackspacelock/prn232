@@ -143,6 +143,7 @@ final dashboardDataProvider = FutureProvider<DashboardData>((ref) async {
       Future<SkillGapAnalysisDto>.value(
         const SkillGapAnalysisDto(
           coveragePercentage: 0,
+          requiredSkills: [],
           matchedSkills: [],
           missingSkills: [],
           categoryBreakdown: [],

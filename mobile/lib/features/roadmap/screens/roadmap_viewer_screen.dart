@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -44,7 +45,10 @@ class RoadmapViewerScreen extends ConsumerWidget {
         data: (data) {
           final nodes = [
             ...data.nodeProgresses,
-          ]..sort((a, b) => (a.node?.order ?? 0).compareTo(b.node?.order ?? 0));
+          ]..sort(
+              (a, b) => (a.roadmapNode?.order ?? a.node?.order ?? 0)
+                  .compareTo(b.roadmapNode?.order ?? b.node?.order ?? 0),
+            );
           final completed = nodes.where((node) => node.status == 4).length;
           final phases = _buildPhases(nodes);
 
@@ -283,6 +287,10 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final node = widget.nodeProgress.node;
+    final directResources =
+        ref.watch(learningResourcesProvider(widget.nodeProgress.nodeId));
+    final recommendedResources =
+        ref.watch(recommendedResourcesProvider(widget.nodeProgress.nodeId));
 
     return ListView(
       controller: widget.scrollController,
@@ -327,6 +335,33 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
               '/roadmap/${widget.personalRoadmapId}/node/${widget.nodeProgress.nodeId}/resources',
             );
           },
+        ),
+        const SizedBox(height: 20),
+        Text('Learning Resources', style: AppTextStyles.titleSmall),
+        const SizedBox(height: 10),
+        directResources.when(
+          loading: () => const SkeletonCard(height: 88),
+          error: (_, __) => Text(
+            'Could not load resources.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          data: (items) => _InlineResourceList(
+            resources: items,
+            emptyText: 'No resources for this milestone.',
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text('Recommended For You', style: AppTextStyles.titleSmall),
+        const SizedBox(height: 10),
+        recommendedResources.when(
+          loading: () => const SkeletonCard(height: 88),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (items) => _InlineResourceList(
+            resources: items,
+            emptyText: 'No personalized recommendations yet.',
+          ),
         ),
         const SizedBox(height: 12),
         AppButton(
@@ -396,6 +431,62 @@ class _NodeStatusSegmentedButton extends StatelessWidget {
   }
 }
 
+class _InlineResourceList extends StatelessWidget {
+  const _InlineResourceList({
+    required this.resources,
+    required this.emptyText,
+  });
+
+  final List<LearningResourceDto> resources;
+  final String emptyText;
+
+  @override
+  Widget build(BuildContext context) {
+    if (resources.isEmpty) {
+      return Text(
+        emptyText,
+        style: AppTextStyles.bodySmall.copyWith(
+          color: AppColors.onSurfaceVariant,
+        ),
+      );
+    }
+
+    return Column(
+      children: resources
+          .take(3)
+          .map(
+            (resource) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(
+                  resource.resourceName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '${resource.provider} - ${resource.resourceType}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: const Icon(Icons.open_in_new, size: 18),
+                onTap: () => _openResource(context, resource.resourceUrl),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Future<void> _openResource(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !await canLaunchUrl(uri)) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
 class _RoadmapSkeleton extends StatelessWidget {
   const _RoadmapSkeleton();
 
@@ -428,8 +519,10 @@ class _RoadmapSkeleton extends StatelessWidget {
 List<_RoadmapPhase> _buildPhases(List<NodeProgressDto> nodes) {
   final parentNodes = nodes
       .where((node) => node.node?.parentNodeId == null)
-      .where((node) =>
-          nodes.any((child) => child.node?.parentNodeId == node.nodeId))
+      .where((node) => nodes.any((child) =>
+          child.roadmapNode?.parentRoadmapNodeId ==
+              node.roadmapNode?.roadmapNodeId ||
+          child.node?.parentNodeId == node.nodeId))
       .toList();
 
   if (parentNodes.isEmpty) {
@@ -440,9 +533,15 @@ List<_RoadmapPhase> _buildPhases(List<NodeProgressDto> nodes) {
   final groupedNodeIds = <String>{};
   for (final parent in parentNodes) {
     final children = nodes
-        .where((node) => node.node?.parentNodeId == parent.nodeId)
+        .where((node) =>
+            node.roadmapNode?.parentRoadmapNodeId ==
+                parent.roadmapNode?.roadmapNodeId ||
+            node.node?.parentNodeId == parent.nodeId)
         .toList()
-      ..sort((a, b) => (a.node?.order ?? 0).compareTo(b.node?.order ?? 0));
+      ..sort(
+        (a, b) => (a.roadmapNode?.order ?? a.node?.order ?? 0)
+            .compareTo(b.roadmapNode?.order ?? b.node?.order ?? 0),
+      );
     groupedNodeIds.add(parent.nodeId);
     groupedNodeIds.addAll(children.map((node) => node.nodeId));
     phases.add(

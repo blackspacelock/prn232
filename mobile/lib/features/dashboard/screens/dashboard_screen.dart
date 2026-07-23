@@ -86,7 +86,7 @@ class DashboardScreen extends ConsumerWidget {
                 _AnnouncementBanner(message: announcement),
                 const SizedBox(height: 16),
               ],
-              _StatsScroller(data: data),
+              _StatsGrid(data: data),
               const SizedBox(height: 24),
               _RoadmapsSection(roadmaps: data.roadmaps),
               const SizedBox(height: 24),
@@ -133,36 +133,38 @@ class _AnnouncementBanner extends StatelessWidget {
   }
 }
 
-class _StatsScroller extends StatelessWidget {
-  const _StatsScroller({required this.data});
+class _StatsGrid extends StatelessWidget {
+  const _StatsGrid({required this.data});
 
   final DashboardData data;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 112,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _StatCard(
-              icon: Icons.map_outlined,
-              value: '${data.roadmapCount}',
-              label: 'My Roadmaps'),
-          _StatCard(
-              icon: Icons.show_chart,
-              value: '${data.averageProgress.round()}%',
-              label: 'Avg Progress'),
-          _StatCard(
-              icon: Icons.psychology_outlined,
-              value: '${data.skillsCount}',
-              label: 'My Skills'),
-          _StatCard(
-              icon: Icons.folder_special_outlined,
-              value: '${data.repositoryCount}',
-              label: 'GitHub Repos'),
-        ],
-      ),
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.55,
+      children: [
+        _StatCard(
+            icon: Icons.map_outlined,
+            value: '${data.roadmapCount}',
+            label: 'My Roadmaps'),
+        _StatCard(
+            icon: Icons.show_chart,
+            value: '${data.averageProgress.round()}%',
+            label: 'Avg Progress'),
+        _StatCard(
+            icon: Icons.psychology_outlined,
+            value: '${data.skillsCount}',
+            label: 'My Skills'),
+        _StatCard(
+            icon: Icons.folder_special_outlined,
+            value: '${data.repositoryCount}',
+            label: 'GitHub Repos'),
+      ],
     );
   }
 }
@@ -178,8 +180,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 148,
-      margin: const EdgeInsets.only(right: 12),
+      width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
@@ -334,7 +335,7 @@ class _SkillGapSnapshot extends StatelessWidget {
               title: 'Set an active roadmap',
               subtitle: 'Generate a roadmap to unlock skill-gap analysis.',
               actionLabel: 'Choose Role',
-              onAction: () => context.go('/career-roles'),
+              onAction: () => context.go('/roadmaps'),
             )
           : InkWell(
               onTap: () => context.go('/skill-gap/select'),

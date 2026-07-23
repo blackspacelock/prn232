@@ -75,8 +75,6 @@ class _SkillInputScreenState extends ConsumerState<SkillInputScreen> {
   Widget build(BuildContext context) {
     final skills = ref.watch(skillInputProvider);
     final technicalSkills = ref.watch(technicalSkillsProvider);
-    final roadmapId = _resolvedRoadmapId(ref);
-
     return Scaffold(
       appBar: AppBar(title: const Text('Your Skills')),
       bottomNavigationBar: SafeArea(
@@ -84,11 +82,7 @@ class _SkillInputScreenState extends ConsumerState<SkillInputScreen> {
         child: AppButton(
           label: 'Run Analysis',
           leadingIcon: const Icon(Icons.arrow_forward),
-          onPressed: roadmapId == null
-              ? null
-              : () => context.go(
-                    '/skill-gap/result?careerRoadmapId=$roadmapId',
-                  ),
+          onPressed: () => context.go('/skill-gap/result'),
         ),
       ),
       body: skills.when(
@@ -192,13 +186,6 @@ class _SkillInputScreenState extends ConsumerState<SkillInputScreen> {
         },
       ),
     );
-  }
-
-  String? _resolvedRoadmapId(WidgetRef ref) {
-    if (widget.careerRoadmapId.isNotEmpty) return widget.careerRoadmapId;
-    final options = ref.watch(roadmapsBySelectedRoleProvider).valueOrNull;
-    if (options == null || options.isEmpty) return widget.careerRoleId;
-    return options.first.careerRoadmapId;
   }
 
   Color _skillColor(String skillName) {

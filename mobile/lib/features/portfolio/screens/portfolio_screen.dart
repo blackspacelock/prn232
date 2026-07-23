@@ -71,6 +71,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           onOpenUrl: _openUrl,
           onRunAnalysis: _runAnalysis,
           onSharePortfolio: _sharePortfolio,
+          onViewPublicPortfolio: _viewPublicPortfolio,
         ),
       ),
       floatingActionButton: asyncState.hasValue
@@ -84,9 +85,17 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
   }
 
   void _sharePortfolio() {
+    Share.share(
+      'Check out my SECompass portfolio: ${_publicPortfolioUrl()}',
+    );
+  }
+
+  Future<void> _viewPublicPortfolio() => _openUrl(_publicPortfolioUrl());
+
+  String _publicPortfolioUrl() {
     final user = ref.read(authProvider).valueOrNull;
-    final userId = user?.id ?? '';
-    Share.share('Check out my SECompass portfolio: https://secompass.app/portfolio/$userId');
+    final userId = user?.id ?? user?.profileId ?? '';
+    return 'https://secompass.app/portfolio/$userId';
   }
 
   Future<void> _openUrl(String url) async {
@@ -103,7 +112,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
   Future<void> _runAnalysis() async {
     try {
       await ref.read(portfolioProvider.notifier).runAnalysis();
-      if (mounted) AppSnackbar.showSuccess(context, 'Portfolio analysis complete');
+      if (mounted) {
+        AppSnackbar.showSuccess(context, 'Portfolio analysis complete');
+      }
     } on AppException catch (e) {
       if (mounted) AppSnackbar.showError(context, e.message);
     }
@@ -162,9 +173,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
         if (mounted) AppSnackbar.showSuccess(context, 'Repository updated');
       } else {
         final user = ref.read(authProvider).valueOrNull;
-        final profileId = user?.profileId ??
-            await TokenStorage.getProfileId() ??
-            '';
+        final profileId =
+            user?.profileId ?? await TokenStorage.getProfileId() ?? '';
         await ref.read(portfolioProvider.notifier).addRepo(
               CreateRepoDto(
                 profileId: profileId,
@@ -196,6 +206,7 @@ class _PortfolioBody extends StatelessWidget {
     required this.onOpenUrl,
     required this.onRunAnalysis,
     required this.onSharePortfolio,
+    required this.onViewPublicPortfolio,
   });
 
   final PortfolioState state;
@@ -210,18 +221,26 @@ class _PortfolioBody extends StatelessWidget {
   final ValueChanged<String> onOpenUrl;
   final VoidCallback onRunAnalysis;
   final VoidCallback onSharePortfolio;
+  final VoidCallback onViewPublicPortfolio;
 
   List<GitHubRepositoryDto> get _filteredRepos {
     var list = state.repos;
-    if (filterVisibility == 'Public') list = list.where((r) => !r.isPrivate).toList();
-    if (filterVisibility == 'Private') list = list.where((r) => r.isPrivate).toList();
+    if (filterVisibility == 'Public') {
+      list = list.where((r) => !r.isPrivate).toList();
+    }
+    if (filterVisibility == 'Private') {
+      list = list.where((r) => r.isPrivate).toList();
+    }
     if (searchQuery.isNotEmpty) {
       final q = searchQuery.toLowerCase();
-      list = list.where((r) =>
-        r.repositoryName.toLowerCase().contains(q) ||
-        (r.repoUrl.toLowerCase().contains(q)) ||
-        (r.description?.toLowerCase().contains(q) ?? false),
-      ).toList();
+      list = list
+          .where(
+            (r) =>
+                r.repositoryName.toLowerCase().contains(q) ||
+                (r.repoUrl.toLowerCase().contains(q)) ||
+                (r.description?.toLowerCase().contains(q) ?? false),
+          )
+          .toList();
     }
     return list;
   }
@@ -238,7 +257,10 @@ class _PortfolioBody extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
         children: [
           const SizedBox(height: 12),
-          _PortfolioHeaderCard(onShare: onSharePortfolio),
+          _PortfolioHeaderCard(
+            onShare: onSharePortfolio,
+            onViewPublicPortfolio: onViewPublicPortfolio,
+          ),
           const SizedBox(height: 16),
           _AnalysisSection(
             analysis: state.analysis,
@@ -289,8 +311,12 @@ class _PortfolioBody extends StatelessWidget {
 }
 
 class _PortfolioHeaderCard extends StatelessWidget {
-  const _PortfolioHeaderCard({required this.onShare});
+  const _PortfolioHeaderCard({
+    required this.onShare,
+    required this.onViewPublicPortfolio,
+  });
   final VoidCallback onShare;
+  final VoidCallback onViewPublicPortfolio;
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +328,8 @@ class _PortfolioHeaderCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.folder_special, color: AppColors.primary, size: 28),
+                const Icon(Icons.folder_special,
+                    color: AppColors.primary, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -320,7 +347,7 @@ class _PortfolioHeaderCard extends StatelessWidget {
                     label: 'View Public Portfolio',
                     variant: AppButtonVariant.tonal,
                     leadingIcon: const Icon(Icons.open_in_new, size: 18),
-                    onPressed: () {},
+                    onPressed: onViewPublicPortfolio,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -419,7 +446,8 @@ class _AnalysisSection extends StatelessWidget {
 }
 
 class _VisibilityFilterChips extends StatelessWidget {
-  const _VisibilityFilterChips({required this.selected, required this.onChanged});
+  const _VisibilityFilterChips(
+      {required this.selected, required this.onChanged});
   final String selected;
   final ValueChanged<String> onChanged;
 
@@ -436,7 +464,8 @@ class _VisibilityFilterChips extends StatelessWidget {
                     label: Text(opt),
                     selected: selected == opt,
                     onSelected: (_) => onChanged(opt),
-                    selectedColor: AppColors.primaryContainer.withValues(alpha: 0.2),
+                    selectedColor:
+                        AppColors.primaryContainer.withValues(alpha: 0.2),
                     checkmarkColor: AppColors.primary,
                   ),
                 ))
@@ -469,7 +498,8 @@ class _RepoCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.folder_outlined, color: AppColors.primary, size: 20),
+                const Icon(Icons.folder_outlined,
+                    color: AppColors.primary, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -520,7 +550,8 @@ class _RepoCard extends StatelessWidget {
                   onPressed: onEdit,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                  icon:
+                      const Icon(Icons.delete_outline, color: AppColors.error),
                   tooltip: 'Delete',
                   onPressed: onDelete,
                 ),
@@ -542,9 +573,8 @@ class _VisibilityBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isPrivate
-            ? AppColors.warningContainer
-            : AppColors.successContainer,
+        color:
+            isPrivate ? AppColors.warningContainer : AppColors.successContainer,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -623,7 +653,8 @@ class _RepoFormSheetState extends State<_RepoFormSheet> {
       widget.onSaved(_RepoFormData(
         name: _nameCtrl.text.trim(),
         url: _urlCtrl.text.trim(),
-        description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        description:
+            _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         isPrivate: _isPrivate,
       ));
     } finally {
@@ -670,9 +701,8 @@ class _RepoFormSheetState extends State<_RepoFormSheet> {
               label: 'Repository Name',
               controller: _nameCtrl,
               prefixIcon: const Icon(Icons.folder_outlined),
-              validator: (v) => v == null || v.trim().isEmpty
-                  ? 'Name is required'
-                  : null,
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Name is required' : null,
             ),
             const SizedBox(height: 16),
             AppTextField(

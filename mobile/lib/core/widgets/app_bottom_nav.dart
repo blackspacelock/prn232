@@ -25,7 +25,8 @@ class AppBottomNav extends ConsumerWidget {
   final String location;
 
   int get _currentIndex {
-    if (location.startsWith('/career-roles') ||
+    if (location.startsWith('/roadmaps') ||
+        location.startsWith('/career-roles') ||
         location.startsWith('/roadmap')) {
       return 1;
     }
@@ -75,7 +76,7 @@ class AppBottomNav extends ConsumerWidget {
           case 0:
             context.go('/dashboard');
           case 1:
-            context.go('/career-roles');
+            context.go('/roadmaps');
           case 2:
             context.go('/mentor');
           case 3:
