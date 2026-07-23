@@ -775,24 +775,6 @@ class _CustomPersonalRoadmapSheetState
     });
   }
 
-  void _addEdge(String? fromClientId, String? toClientId) {
-    if (fromClientId == null ||
-        toClientId == null ||
-        fromClientId == toClientId) {
-      return;
-    }
-    final exists = _edges.any(
-      (edge) =>
-          edge.fromClientId == fromClientId && edge.toClientId == toClientId,
-    );
-    if (!exists) {
-      setState(() => _edges.add(
-            _CustomEdgeDraft(
-                fromClientId: fromClientId, toClientId: toClientId),
-          ));
-    }
-  }
-
   List<CustomRoadmapStepRequest> _buildStepRequests() {
     final validNodes =
         _nodes.where((node) => node.name.trim().isNotEmpty).toList();
@@ -982,16 +964,6 @@ class _CustomPersonalRoadmapSheetState
                                   onDelete: () => _removeNode(node),
                                 ),
                               ),
-                            if (_nodes.length >= 2) ...[
-                              const SizedBox(height: 12),
-                              _EdgeComposer(
-                                nodes: _nodes,
-                                edges: _edges,
-                                onAdd: _addEdge,
-                                onRemove: (edge) =>
-                                    setState(() => _edges.remove(edge)),
-                              ),
-                            ],
                           ],
                         ),
                       ),
@@ -1478,97 +1450,6 @@ class _CustomNodeDraftCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _EdgeComposer extends StatefulWidget {
-  const _EdgeComposer({
-    required this.nodes,
-    required this.edges,
-    required this.onAdd,
-    required this.onRemove,
-  });
-
-  final List<_CustomNodeDraft> nodes;
-  final List<_CustomEdgeDraft> edges;
-  final void Function(String? fromClientId, String? toClientId) onAdd;
-  final ValueChanged<_CustomEdgeDraft> onRemove;
-
-  @override
-  State<_EdgeComposer> createState() => _EdgeComposerState();
-}
-
-class _EdgeComposerState extends State<_EdgeComposer> {
-  String? _fromClientId;
-  String? _toClientId;
-
-  String _nodeName(String clientId) {
-    for (final node in widget.nodes) {
-      if (node.clientId == clientId) return node.name;
-    }
-    return 'Node';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = widget.nodes
-        .map(
-          (node) => DropdownMenuEntry<String>(
-            value: node.clientId,
-            label: node.name,
-          ),
-        )
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Roadmap edges', style: AppTextStyles.titleSmall),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownMenu<String>(
-                width: double.infinity,
-                label: const Text('From'),
-                initialSelection: _fromClientId,
-                onSelected: (value) => setState(() => _fromClientId = value),
-                dropdownMenuEntries: entries,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: DropdownMenu<String>(
-                width: double.infinity,
-                label: const Text('To'),
-                initialSelection: _toClientId,
-                onSelected: (value) => setState(() => _toClientId = value),
-                dropdownMenuEntries: entries,
-              ),
-            ),
-            IconButton.filledTonal(
-              tooltip: 'Add edge',
-              onPressed: () => widget.onAdd(_fromClientId, _toClientId),
-              icon: const Icon(Icons.add),
-            ),
-          ],
-        ),
-        ...widget.edges.map(
-          (edge) => ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.arrow_forward),
-            title: Text(
-                '${_nodeName(edge.fromClientId)} -> ${_nodeName(edge.toClientId)}'),
-            trailing: IconButton(
-              tooltip: 'Remove edge',
-              onPressed: () => widget.onRemove(edge),
-              icon: const Icon(Icons.close),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

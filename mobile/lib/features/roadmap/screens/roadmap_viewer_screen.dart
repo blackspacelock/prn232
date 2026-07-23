@@ -63,23 +63,21 @@ class RoadmapViewerScreen extends ConsumerWidget {
             slivers: [
               SliverAppBar(
                 pinned: true,
-                expandedHeight: 240,
                 leading: const AppBackButton(fallbackLocation: '/roadmaps'),
                 title: Text(data.careerRoadmap?.name ?? 'Roadmap'),
-                flexibleSpace: FlexibleSpaceBar(
-                  collapseMode: CollapseMode.pin,
-                  background: _RoadmapHeader(
-                    roadmap: data,
-                    completedNodes: completed,
-                    totalNodes: nodes.length,
-                  ),
-                ),
                 bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(8),
                   child: LinearProgressBar(
                     value: nodes.isEmpty ? 0 : completed / nodes.length,
                     height: 8,
                   ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _RoadmapHeader(
+                  roadmap: data,
+                  completedNodes: completed,
+                  totalNodes: nodes.length,
                 ),
               ),
               if (nodes.isEmpty)
@@ -148,7 +146,7 @@ class _RoadmapHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 100, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -169,7 +167,7 @@ class _RoadmapHeader extends StatelessWidget {
               color: AppColors.onSurfaceVariant,
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 18),
           Text(
             '$completedNodes of $totalNodes nodes completed',
             style: AppTextStyles.labelLarge.copyWith(
