@@ -342,21 +342,25 @@ class _SkillGapSnapshot extends StatelessWidget {
               child: Column(
                 children: [
                   SizedBox(
-                    height: 240,
+                    height: 320,
                     child: RadarChart(
                       RadarChartData(
                         radarShape: RadarShape.polygon,
+                        radarBorderData:
+                            const BorderSide(color: AppColors.outlineVariant),
+                        tickBorderData:
+                            const BorderSide(color: AppColors.outlineVariant),
+                        gridBorderData:
+                            const BorderSide(color: AppColors.outlineVariant),
                         tickCount: 4,
                         ticksTextStyle: const TextStyle(
                           color: Colors.transparent,
                           fontSize: 0,
                         ),
-                        titlePositionPercentageOffset: 0.22,
+                        titlePositionPercentageOffset: 0.16,
                         getTitle: (index, angle) {
                           final name = categories[index].name;
-                          final label = name.length > 12
-                              ? '${name.substring(0, 10)}…'
-                              : name;
+                          final label = _compactRadarLabel(name);
                           return RadarChartTitle(
                             text: label,
                             angle: angle + 90,
@@ -364,7 +368,7 @@ class _SkillGapSnapshot extends StatelessWidget {
                         },
                         titleTextStyle: AppTextStyles.labelSmall.copyWith(
                           color: AppColors.onSurfaceVariant,
-                          fontSize: 10,
+                          fontSize: 9,
                         ),
                         dataSets: [
                           RadarDataSet(
@@ -422,6 +426,20 @@ class _LegendRow extends StatelessWidget {
       ],
     );
   }
+}
+
+String _compactRadarLabel(String label) {
+  final trimmed = label.trim();
+  if (trimmed.length <= 10) return trimmed;
+  final words = trimmed.split(RegExp(r'\s+|&'));
+  if (words.length > 1) {
+    final acronym = words
+        .where((word) => word.trim().isNotEmpty)
+        .map((word) => word.trim()[0].toUpperCase())
+        .join();
+    if (acronym.length >= 2 && acronym.length <= 5) return acronym;
+  }
+  return '${trimmed.substring(0, 8)}…';
 }
 
 class _LegendDot extends StatelessWidget {
