@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/api/api_constants.dart';
 import '../../../core/models/app_exception.dart';
 import '../../../core/models/portfolio_models.dart';
 import '../../../core/storage/token_storage.dart';
@@ -95,17 +96,22 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
   String _publicPortfolioUrl() {
     final user = ref.read(authProvider).valueOrNull;
     final userId = user?.id ?? user?.profileId ?? '';
-    return 'https://secompass.app/portfolio/$userId';
+    final base = ApiConstants.webBaseUrl.replaceFirst(RegExp(r'/$'), '');
+    return '$base/portfolio/$userId';
   }
 
   Future<void> _openUrl(String url) async {
     final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    if (uri == null || !uri.hasScheme) {
       if (mounted) {
         AppSnackbar.showError(context, 'Could not open URL');
       }
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      AppSnackbar.showError(context, 'Could not open URL');
     }
   }
 
