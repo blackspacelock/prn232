@@ -15,6 +15,12 @@ abstract class RoadmapRepository {
   );
   Future<void> toggleActiveRoadmap(String personalRoadmapId);
   Future<void> deleteRoadmap(String personalRoadmapId);
+  Future<RoadmapTagDto> addRoadmapTag(
+    String personalRoadmapId, {
+    required String name,
+    String? color,
+  });
+  Future<void> deleteRoadmapTag(String personalRoadmapId, String tagId);
   Future<void> updateNodeStatus(
     String nodeProgressId,
     int status, {
