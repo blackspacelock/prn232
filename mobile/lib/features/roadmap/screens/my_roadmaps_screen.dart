@@ -43,17 +43,15 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
       appBar: AppBar(
         title: const Text('My Roadmaps'),
         actions: [
-          IconButton(
-            tooltip: 'Create personal roadmap',
-            icon: const Icon(Icons.add_task_outlined),
-            onPressed: _showRoadmapActionSheet,
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: FilledButton.icon(
+              onPressed: _showRoadmapActionSheet,
+              icon: const Icon(Icons.rocket_launch_outlined, size: 18),
+              label: const Text('Generate Roadmap'),
+            ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showRoadmapActionSheet,
-        icon: const Icon(Icons.rocket_launch_outlined),
-        label: const Text('Generate Roadmap'),
       ),
       body: roadmaps.when(
         loading: () => const _RoadmapListSkeleton(),
@@ -82,7 +80,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
               await ref.read(personalRoadmapsProvider.future);
             },
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
                 _RoadmapOverviewPanel(
                   totalCount: items.length,
