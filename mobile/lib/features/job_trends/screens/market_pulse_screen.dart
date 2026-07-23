@@ -6,6 +6,7 @@ import '../../../core/models/job_trend_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/app_filter_controls.dart';
 import '../../../core/widgets/linear_progress_bar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../providers/market_pulse_provider.dart';
@@ -373,71 +374,65 @@ class _MarketControls extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          AppFilterBar(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onPickFrom,
-                  icon: const Icon(Icons.calendar_today_outlined, size: 16),
-                  label: Text(
-                    fromDate == null ? 'From' : dateFormat.format(fromDate!),
-                  ),
-                ),
+              AppFilterButton(
+                label: 'From',
+                value: fromDate == null
+                    ? 'Any date'
+                    : dateFormat.format(fromDate!),
+                icon: Icons.calendar_today_outlined,
+                trailing: Icons.edit_calendar_outlined,
+                onPressed: onPickFrom,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onPickTo,
-                  icon: const Icon(Icons.event_outlined, size: 16),
-                  label: Text(
-                    toDate == null ? 'To' : dateFormat.format(toDate!),
-                  ),
-                ),
+              AppFilterButton(
+                label: 'To',
+                value: toDate == null ? 'Any date' : dateFormat.format(toDate!),
+                icon: Icons.event_outlined,
+                trailing: Icons.edit_calendar_outlined,
+                onPressed: onPickTo,
               ),
-              IconButton(
-                tooltip: 'Clear dates',
-                onPressed:
-                    fromDate == null && toDate == null ? null : onClearDates,
-                icon: const Icon(Icons.close),
+              AppFilterSelect<_MarketSort>(
+                label: 'Sort by',
+                valueLabel: switch (sort) {
+                  _MarketSort.score => 'Trend Score',
+                  _MarketSort.name => 'Skill Name',
+                  _MarketSort.date => 'Snapshot Date',
+                },
+                icon: Icons.sort_outlined,
+                onSelected: onSortChanged,
+                options: const [
+                  AppFilterOption(
+                    value: _MarketSort.score,
+                    label: 'Trend Score',
+                  ),
+                  AppFilterOption(
+                    value: _MarketSort.name,
+                    label: 'Skill Name',
+                  ),
+                  AppFilterOption(
+                    value: _MarketSort.date,
+                    label: 'Snapshot Date',
+                  ),
+                ],
+              ),
+              AppFilterButton(
+                label: 'Order',
+                value: descending ? 'Descending' : 'Ascending',
+                icon: descending ? Icons.south_outlined : Icons.north_outlined,
+                trailing: Icons.swap_vert_outlined,
+                onPressed: onDirectionChanged,
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownMenu<_MarketSort>(
-                  width: double.infinity,
-                  initialSelection: sort,
-                  label: const Text('Sort by'),
-                  onSelected: (value) {
-                    if (value != null) onSortChanged(value);
-                  },
-                  dropdownMenuEntries: const [
-                    DropdownMenuEntry(
-                      value: _MarketSort.score,
-                      label: 'Trend Score',
-                    ),
-                    DropdownMenuEntry(
-                      value: _MarketSort.name,
-                      label: 'Skill Name',
-                    ),
-                    DropdownMenuEntry(
-                      value: _MarketSort.date,
-                      label: 'Snapshot Date',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                tooltip: descending ? 'Descending' : 'Ascending',
-                onPressed: onDirectionChanged,
-                icon: Icon(
-                  descending ? Icons.south_outlined : Icons.north_outlined,
-                ),
-              ),
-            ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed:
+                  fromDate == null && toDate == null ? null : onClearDates,
+              icon: const Icon(Icons.refresh_outlined, size: 16),
+              label: const Text('Reset dates'),
+            ),
           ),
         ],
       ),

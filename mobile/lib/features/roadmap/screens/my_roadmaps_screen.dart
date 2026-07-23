@@ -6,6 +6,7 @@ import '../../../core/models/roadmap_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_filter_controls.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -1716,50 +1717,45 @@ class _RoadmapControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    return AppFilterBar(
       children: [
-        DropdownMenu<_RoadmapFilter>(
-          initialSelection: filter,
-          label: const Text('Status'),
-          onSelected: (value) {
-            if (value != null) onFilterChanged(value);
-          },
-          dropdownMenuEntries: _RoadmapFilter.values
+        AppFilterSelect<_RoadmapFilter>(
+          label: 'Status',
+          valueLabel: filter.label,
+          icon: Icons.tune_outlined,
+          onSelected: onFilterChanged,
+          options: _RoadmapFilter.values
               .map(
-                (value) => DropdownMenuEntry(
+                (value) => AppFilterOption(
                   value: value,
                   label: value.label,
                 ),
               )
               .toList(),
         ),
-        DropdownMenu<_RoadmapSort>(
-          initialSelection: sort,
-          label: const Text('Sort'),
-          onSelected: (value) {
-            if (value != null) onSortChanged(value);
-          },
-          dropdownMenuEntries: _RoadmapSort.values
+        AppFilterSelect<_RoadmapSort>(
+          label: 'Sort',
+          valueLabel: sort.label,
+          icon: Icons.sort_outlined,
+          onSelected: onSortChanged,
+          options: _RoadmapSort.values
               .map(
-                (value) => DropdownMenuEntry(
+                (value) => AppFilterOption(
                   value: value,
                   label: value.label,
                 ),
               )
               .toList(),
         ),
-        DropdownMenu<String>(
-          initialSelection: tagFilter,
-          label: const Text('Tag'),
-          onSelected: (value) {
-            if (value != null) onTagFilterChanged(value);
-          },
-          dropdownMenuEntries: [
-            const DropdownMenuEntry(value: '', label: 'All Tags'),
+        AppFilterSelect<String>(
+          label: 'Tag',
+          valueLabel: tagFilter.isEmpty ? 'All Tags' : tagFilter,
+          icon: Icons.sell_outlined,
+          onSelected: onTagFilterChanged,
+          options: [
+            const AppFilterOption(value: '', label: 'All Tags'),
             ...tagOptions.map(
-              (value) => DropdownMenuEntry(value: value, label: value),
+              (value) => AppFilterOption(value: value, label: value),
             ),
           ],
         ),
