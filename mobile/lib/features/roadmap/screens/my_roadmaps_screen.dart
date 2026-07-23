@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -40,7 +39,6 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: const AppBackButton(),
         title: const Text('My Roadmaps'),
         actions: [
           IconButton(
@@ -328,147 +326,195 @@ class _GeneratePersonalCustomRoadmapSheetState
         ? const AsyncValue<List<CareerRoadmapDto>>.data([])
         : ref.watch(roadmapsBySelectedRoleProvider);
 
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          0,
-          16,
-          MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.78,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Generate Personal Custom Roadmap',
-                style: AppTextStyles.titleLarge,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Select a career role and roadmap template to create a personalized learning path from this page.',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text('1. Select Career Role', style: AppTextStyles.titleSmall),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 164,
-                child: roles.when(
-                  loading: () => const SkeletonCard(height: 140),
-                  error: (error, _) => EmptyStateView(
-                    icon: Icons.error_outline,
-                    title: 'Could not load career roles',
-                    subtitle: error.toString(),
-                    actionLabel: 'Retry',
-                    onAction: () => ref.invalidate(careerRolesProvider),
-                  ),
-                  data: (items) => ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemBuilder: (context, index) {
-                      final role = items[index];
-                      final selected =
-                          _selectedRole?.careerRoleId == role.careerRoleId;
-                      return _GenerateRoleTile(
-                        role: role,
-                        selected: selected,
-                        onTap: () {
-                          setState(() {
-                            _selectedRole = role;
-                            _selectedRoadmapId = null;
-                          });
-                          ref.read(selectedCareerRoleProvider.notifier).state =
-                              role;
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text('2. Select Roadmap Template',
-                  style: AppTextStyles.titleSmall),
-              const SizedBox(height: 8),
-              Expanded(
-                child: _selectedRole == null
-                    ? const EmptyStateView(
-                        icon: Icons.route_outlined,
-                        title: 'Choose a role first',
-                        subtitle:
-                            'Roadmap templates appear after role selection.',
-                      )
-                    : roadmaps.when(
-                        loading: () => const Column(
-                          children: [
-                            SkeletonCard(height: 80),
-                            SizedBox(height: 10),
-                            SkeletonCard(height: 80),
-                          ],
-                        ),
-                        error: (error, _) => EmptyStateView(
-                          icon: Icons.error_outline,
-                          title: 'Could not load templates',
-                          subtitle: error.toString(),
-                          actionLabel: 'Retry',
-                          onAction: () =>
-                              ref.invalidate(roadmapsBySelectedRoleProvider),
-                        ),
-                        data: (items) => items.isEmpty
-                            ? const EmptyStateView(
-                                icon: Icons.route_outlined,
-                                title: 'No templates yet',
-                                subtitle: 'Try a different career role.',
-                              )
-                            : ListView.separated(
-                                itemCount: items.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 10),
-                                itemBuilder: (context, index) {
-                                  final roadmap = items[index];
-                                  return _GenerateRoadmapTile(
-                                    roadmap: roadmap,
-                                    selected: _selectedRoadmapId ==
-                                        roadmap.careerRoadmapId,
-                                    onTap: () => setState(
-                                      () => _selectedRoadmapId =
-                                          roadmap.careerRoadmapId,
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppButton(
-                      label: 'Cancel',
-                      variant: AppButtonVariant.text,
-                      onPressed: _isGenerating
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: AppButton(
-                      label:
-                          _isGenerating ? 'Generating...' : 'Generate Custom',
-                      isLoading: _isGenerating,
-                      leadingIcon: const Icon(Icons.rocket_launch_outlined),
-                      onPressed: _selectedRoadmapId == null ? null : _generate,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    return PopScope(
+      canPop: !_isGenerating,
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            0,
+            16,
+            MediaQuery.of(context).viewInsets.bottom + 16,
           ),
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.78,
+            child: _isGenerating
+                ? const _GeneratingRoadmapView()
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Generate Roadmap', style: AppTextStyles.titleLarge),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Select a career role and roadmap template to get a personalized learning path.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '1. Select Career Role',
+                        style: AppTextStyles.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 192,
+                        child: roles.when(
+                          loading: () => const Column(
+                            children: [
+                              SkeletonCard(height: 44),
+                              SizedBox(height: 8),
+                              SkeletonCard(height: 44),
+                              SizedBox(height: 8),
+                              SkeletonCard(height: 44),
+                            ],
+                          ),
+                          error: (error, _) => EmptyStateView(
+                            icon: Icons.error_outline,
+                            title: 'Could not load career roles',
+                            subtitle: error.toString(),
+                            actionLabel: 'Retry',
+                            onAction: () => ref.invalidate(careerRolesProvider),
+                          ),
+                          data: (items) => GridView.builder(
+                            itemCount: items.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                              childAspectRatio: 2.35,
+                            ),
+                            itemBuilder: (context, index) {
+                              final role = items[index];
+                              final selected = _selectedRole?.careerRoleId ==
+                                  role.careerRoleId;
+                              return _GenerateRoleTile(
+                                role: role,
+                                selected: selected,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedRole = role;
+                                    _selectedRoadmapId = null;
+                                  });
+                                  ref
+                                      .read(
+                                        selectedCareerRoleProvider.notifier,
+                                      )
+                                      .state = role;
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      if (_selectedRole != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          '2. Select Roadmap Template',
+                          style: AppTextStyles.titleSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: roadmaps.when(
+                            loading: () => const Column(
+                              children: [
+                                SkeletonCard(height: 54),
+                                SizedBox(height: 8),
+                                SkeletonCard(height: 54),
+                              ],
+                            ),
+                            error: (error, _) => EmptyStateView(
+                              icon: Icons.error_outline,
+                              title: 'Could not load templates',
+                              subtitle: error.toString(),
+                              actionLabel: 'Retry',
+                              onAction: () => ref.invalidate(
+                                roadmapsBySelectedRoleProvider,
+                              ),
+                            ),
+                            data: (items) => items.isEmpty
+                                ? const Padding(
+                                    padding: EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      'No roadmap templates for this role.',
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    itemCount: items.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(height: 8),
+                                    itemBuilder: (context, index) {
+                                      final roadmap = items[index];
+                                      return _GenerateRoadmapTile(
+                                        roadmap: roadmap,
+                                        selected: _selectedRoadmapId ==
+                                            roadmap.careerRoadmapId,
+                                        onTap: () => setState(
+                                          () => _selectedRoadmapId =
+                                              roadmap.careerRoadmapId,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ),
+                      ] else
+                        const Spacer(),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppButton(
+                              label: 'Cancel',
+                              variant: AppButtonVariant.text,
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: AppButton(
+                              label: 'Generate Roadmap',
+                              leadingIcon:
+                                  const Icon(Icons.rocket_launch_outlined),
+                              onPressed:
+                                  _selectedRoadmapId == null ? null : _generate,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GeneratingRoadmapView extends StatelessWidget {
+  const _GeneratingRoadmapView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(strokeWidth: 4),
+            ),
+            SizedBox(height: 24),
+            Text(
+              'Building your roadmap...',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+            ),
+          ],
         ),
       ),
     );
@@ -488,52 +534,29 @@ class _GenerateRoleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 168,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.primaryContainer.withValues(alpha: 0.18)
-                : AppColors.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.outlineVariant,
-              width: selected ? 2 : 1,
-            ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primaryContainer.withValues(alpha: 0.24)
+              : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.outline,
+            width: 2,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                selected
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-                color:
-                    selected ? AppColors.primary : AppColors.onSurfaceVariant,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                role.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.titleSmall,
-              ),
-              if ((role.description ?? '').isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  role.description!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ],
+        ),
+        alignment: Alignment.centerLeft,
+        child: Text(
+          role.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: selected ? AppColors.primary : AppColors.onSurface,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -554,27 +577,48 @@ class _GenerateRoadmapTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: selected ? AppColors.primary : AppColors.outlineVariant,
-          width: selected ? 2 : 1,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primaryContainer.withValues(alpha: 0.24)
+              : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.outline,
+            width: 2,
+          ),
         ),
-      ),
-      leading: Icon(
-        selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-        color: selected ? AppColors.primary : AppColors.onSurfaceVariant,
-      ),
-      title: Text(roadmap.name),
-      subtitle: roadmap.description == null
-          ? null
-          : Text(
-              roadmap.description!,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              roadmap.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: selected ? AppColors.primary : AppColors.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-      onTap: onTap,
+            if ((roadmap.description ?? '').isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                roadmap.description!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

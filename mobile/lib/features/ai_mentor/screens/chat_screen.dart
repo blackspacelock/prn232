@@ -65,7 +65,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: const AppBackButton(),
+        leading: widget.sessionId == null
+            ? null
+            : const AppBackButton(fallbackLocation: '/mentor'),
         title: Text(active?.title ?? 'AI Mentor'),
         actions: [
           IconButton(
