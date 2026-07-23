@@ -394,6 +394,8 @@ class _RoadmapStatTile extends StatelessWidget {
 
 enum _RoadmapCreateMode { fromTemplate, personal }
 
+enum _PersonalRoadmapStep { selectRole, confirm }
+
 class _RoadmapGenerationSheet extends ConsumerStatefulWidget {
   const _RoadmapGenerationSheet({required this.mode});
 
@@ -406,21 +408,34 @@ class _RoadmapGenerationSheet extends ConsumerStatefulWidget {
 
 class _RoadmapGenerationSheetState
     extends ConsumerState<_RoadmapGenerationSheet> {
+  final _roleSearchController = TextEditingController();
+  final _templateSearchController = TextEditingController();
   final _noteController = TextEditingController();
   CareerRoleDto? _selectedRole;
   String? _selectedRoadmapId;
+  String _roleQuery = '';
+  String _templateQuery = '';
+  _PersonalRoadmapStep _personalStep = _PersonalRoadmapStep.selectRole;
   bool _isGenerating = false;
 
   bool get _isPersonal => widget.mode == _RoadmapCreateMode.personal;
 
   @override
   void dispose() {
+    _roleSearchController.dispose();
+    _templateSearchController.dispose();
     _noteController.dispose();
     super.dispose();
   }
 
   Future<void> _generate() async {
-    final careerRoadmapId = _selectedRoadmapId;
+    final personalTemplates = _isPersonal
+        ? ref.read(roadmapsBySelectedRoleProvider).valueOrNull
+        : null;
+    final careerRoadmapId = _selectedRoadmapId ??
+        (personalTemplates == null || personalTemplates.isEmpty
+            ? null
+            : personalTemplates.first.careerRoadmapId);
     if (careerRoadmapId == null || _isGenerating) return;
 
     setState(() => _isGenerating = true);
@@ -449,7 +464,6 @@ class _RoadmapGenerationSheetState
     final roadmaps = _selectedRole == null
         ? const AsyncValue<List<CareerRoadmapDto>>.data([])
         : ref.watch(roadmapsBySelectedRoleProvider);
-
     return PopScope(
       canPop: !_isGenerating,
       child: SafeArea(
@@ -464,179 +478,559 @@ class _RoadmapGenerationSheetState
             height: MediaQuery.sizeOf(context).height * 0.78,
             child: _isGenerating
                 ? const _GeneratingRoadmapView()
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _isPersonal
-                            ? 'Create Personal Roadmap'
-                            : 'Generate Roadmap',
-                        style: AppTextStyles.titleLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _isPersonal
-                            ? 'Choose a role, pick a template, and add your goals to create a personal learning path.'
-                            : 'Select a career role and roadmap template to get a personalized learning path.',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '1. Select Career Role',
-                        style: AppTextStyles.titleSmall,
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 192,
-                        child: roles.when(
-                          loading: () => ListView(
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: const [
-                              SkeletonCard(height: 40),
-                              SkeletonCard(height: 40),
-                              SkeletonCard(height: 40),
-                            ],
-                          ),
-                          error: (error, _) => EmptyStateView(
-                            icon: Icons.error_outline,
-                            title: 'Could not load career roles',
-                            subtitle: error.toString(),
-                            actionLabel: 'Retry',
-                            onAction: () => ref.invalidate(careerRolesProvider),
-                          ),
-                          data: (items) => GridView.builder(
-                            itemCount: items.length,
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 8,
-                              mainAxisSpacing: 8,
-                              childAspectRatio: 2.35,
-                            ),
-                            itemBuilder: (context, index) {
-                              final role = items[index];
-                              final selected = _selectedRole?.careerRoleId ==
-                                  role.careerRoleId;
-                              return _GenerateRoleTile(
-                                role: role,
-                                selected: selected,
-                                onTap: () {
-                                  setState(() {
-                                    _selectedRole = role;
-                                    _selectedRoadmapId = null;
-                                  });
-                                  ref
-                                      .read(
-                                        selectedCareerRoleProvider.notifier,
-                                      )
-                                      .state = role;
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      if (_selectedRole != null) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          '2. Select Roadmap Template',
-                          style: AppTextStyles.titleSmall,
-                        ),
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: roadmaps.when(
-                            loading: () => ListView(
-                              physics: const NeverScrollableScrollPhysics(),
-                              children: const [
-                                SkeletonCard(height: 54),
-                                SkeletonCard(height: 54),
-                              ],
-                            ),
-                            error: (error, _) => EmptyStateView(
-                              icon: Icons.error_outline,
-                              title: 'Could not load templates',
-                              subtitle: error.toString(),
-                              actionLabel: 'Retry',
-                              onAction: () => ref.invalidate(
-                                roadmapsBySelectedRoleProvider,
-                              ),
-                            ),
-                            data: (items) => items.isEmpty
-                                ? const Padding(
-                                    padding: EdgeInsets.only(top: 8),
-                                    child: Text(
-                                      'No roadmap templates for this role.',
-                                    ),
-                                  )
-                                : ListView.separated(
-                                    itemCount: items.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(height: 8),
-                                    itemBuilder: (context, index) {
-                                      final roadmap = items[index];
-                                      return _GenerateRoadmapTile(
-                                        roadmap: roadmap,
-                                        selected: _selectedRoadmapId ==
-                                            roadmap.careerRoadmapId,
-                                        onTap: () => setState(
-                                          () => _selectedRoadmapId =
-                                              roadmap.careerRoadmapId,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ),
-                        if (_isPersonal) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            'Personal note',
-                            style: AppTextStyles.titleSmall,
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _noteController,
-                            minLines: 3,
-                            maxLines: 4,
-                            textInputAction: TextInputAction.newline,
-                            decoration: const InputDecoration(
-                              hintText:
-                                  'Add specific goals, preferences, or deadlines...',
-                            ),
-                          ),
-                        ],
-                      ] else
-                        const Spacer(),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: AppButton(
-                              label: 'Cancel',
-                              variant: AppButtonVariant.text,
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: AppButton(
-                              label: _isPersonal
-                                  ? 'Create Roadmap'
-                                  : 'Generate Roadmap',
-                              leadingIcon:
-                                  const Icon(Icons.rocket_launch_outlined),
-                              onPressed:
-                                  _selectedRoadmapId == null ? null : _generate,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                : _isPersonal
+                    ? _buildPersonalFlow(roles, roadmaps)
+                    : _buildTemplateFlow(roles, roadmaps),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTemplateFlow(
+    AsyncValue<List<CareerRoleDto>> roles,
+    AsyncValue<List<CareerRoadmapDto>> roadmaps,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Generate Roadmap', style: AppTextStyles.titleLarge),
+        const SizedBox(height: 4),
+        Text(
+          'Select a career role and roadmap template to get a personalized learning path.',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text('1. Select Career Role', style: AppTextStyles.titleSmall),
+        const SizedBox(height: 8),
+        _SearchField(
+          controller: _roleSearchController,
+          hintText: 'Search career roles...',
+          onChanged: (value) => setState(() => _roleQuery = value),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(height: 168, child: _buildRoleGrid(roles)),
+        if (_selectedRole != null) ...[
+          const SizedBox(height: 16),
+          Text('2. Select Roadmap Template', style: AppTextStyles.titleSmall),
+          const SizedBox(height: 8),
+          _SearchField(
+            controller: _templateSearchController,
+            hintText: 'Search roadmap templates...',
+            onChanged: (value) => setState(() => _templateQuery = value),
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: _buildTemplateList(roadmaps)),
+        ] else
+          const Spacer(),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: AppButton(
+                label: 'Cancel',
+                variant: AppButtonVariant.text,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: AppButton(
+                label: 'Generate Roadmap',
+                leadingIcon: const Icon(Icons.rocket_launch_outlined),
+                onPressed: _selectedRoadmapId == null ? null : _generate,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPersonalFlow(
+    AsyncValue<List<CareerRoleDto>> roles,
+    AsyncValue<List<CareerRoadmapDto>> roadmaps,
+  ) {
+    final selectedRole = _selectedRole;
+    final roadmapCount = roadmaps.valueOrNull?.length;
+    final canGenerate = selectedRole != null &&
+        (roadmaps.isLoading || (roadmaps.valueOrNull?.isNotEmpty ?? false));
+
+    if (_personalStep == _PersonalRoadmapStep.confirm && selectedRole != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SheetHeader(
+            title: 'Create Personal Roadmap',
+            subtitle: 'Review and confirm your selection',
+            onClose: () => Navigator.of(context).pop(),
+          ),
+          const SizedBox(height: 16),
+          const _StepIndicator(confirming: true),
+          const SizedBox(height: 16),
+          _SelectedPersonalRoleCard(
+            role: selectedRole,
+            roadmapCount: roadmapCount,
+          ),
+          const SizedBox(height: 16),
+          Text('Personal note (optional)', style: AppTextStyles.titleSmall),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _noteController,
+            minLines: 4,
+            maxLines: 5,
+            textInputAction: TextInputAction.newline,
+            decoration: const InputDecoration(
+              hintText: 'Add any specific goals or preferences...',
+            ),
+          ),
+          if (roadmaps.hasError) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Could not load roadmap templates for this role.',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+            ),
+          ] else if (roadmaps.valueOrNull?.isEmpty ?? false) ...[
+            const SizedBox(height: 8),
+            Text(
+              'No roadmap templates for this role.',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+            ),
+          ],
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  label: 'Back',
+                  variant: AppButtonVariant.text,
+                  leadingIcon: const Icon(Icons.arrow_back),
+                  onPressed: () => setState(
+                    () => _personalStep = _PersonalRoadmapStep.selectRole,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppButton(
+                  label: roadmaps.isLoading ? 'Loading...' : 'Generate Roadmap',
+                  leadingIcon: const Icon(Icons.rocket_launch_outlined),
+                  onPressed:
+                      canGenerate && !roadmaps.isLoading ? _generate : null,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SheetHeader(
+          title: 'Create Personal Roadmap',
+          subtitle: 'Select a career role to get started',
+          onClose: () => Navigator.of(context).pop(),
+        ),
+        const SizedBox(height: 16),
+        const _StepIndicator(confirming: false),
+        const SizedBox(height: 16),
+        _SearchField(
+          controller: _roleSearchController,
+          hintText: 'Search career roles...',
+          onChanged: (value) => setState(() => _roleQuery = value),
+        ),
+        const SizedBox(height: 12),
+        Expanded(child: _buildRoleGrid(roles, showRoadmapCount: true)),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: AppButton(
+                label: 'Cancel',
+                variant: AppButtonVariant.text,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: AppButton(
+                label: 'Next',
+                leadingIcon: const Icon(Icons.chevron_right),
+                onPressed: selectedRole == null
+                    ? null
+                    : () => setState(
+                          () => _personalStep = _PersonalRoadmapStep.confirm,
+                        ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoleGrid(
+    AsyncValue<List<CareerRoleDto>> roles, {
+    bool showRoadmapCount = false,
+  }) {
+    return roles.when(
+      loading: () => ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        children: const [
+          SkeletonCard(height: 40),
+          SkeletonCard(height: 40),
+          SkeletonCard(height: 40),
+        ],
+      ),
+      error: (error, _) => EmptyStateView(
+        icon: Icons.error_outline,
+        title: 'Could not load career roles',
+        subtitle: error.toString(),
+        actionLabel: 'Retry',
+        onAction: () => ref.invalidate(careerRolesProvider),
+      ),
+      data: (items) {
+        final filtered = _filterRoles(items);
+        if (filtered.isEmpty) {
+          return const EmptyStateView(
+            icon: Icons.search_off_outlined,
+            title: 'No roles found',
+            subtitle: 'Try a different search term.',
+          );
+        }
+        return GridView.builder(
+          itemCount: filtered.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: showRoadmapCount ? 2 : 2,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: showRoadmapCount ? 1.45 : 2.35,
+          ),
+          itemBuilder: (context, index) {
+            final role = filtered[index];
+            final selected = _selectedRole?.careerRoleId == role.careerRoleId;
+            return _GenerateRoleTile(
+              role: role,
+              selected: selected,
+              showRoadmapCount: showRoadmapCount,
+              roadmapCount: selected
+                  ? ref
+                      .watch(roadmapsBySelectedRoleProvider)
+                      .valueOrNull
+                      ?.length
+                  : null,
+              onTap: () {
+                setState(() {
+                  _selectedRole = role;
+                  _selectedRoadmapId = null;
+                  _templateQuery = '';
+                  _templateSearchController.clear();
+                });
+                ref.read(selectedCareerRoleProvider.notifier).state = role;
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTemplateList(AsyncValue<List<CareerRoadmapDto>> roadmaps) {
+    return roadmaps.when(
+      loading: () => ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        children: const [
+          SkeletonCard(height: 54),
+          SkeletonCard(height: 54),
+        ],
+      ),
+      error: (error, _) => EmptyStateView(
+        icon: Icons.error_outline,
+        title: 'Could not load templates',
+        subtitle: error.toString(),
+        actionLabel: 'Retry',
+        onAction: () => ref.invalidate(roadmapsBySelectedRoleProvider),
+      ),
+      data: (items) {
+        final filtered = _filterRoadmaps(items);
+        if (filtered.isEmpty) {
+          return const EmptyStateView(
+            icon: Icons.search_off_outlined,
+            title: 'No roadmap templates',
+            subtitle: 'Try a different template search.',
+          );
+        }
+        return ListView.separated(
+          itemCount: filtered.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          itemBuilder: (context, index) {
+            final roadmap = filtered[index];
+            return _GenerateRoadmapTile(
+              roadmap: roadmap,
+              selected: _selectedRoadmapId == roadmap.careerRoadmapId,
+              onTap: () => setState(
+                () => _selectedRoadmapId = roadmap.careerRoadmapId,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  List<CareerRoleDto> _filterRoles(List<CareerRoleDto> roles) {
+    final query = _roleQuery.trim().toLowerCase();
+    if (query.isEmpty) return roles;
+    return roles
+        .where(
+          (role) =>
+              role.name.toLowerCase().contains(query) ||
+              (role.description ?? '').toLowerCase().contains(query),
+        )
+        .toList();
+  }
+
+  List<CareerRoadmapDto> _filterRoadmaps(List<CareerRoadmapDto> roadmaps) {
+    final query = _templateQuery.trim().toLowerCase();
+    if (query.isEmpty) return roadmaps;
+    return roadmaps
+        .where(
+          (roadmap) =>
+              roadmap.name.toLowerCase().contains(query) ||
+              (roadmap.description ?? '').toLowerCase().contains(query),
+        )
+        .toList();
+  }
+}
+
+class _SheetHeader extends StatelessWidget {
+  const _SheetHeader({
+    required this.title,
+    required this.subtitle,
+    required this.onClose,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: AppTextStyles.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'Close',
+          onPressed: onClose,
+          icon: const Icon(Icons.close),
+        ),
+      ],
+    );
+  }
+}
+
+class _StepIndicator extends StatelessWidget {
+  const _StepIndicator({required this.confirming});
+
+  final bool confirming;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _StepPill(
+          label: 'Select Role',
+          value: confirming ? Icons.check : null,
+          active: true,
+          complete: confirming,
+        ),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: confirming ? AppColors.success : AppColors.outlineVariant,
+          ),
+        ),
+        _StepPill(
+          label: 'Confirm',
+          value: null,
+          active: confirming,
+          complete: false,
+          number: 2,
+        ),
+      ],
+    );
+  }
+}
+
+class _StepPill extends StatelessWidget {
+  const _StepPill({
+    required this.label,
+    required this.active,
+    required this.complete,
+    this.value,
+    this.number = 1,
+  });
+
+  final String label;
+  final bool active;
+  final bool complete;
+  final IconData? value;
+  final int number;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = complete
+        ? AppColors.success
+        : active
+            ? AppColors.primary
+            : AppColors.outline;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active || complete ? color : Colors.transparent,
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 2),
+          ),
+          child: value == null
+              ? Text(
+                  number.toString(),
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: active || complete ? Colors.white : color,
+                  ),
+                )
+              : Icon(value, size: 16, color: Colors.white),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: active || complete ? color : AppColors.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.controller,
+    required this.hintText,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: hintText,
+        prefixIcon: const Icon(Icons.search),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      ),
+    );
+  }
+}
+
+class _SelectedPersonalRoleCard extends StatelessWidget {
+  const _SelectedPersonalRoleCard({
+    required this.role,
+    required this.roadmapCount,
+  });
+
+  final CareerRoleDto role;
+  final int? roadmapCount;
+
+  @override
+  Widget build(BuildContext context) {
+    const phases = ['Fundamentals', 'Core Skills', 'Projects'];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryContainer.withValues(alpha: 0.24),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.work_outline, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  role.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            roadmapCount == null
+                ? 'Loading roadmap options...'
+                : '$roadmapCount roadmap template${roadmapCount == 1 ? '' : 's'} available',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: phases
+                .map(
+                  (phase) => Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainer,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.outlineVariant),
+                    ),
+                    child: Text(phase, style: AppTextStyles.labelSmall),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
       ),
     );
   }
@@ -676,11 +1070,15 @@ class _GenerateRoleTile extends StatelessWidget {
     required this.role,
     required this.selected,
     required this.onTap,
+    this.showRoadmapCount = false,
+    this.roadmapCount,
   });
 
   final CareerRoleDto role;
   final bool selected;
   final VoidCallback onTap;
+  final bool showRoadmapCount;
+  final int? roadmapCount;
 
   @override
   Widget build(BuildContext context) {
@@ -700,14 +1098,57 @@ class _GenerateRoleTile extends StatelessWidget {
           ),
         ),
         alignment: Alignment.centerLeft,
-        child: Text(
-          role.name,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: selected ? AppColors.primary : AppColors.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
+        child: Stack(
+          children: [
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showRoadmapCount) ...[
+                    Icon(
+                      Icons.work_outline,
+                      color: selected ? AppColors.primary : AppColors.onSurface,
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+                  Text(
+                    role.name,
+                    maxLines: showRoadmapCount ? 2 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign:
+                        showRoadmapCount ? TextAlign.center : TextAlign.start,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: selected ? AppColors.primary : AppColors.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (showRoadmapCount) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      roadmapCount == null
+                          ? 'Roadmaps'
+                          : '$roadmapCount roadmaps',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (selected)
+              const Positioned(
+                top: 0,
+                right: 0,
+                child: Icon(
+                  Icons.check_circle,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+              ),
+          ],
         ),
       ),
     );
