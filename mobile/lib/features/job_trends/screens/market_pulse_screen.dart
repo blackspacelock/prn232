@@ -201,7 +201,7 @@ class _SummaryGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 10,
       mainAxisSpacing: 10,
-      childAspectRatio: 1.48,
+      childAspectRatio: 1.22,
       children: [
         _SummaryCard(
           icon: Icons.trending_up,
@@ -262,7 +262,7 @@ class _SummaryCard extends StatelessWidget {
             backgroundColor: const Color(0xFFE8F0FE),
             child: Icon(icon, color: const Color(0xFF1A73E8), size: 19),
           ),
-          const Spacer(),
+          const SizedBox(height: 12),
           Text(
             label.toUpperCase(),
             maxLines: 1,
