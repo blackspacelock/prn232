@@ -57,6 +57,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
+  Future<void> _createSessionAndNavigate(BuildContext navigationContext) async {
+    try {
+      await ref
+          .read(mentorChatProvider(widget.sessionId).notifier)
+          .createSession();
+      final created =
+          ref.read(mentorChatProvider(widget.sessionId)).valueOrNull;
+      final id = created?.activeSession?.chatSessionId;
+      if (!navigationContext.mounted || id == null) return;
+      navigationContext.go('/mentor/$id');
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final chat = ref.watch(mentorChatProvider(widget.sessionId));
@@ -77,19 +92,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: state == null
-                ? null
-                : () async {
-                    await ref
-                        .read(mentorChatProvider(widget.sessionId).notifier)
-                        .createSession();
-                    final created = ref
-                        .read(mentorChatProvider(widget.sessionId))
-                        .valueOrNull;
-                    final id = created?.activeSession?.chatSessionId;
-                    if (!mounted || id == null) return;
-                    GoRouter.of(this.context).go('/mentor/$id');
-                  },
+            onPressed:
+                state == null ? null : () => _createSessionAndNavigate(context),
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -125,9 +129,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         subtitle:
                             'Create or select a chat to get guidance on your roadmap.',
                         actionLabel: 'New Chat',
-                        onAction: () => ref
-                            .read(mentorChatProvider(widget.sessionId).notifier)
-                            .createSession(),
+                        onAction: () => _createSessionAndNavigate(context),
                       )
                     : ListView.builder(
                         controller: _scrollController,
@@ -165,16 +167,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         state: state,
         onNewChat: () async {
           Navigator.of(sheetContext).pop();
-          await ref
-              .read(mentorChatProvider(widget.sessionId).notifier)
-              .createSession();
-          final id = ref
-              .read(mentorChatProvider(widget.sessionId))
-              .valueOrNull
-              ?.activeSession
-              ?.chatSessionId;
-          if (!rootContext.mounted || id == null) return;
-          rootContext.go('/mentor/$id');
+          await _createSessionAndNavigate(rootContext);
         },
         onSelect: (session) async {
           Navigator.of(sheetContext).pop();

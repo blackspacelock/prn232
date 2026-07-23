@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../../../core/api/api_constants.dart';
 import '../../../core/api/dio_client.dart';
 import '../../../core/api/graphql_api.dart';
+import '../../../core/models/app_exception.dart';
 import '../../../core/models/chat_models.dart';
 import 'chat_repository.dart';
 
@@ -67,11 +68,16 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Future<ChatSessionDto> createSession(String profileId, String title) async {
-    final response = await _dio.post(
-      ApiConstants.chatSessions,
-      data: {'profileId': profileId, 'title': title},
-    );
-    return ChatSessionDto.fromJson(response.data as Map<String, dynamic>);
+    try {
+      final response = await _dio.post(
+        ApiConstants.chatSessions,
+        queryParameters: {'profileId': profileId},
+        data: {'title': title},
+      );
+      return ChatSessionDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (error) {
+      _throwMapped(error);
+    }
   }
 
   @override
@@ -95,5 +101,25 @@ class ChatRepositoryImpl implements ChatRepository {
       data: {'title': newTitle},
     );
     return ChatSessionDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Never _throwMapped(DioException error) {
+    final status = error.response?.statusCode;
+    final data = error.response?.data;
+    var message = error.message ?? 'Request failed.';
+    if (data is String && data.isNotEmpty) message = data;
+    if (data is Map) {
+      message = (data['message'] ?? data['error'] ?? data['detail'] ?? message)
+          .toString();
+    }
+    if (status == 401) throw AuthException(message);
+    if (status != null && status >= 400 && status < 500) {
+      throw ValidationException(message);
+    }
+    if (error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout) {
+      throw const NetworkException();
+    }
+    throw ServerException(message, statusCode: status);
   }
 }
