@@ -260,7 +260,7 @@ class _RadarSection extends StatelessWidget {
           Text('Category Coverage', style: AppTextStyles.titleMedium),
           const SizedBox(height: 12),
           SizedBox(
-            height: 280,
+            height: 320,
             child: RadarChart(
               RadarChartData(
                 radarShape: RadarShape.polygon,
@@ -272,12 +272,20 @@ class _RadarSection extends StatelessWidget {
                     const BorderSide(color: AppColors.outlineVariant),
                 tickCount: 4,
                 ticksTextStyle: const TextStyle(color: Colors.transparent),
-                getTitle: (index, angle) => RadarChartTitle(
-                  text: breakdown[index].category,
-                  angle: angle,
-                ),
+                titlePositionPercentageOffset: 0.2,
+                getTitle: (index, angle) {
+                  final label = breakdown[index].category;
+                  // Truncate long labels for readability
+                  final displayLabel =
+                      label.length > 14 ? '${label.substring(0, 12)}…' : label;
+                  return RadarChartTitle(
+                    text: displayLabel,
+                    angle: angle + 90,
+                  );
+                },
                 titleTextStyle: AppTextStyles.labelSmall.copyWith(
                   color: AppColors.onSurfaceVariant,
+                  fontSize: 10,
                 ),
                 dataSets: [
                   RadarDataSet(

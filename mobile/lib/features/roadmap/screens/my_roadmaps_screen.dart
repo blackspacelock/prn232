@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/models/profile_models.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -1029,7 +1030,7 @@ class _CustomEdgeDraft {
       );
 }
 
-class _CustomNodeEditorSheet extends StatefulWidget {
+class _CustomNodeEditorSheet extends ConsumerStatefulWidget {
   const _CustomNodeEditorSheet({
     required this.availableParents,
     required this.order,
@@ -1041,18 +1042,22 @@ class _CustomNodeEditorSheet extends StatefulWidget {
   final int order;
 
   @override
-  State<_CustomNodeEditorSheet> createState() => _CustomNodeEditorSheetState();
+  ConsumerState<_CustomNodeEditorSheet> createState() =>
+      _CustomNodeEditorSheetState();
 }
 
-class _CustomNodeEditorSheetState extends State<_CustomNodeEditorSheet> {
+class _CustomNodeEditorSheetState
+    extends ConsumerState<_CustomNodeEditorSheet> {
   late final TextEditingController _nameController;
   late final TextEditingController _descriptionController;
-  late final TextEditingController _skillsController;
+  late final TextEditingController _skillSearchController;
   late final TextEditingController _resourceNameController;
   late final TextEditingController _resourceUrlController;
   late final TextEditingController _resourceTypeController;
   String? _parentClientId;
+  late List<String> _selectedSkills;
   late List<_CustomResourceDraft> _resources;
+  String _skillQuery = '';
 
   @override
   void initState() {
@@ -1061,12 +1066,12 @@ class _CustomNodeEditorSheetState extends State<_CustomNodeEditorSheet> {
     _nameController = TextEditingController(text: node?.name ?? '');
     _descriptionController =
         TextEditingController(text: node?.description ?? '');
-    _skillsController =
-        TextEditingController(text: node?.skills.join(', ') ?? '');
+    _skillSearchController = TextEditingController();
     _resourceNameController = TextEditingController();
     _resourceUrlController = TextEditingController();
     _resourceTypeController = TextEditingController(text: 'Article');
     _parentClientId = node?.parentClientId;
+    _selectedSkills = [...?node?.skills];
     _resources = [...?node?.resources];
   }
 
@@ -1074,11 +1079,28 @@ class _CustomNodeEditorSheetState extends State<_CustomNodeEditorSheet> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
-    _skillsController.dispose();
+    _skillSearchController.dispose();
     _resourceNameController.dispose();
     _resourceUrlController.dispose();
     _resourceTypeController.dispose();
     super.dispose();
+  }
+
+  void _addSkill(String skillName) {
+    final trimmed = skillName.trim();
+    if (trimmed.isEmpty) return;
+    if (_selectedSkills.any((s) => s.toLowerCase() == trimmed.toLowerCase())) {
+      return;
+    }
+    setState(() {
+      _selectedSkills.add(trimmed);
+      _skillSearchController.clear();
+      _skillQuery = '';
+    });
+  }
+
+  void _removeSkill(String skillName) {
+    setState(() => _selectedSkills.remove(skillName));
   }
 
   void _addResource() {
@@ -1104,12 +1126,6 @@ class _CustomNodeEditorSheetState extends State<_CustomNodeEditorSheet> {
   void _save() {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
-    final skills = _skillsController.text
-        .split(',')
-        .map((skill) => skill.trim())
-        .where((skill) => skill.isNotEmpty)
-        .toSet()
-        .toList();
     Navigator.of(context).pop(
       _CustomNodeDraft(
         clientId: widget.node?.clientId ??
@@ -1118,7 +1134,7 @@ class _CustomNodeEditorSheetState extends State<_CustomNodeEditorSheet> {
         name: name,
         description: _descriptionController.text.trim(),
         order: widget.node?.order ?? widget.order,
-        skills: skills,
+        skills: _selectedSkills.toSet().toList(),
         resources: _resources,
       ),
     );
@@ -1126,6 +1142,19 @@ class _CustomNodeEditorSheetState extends State<_CustomNodeEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final technicalSkills =
+        ref.watch(technicalSkillsProvider).valueOrNull ?? const [];
+    final filteredSuggestions = _skillQuery.isEmpty
+        ? const <TechnicalSkillDto>[]
+        : technicalSkills
+            .where((skill) => skill.skillName
+                .toLowerCase()
+                .contains(_skillQuery.toLowerCase()))
+            .where((skill) => !_selectedSkills
+                .any((s) => s.toLowerCase() == skill.skillName.toLowerCase()))
+            .take(6)
+            .toList();
+
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -1181,13 +1210,63 @@ class _CustomNodeEditorSheetState extends State<_CustomNodeEditorSheet> {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    TextField(
-                      controller: _skillsController,
-                      decoration: const InputDecoration(
-                        labelText: 'Technical skills',
-                        hintText: 'C#, ASP.NET Core, SQL',
+                    Text('Technical skills', style: AppTextStyles.titleSmall),
+                    const SizedBox(height: 8),
+                    if (_selectedSkills.isNotEmpty) ...[
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _selectedSkills
+                            .map(
+                              (skill) => InputChip(
+                                label: Text(skill),
+                                onDeleted: () => _removeSkill(skill),
+                              ),
+                            )
+                            .toList(),
                       ),
+                      const SizedBox(height: 10),
+                    ],
+                    TextField(
+                      controller: _skillSearchController,
+                      decoration: const InputDecoration(
+                        labelText: 'Search and add skills...',
+                        prefixIcon: Icon(Icons.search),
+                        hintText: 'Type to search skills',
+                      ),
+                      onChanged: (value) =>
+                          setState(() => _skillQuery = value.trim()),
+                      onSubmitted: (value) {
+                        if (filteredSuggestions.length == 1) {
+                          _addSkill(filteredSuggestions.first.skillName);
+                        } else if (value.trim().isNotEmpty) {
+                          _addSkill(value);
+                        }
+                      },
                     ),
+                    if (filteredSuggestions.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.outlineVariant),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: filteredSuggestions
+                              .map(
+                                (skill) => ListTile(
+                                  dense: true,
+                                  title: Text(skill.skillName),
+                                  subtitle: Text(skill.category),
+                                  onTap: () => _addSkill(skill.skillName),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     Text('Learning resources', style: AppTextStyles.titleSmall),
                     const SizedBox(height: 8),

@@ -173,6 +173,9 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     String profileId,
     String careerRoadmapId,
   ) async {
+    if (profileId.isEmpty || careerRoadmapId.isEmpty) {
+      throw ValidationException('Profile ID and Career Roadmap ID are required.');
+    }
     final response = await _dio.post(
       '${ApiConstants.personalRoadmaps}/generate',
       data: {
@@ -187,6 +190,9 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   Future<PersonalRoadmapDto> createCustomRoadmap(
     CustomPersonalRoadmapRequest request,
   ) async {
+    if (request.profileId.isEmpty || request.careerRoleId.isEmpty) {
+      throw ValidationException('Profile ID and Career Role ID are required.');
+    }
     final response = await _dio.post(
       '${ApiConstants.personalRoadmaps}/custom',
       data: request.toJson(),

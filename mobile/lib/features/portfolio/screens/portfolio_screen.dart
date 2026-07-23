@@ -42,13 +42,6 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('E-Portfolio'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            tooltip: 'Share portfolio',
-            onPressed: _sharePortfolio,
-          ),
-        ],
       ),
       body: asyncState.when(
         loading: () => const _PortfolioSkeleton(),

@@ -342,7 +342,7 @@ class _SkillGapSnapshot extends StatelessWidget {
               child: Column(
                 children: [
                   SizedBox(
-                    height: 220,
+                    height: 240,
                     child: RadarChart(
                       RadarChartData(
                         radarShape: RadarShape.polygon,
@@ -351,15 +351,20 @@ class _SkillGapSnapshot extends StatelessWidget {
                           color: Colors.transparent,
                           fontSize: 0,
                         ),
+                        titlePositionPercentageOffset: 0.22,
                         getTitle: (index, angle) {
-                          final category = categories[index];
+                          final name = categories[index].name;
+                          final label = name.length > 12
+                              ? '${name.substring(0, 10)}…'
+                              : name;
                           return RadarChartTitle(
-                            text: category.name,
-                            angle: angle,
+                            text: label,
+                            angle: angle + 90,
                           );
                         },
                         titleTextStyle: AppTextStyles.labelSmall.copyWith(
                           color: AppColors.onSurfaceVariant,
+                          fontSize: 10,
                         ),
                         dataSets: [
                           RadarDataSet(

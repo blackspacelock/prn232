@@ -63,10 +63,11 @@ class RoadmapViewerScreen extends ConsumerWidget {
             slivers: [
               SliverAppBar(
                 pinned: true,
-                expandedHeight: 210,
+                expandedHeight: 240,
                 leading: const AppBackButton(fallbackLocation: '/roadmaps'),
                 title: Text(data.careerRoadmap?.name ?? 'Roadmap'),
                 flexibleSpace: FlexibleSpaceBar(
+                  collapseMode: CollapseMode.pin,
                   background: _RoadmapHeader(
                     roadmap: data,
                     completedNodes: completed,
@@ -147,7 +148,7 @@ class _RoadmapHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 88, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 100, 16, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -288,41 +289,48 @@ class _RoadmapGraphSectionState extends State<_RoadmapGraphSection> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                width: scaledWidth,
-                height: scaledHeight,
-                child: Transform.scale(
-                  scale: _zoom,
-                  alignment: Alignment.topLeft,
-                  child: SizedBox(
-                    width: canvasWidth,
-                    height: baseCanvasHeight,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: _RoadmapConnectorPainter(
-                              nodes: widget.nodes,
-                              edges: widget.edges,
-                              positions: positions,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: SizedBox(
+                  width: scaledWidth + 32,
+                  height: scaledHeight + 32,
+                  child: Transform.scale(
+                    scale: _zoom,
+                    alignment: Alignment.topLeft,
+                    child: SizedBox(
+                      width: canvasWidth + 32,
+                      height: baseCanvasHeight + 32,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned.fill(
+                              child: CustomPaint(
+                                painter: _RoadmapConnectorPainter(
+                                  nodes: widget.nodes,
+                                  edges: widget.edges,
+                                  positions: positions,
+                                ),
+                              ),
                             ),
-                          ),
+                            ...widget.nodes.map((node) {
+                              final position =
+                                  positions[node._graphId] ?? Offset.zero;
+                              return Positioned(
+                                left: position.dx,
+                                top: position.dy,
+                                width: _GraphNodeCard.width,
+                                height: _GraphNodeCard.height,
+                                child: _GraphNodeCard(
+                                  nodeProgress: node,
+                                  onTap: () => widget.onNodeTap(node),
+                                ),
+                              );
+                            }),
+                          ],
                         ),
-                        ...widget.nodes.map((node) {
-                          final position =
-                              positions[node._graphId] ?? Offset.zero;
-                          return Positioned(
-                            left: position.dx,
-                            top: position.dy,
-                            width: _GraphNodeCard.width,
-                            height: _GraphNodeCard.height,
-                            child: _GraphNodeCard(
-                              nodeProgress: node,
-                              onTap: () => widget.onNodeTap(node),
-                            ),
-                          );
-                        }),
-                      ],
+                      ),
                     ),
                   ),
                 ),

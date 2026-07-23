@@ -8,6 +8,8 @@ namespace SECompass.API.Controllers;
 [ApiController]
 [Route("api/personal-roadmaps")]
 [Authorize]
+[Consumes("application/json")]
+[Produces("application/json")]
 public class PersonalRoadmapsController : ControllerBase
 {
     private readonly IPersonalRoadmapService _service;
@@ -19,9 +21,12 @@ public class PersonalRoadmapsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Generate([FromBody] GeneratePersonalRoadmapRequestDto dto)
     {
+        if (dto.ProfileId == Guid.Empty || dto.CareerRoadmapId == Guid.Empty)
+            return BadRequest("ProfileId and CareerRoadmapId are required.");
+
         var result = await _service.GenerateAsync(dto.ProfileId, dto.CareerRoadmapId);
         if (!result.Success) return BadRequest(result.Error);
-        return CreatedAtAction(nameof(Generate), result.Data);
+        return StatusCode(StatusCodes.Status201Created, result.Data);
     }
 
     [HttpPost("custom")]
@@ -29,9 +34,12 @@ public class PersonalRoadmapsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateCustom([FromBody] CreateCustomPersonalRoadmapRequestDto dto)
     {
+        if (dto.ProfileId == Guid.Empty || dto.CareerRoleId == Guid.Empty)
+            return BadRequest("ProfileId and CareerRoleId are required.");
+
         var result = await _service.CreateCustomAsync(dto);
         if (!result.Success) return BadRequest(result.Error);
-        return CreatedAtAction(nameof(CreateCustom), result.Data);
+        return StatusCode(StatusCodes.Status201Created, result.Data);
     }
 
     [HttpDelete("{id:guid}")]
