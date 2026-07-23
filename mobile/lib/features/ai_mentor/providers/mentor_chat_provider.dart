@@ -55,19 +55,46 @@ class MentorChatNotifier extends FamilyAsyncNotifier<ChatState, String?> {
   Future<void> renameSession(String sessionId, String title) async {
     final previous = state.valueOrNull;
     if (previous == null) return;
-    final renamed =
-        await ref.read(chatRepositoryProvider).renameSession(sessionId, title);
-    state = AsyncData(
-      previous.copyWith(
-        sessions: previous.sessions
-            .map((session) =>
-                session.chatSessionId == sessionId ? renamed : session)
-            .toList(),
-        activeSession: previous.activeSession?.chatSessionId == sessionId
-            ? previous.activeSession!.copyWith(title: renamed.title)
-            : previous.activeSession,
-      ),
+
+    final trimmedTitle = title.trim();
+    final activeRenamed = previous.activeSession?.chatSessionId == sessionId;
+    final optimistic = previous.copyWith(
+      sessions: previous.sessions
+          .map(
+            (session) => session.chatSessionId == sessionId
+                ? session.copyWith(title: trimmedTitle)
+                : session,
+          )
+          .toList(),
+      activeSession: activeRenamed
+          ? previous.activeSession!.copyWith(title: trimmedTitle)
+          : previous.activeSession,
     );
+    state = AsyncData(optimistic);
+
+    try {
+      final renamed = await ref
+          .read(chatRepositoryProvider)
+          .renameSession(sessionId, trimmedTitle);
+      final current = state.valueOrNull ?? optimistic;
+      state = AsyncData(
+        current.copyWith(
+          sessions: current.sessions
+              .map(
+                (session) => session.chatSessionId == sessionId
+                    ? session.copyWith(title: renamed.title)
+                    : session,
+              )
+              .toList(),
+          activeSession: current.activeSession?.chatSessionId == sessionId
+              ? current.activeSession!.copyWith(title: renamed.title)
+              : current.activeSession,
+        ),
+      );
+    } catch (_) {
+      state = AsyncData(previous);
+      rethrow;
+    }
   }
 
   Future<bool> deleteSession(String sessionId) async {
