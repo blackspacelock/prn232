@@ -103,6 +103,13 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
           progressPercentage
           isActive
           createdAt
+          tags {
+            id
+            personalRoadmapId
+            name
+            color
+            createdAt
+          }
         }
       }
       ''',
@@ -130,6 +137,13 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
           progressPercentage
           isActive
           createdAt
+          tags {
+            id
+            personalRoadmapId
+            name
+            color
+            createdAt
+          }
           nodeProgresses {
             id
             personalRoadmapId
@@ -224,6 +238,29 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
   @override
   Future<void> deleteRoadmap(String personalRoadmapId) async {
     await _dio.delete('${ApiConstants.personalRoadmaps}/$personalRoadmapId');
+  }
+
+  @override
+  Future<RoadmapTagDto> addRoadmapTag(
+    String personalRoadmapId, {
+    required String name,
+    String? color,
+  }) async {
+    final response = await _dio.post(
+      '${ApiConstants.personalRoadmaps}/$personalRoadmapId/tags',
+      data: {
+        'name': name,
+        if (color != null && color.trim().isNotEmpty) 'color': color,
+      },
+    );
+    return RoadmapTagDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> deleteRoadmapTag(String personalRoadmapId, String tagId) async {
+    await _dio.delete(
+      '${ApiConstants.personalRoadmaps}/$personalRoadmapId/tags/$tagId',
+    );
   }
 
   @override

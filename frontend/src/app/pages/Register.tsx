@@ -9,6 +9,7 @@ import { Snackbar } from '../components/Snackbar';
 import { PublicLayout } from '../components/PublicLayout';
 import { apiClient } from '@/lib/axios';
 import { mapAuthResponse } from '@/lib/authMapper';
+import { getRoleHomePath } from '@/lib/authRedirect';
 import { useAuthStore } from '@/store/authStore';
 import type { AuthResponseDto, GoogleLoginDto, RegisterUserDto } from '@/types/api';
 
@@ -37,7 +38,7 @@ export function RegisterPage() {
     onSuccess: (data) => {
       const { user, accessToken, refreshToken } = mapAuthResponse(data);
       setAuth(accessToken, user, refreshToken);
-      navigate('/dashboard', { replace: true });
+      navigate(getRoleHomePath(user.role), { replace: true });
     },
     onError: (error: unknown) => {
       const msg =
@@ -53,7 +54,7 @@ export function RegisterPage() {
     onSuccess: (data) => {
       const { user, accessToken, refreshToken } = mapAuthResponse(data);
       setAuth(accessToken, user, refreshToken);
-      navigate('/dashboard', { replace: true });
+      navigate(getRoleHomePath(user.role), { replace: true });
     },
     onError: (error: unknown) => {
       const msg =

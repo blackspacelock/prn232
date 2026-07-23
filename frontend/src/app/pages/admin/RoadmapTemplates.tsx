@@ -6,16 +6,17 @@ import { Skeleton } from '../../components/Skeleton';
 import { Snackbar } from '../../components/Snackbar';
 import { EmptyState } from '../../components/EmptyState';
 import { AdminDetailDialog, AdminInspectorSection } from '../../components/admin/AdminDetailDialog';
-import { AdminFilterSelect, AdminListToolbar, AdminPagination, useAdminList } from '../../components/admin/AdminListControls';
+import { AdminFilterSelect, AdminListToolbar, AdminPagination } from '../../components/admin/AdminListControls';
+import { useAdminList } from '../../components/admin/useAdminList';
 import { Eye, GitBranch, Hash, Plus, Save, Trash2, Map as MapIcon, Network } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation, useQuery as useRestQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, deleteWithCascadeMode } from '@/lib/axios';
 import { apolloClient } from '@/lib/apollo';
-import { GET_CAREER_ROLES, GET_CAREER_ROADMAP_WITH_NODES } from '@/graphql/queries';
+import { GET_CAREER_ROLES, GET_CAREER_ROADMAP_WITH_NODES, GET_TECHNICAL_SKILLS } from '@/graphql/queries';
 import { RoadmapCanvasHeader } from '../../components/roadmap/RoadmapCanvasHeader';
 import { RoadmapGraphCanvas, type RoadmapGraphNode } from '../../components/roadmap/RoadmapGraphCanvas';
-import type { CreateRoadmapNodeDto, RoadmapNodeDto } from '@/types/api';
+import type { CreateRoadmapNodeDto, RoadmapNodeDto, TechnicalSkillDto, UpdateRoadmapNodeDto } from '@/types/api';
 import type { NodeStatusInt } from '@/constants/nodeStatus';
 
 interface CareerRole { id: string; name: string }
@@ -70,17 +71,22 @@ export function AdminRoadmapTemplatesPage() {
   const [selectedRoadmapNode, setSelectedRoadmapNode] = useState<RoadmapNodeDto | null>(null);
   const [roadmapNodeForm, setRoadmapNodeForm] = useState<RoadmapNodeForm>({
     nodeId: '',
+    previousRoadmapNodeId: undefined,
     parentRoadmapNodeId: undefined,
+    branchRoadmapNodeId: undefined,
     order: 1,
     nodeType: 'Topic',
     requirementType: 'Required',
     positionXText: '',
     positionYText: '',
+    technicalSkillIds: [],
   });
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const { data: rolesData } = useQuery(GET_CAREER_ROLES);
   const roles: CareerRole[] = (rolesData as { careerRoles?: CareerRole[] })?.careerRoles ?? [];
+  const { data: technicalSkillsData } = useQuery(GET_TECHNICAL_SKILLS);
+  const technicalSkills: TechnicalSkillDto[] = (technicalSkillsData as { technicalSkills?: TechnicalSkillDto[] })?.technicalSkills ?? [];
 
   const { data: roadmaps = [], isLoading: loading, error, refetch } = useRestQuery({
     queryKey: ['admin-career-roadmaps'],
@@ -107,12 +113,25 @@ export function AdminRoadmapTemplatesPage() {
     },
     getSortValue: (roadmap, key) => key === 'createdAt' ? new Date(roadmap.createdAt) : roadmap.name,
   });
-  const roadmapNodes: RoadmapNodeDto[] =
-    (roadmapNodesData as { careerRoadmapWithNodes?: { nodes: RoadmapNodeDto[] } })
-      ?.careerRoadmapWithNodes?.nodes ?? [];
-  const roadmapEdges =
-    (roadmapNodesData as { careerRoadmapWithNodes?: { edges?: Array<{ id: string; fromRoadmapNodeId: string; toRoadmapNodeId: string; edgeType?: string }> } })
-      ?.careerRoadmapWithNodes?.edges ?? [];
+  const roadmapNodes: RoadmapNodeDto[] = useMemo(
+    () =>
+      (roadmapNodesData as { careerRoadmapWithNodes?: { nodes: RoadmapNodeDto[] } })
+        ?.careerRoadmapWithNodes?.nodes ?? [],
+    [roadmapNodesData],
+  );
+  const roadmapEdges = useMemo(
+    () =>
+      (roadmapNodesData as { careerRoadmapWithNodes?: { edges?: Array<{ id: string; fromRoadmapNodeId: string; toRoadmapNodeId: string; edgeType?: string }> } })
+        ?.careerRoadmapWithNodes?.edges ?? [],
+    [roadmapNodesData],
+  );
+  const learningSourceByRoadmapNodeId = useMemo(() => {
+    const map = new Map<string, string>();
+    roadmapEdges.forEach((edge) => {
+      map.set(edge.toRoadmapNodeId, edge.fromRoadmapNodeId);
+    });
+    return map;
+  }, [roadmapEdges]);
   const graphNodes: RoadmapGraphNode[] = useMemo(() => {
     const depthById = getNodeDepths(roadmapNodes);
     return roadmapNodes.map((roadmapNode) => ({
@@ -201,17 +220,32 @@ export function AdminRoadmapTemplatesPage() {
       apiClient.post<RoadmapNodeDto>(`/api/career-roadmaps/${roadmapId}/roadmap-nodes`, dto).then((r) => r.data),
     onSuccess: (roadmapNode, { roadmapId }) => {
       updateExpandedRoadmapNodes(roadmapId, (nodes) => [...nodes, roadmapNode]);
+      loadRoadmapNodes({ variables: { roadmapId } });
       setRoadmapNodeForm({
         nodeId: '',
+        previousRoadmapNodeId: undefined,
         parentRoadmapNodeId: undefined,
+        branchRoadmapNodeId: undefined,
         order: roadmapNodeForm.order + 1,
         nodeType: roadmapNodeForm.nodeType,
         requirementType: roadmapNodeForm.requirementType,
         positionXText: '',
         positionYText: '',
+        technicalSkillIds: [],
       });
     },
     onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to assign node.'),
+  });
+
+  const updateRoadmapNodeMutation = useMutation({
+    mutationFn: ({ roadmapId, roadmapNodeId, dto }: { roadmapId: string; roadmapNodeId: string; dto: UpdateRoadmapNodeDto }) =>
+      apiClient.put<RoadmapNodeDto>(`/api/career-roadmaps/${roadmapId}/roadmap-nodes/${roadmapNodeId}`, dto).then((r) => r.data),
+    onSuccess: (roadmapNode, { roadmapId }) => {
+      updateExpandedRoadmapNodes(roadmapId, (nodes) => nodes.map((node) => node.id === roadmapNode.id ? roadmapNode : node));
+      loadRoadmapNodes({ variables: { roadmapId } });
+      setSelectedRoadmapNode(roadmapNode);
+    },
+    onError: (e: unknown) => showError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to update node.'),
   });
 
   const removeNodeMutation = useMutation({
@@ -231,12 +265,15 @@ export function AdminRoadmapTemplatesPage() {
     setSelectedRoadmapNode(null);
     setRoadmapNodeForm({
       nodeId: '',
+      previousRoadmapNodeId: undefined,
       parentRoadmapNodeId: undefined,
+      branchRoadmapNodeId: undefined,
       order: 1,
       nodeType: 'Topic',
       requirementType: 'Required',
       positionXText: '',
       positionYText: '',
+      technicalSkillIds: [],
     });
     loadRoadmapNodes({ variables: { roadmapId: rm.id } });
   };
@@ -249,12 +286,15 @@ export function AdminRoadmapTemplatesPage() {
     setForm({ name: '', description: '', careerRoleId: selectedRoleId === 'All' ? '' : selectedRoleId });
     setRoadmapNodeForm({
       nodeId: '',
+      previousRoadmapNodeId: undefined,
       parentRoadmapNodeId: undefined,
+      branchRoadmapNodeId: undefined,
       order: 1,
       nodeType: 'Topic',
       requirementType: 'Required',
       positionXText: '',
       positionYText: '',
+      technicalSkillIds: [],
     });
   };
 
@@ -268,6 +308,59 @@ export function AdminRoadmapTemplatesPage() {
   const handleSave = () => {
     if (editingRoadmap) updateMutation.mutate({ id: editingRoadmap.id, dto: form });
     else createMutation.mutate(form);
+  };
+
+  const selectRoadmapNode = (roadmapNode: RoadmapNodeDto) => {
+    setSelectedRoadmapNode(roadmapNode);
+    setRoadmapNodeForm({
+      nodeId: roadmapNode.nodeId,
+      previousRoadmapNodeId: learningSourceByRoadmapNodeId.get(roadmapNode.id),
+      parentRoadmapNodeId: roadmapNode.parentRoadmapNodeId,
+      branchRoadmapNodeId: roadmapNode.parentRoadmapNodeId ? roadmapNode.parentRoadmapNodeId : undefined,
+      order: roadmapNode.order,
+      nodeType: roadmapNode.nodeType,
+      requirementType: roadmapNode.requirementType,
+      positionXText: roadmapNode.positionX?.toString() ?? '',
+      positionYText: roadmapNode.positionY?.toString() ?? '',
+      technicalSkillIds: roadmapNode.node.technicalSkills.map((skill) => skill.id),
+    });
+  };
+
+  const resetRoadmapNodeForm = () => {
+    setSelectedRoadmapNode(null);
+    setRoadmapNodeForm({
+      nodeId: '',
+      previousRoadmapNodeId: undefined,
+      parentRoadmapNodeId: undefined,
+      branchRoadmapNodeId: undefined,
+      order: roadmapNodes.length + 1,
+      nodeType: 'Topic',
+      requirementType: 'Required',
+      positionXText: '',
+      positionYText: '',
+      technicalSkillIds: [],
+    });
+  };
+
+  const buildRoadmapNodePayload = () => ({
+    previousRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId !== undefined ? undefined : roadmapNodeForm.previousRoadmapNodeId,
+    parentRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId || undefined,
+    branchRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId || undefined,
+    order: roadmapNodeForm.order,
+    nodeType: roadmapNodeForm.nodeType,
+    requirementType: roadmapNodeForm.requirementType,
+    positionX: roadmapNodeForm.positionXText ? Number(roadmapNodeForm.positionXText) : undefined,
+    positionY: roadmapNodeForm.positionYText ? Number(roadmapNodeForm.positionYText) : undefined,
+    technicalSkillIds: roadmapNodeForm.technicalSkillIds,
+  });
+
+  const toggleTechnicalSkill = (skillId: string) => {
+    setRoadmapNodeForm((current) => ({
+      ...current,
+      technicalSkillIds: current.technicalSkillIds?.includes(skillId)
+        ? current.technicalSkillIds.filter((id) => id !== skillId)
+        : [...(current.technicalSkillIds ?? []), skillId],
+    }));
   };
 
   const isDetailOpen = showForm || previewRoadmap !== null;
@@ -461,7 +554,7 @@ export function AdminRoadmapTemplatesPage() {
                           >
                             <button
                               type="button"
-                              onClick={() => setSelectedRoadmapNode(roadmapNode)}
+                              onClick={() => selectRoadmapNode(roadmapNode)}
                               className="min-w-0 flex-1 text-left"
                             >
                               <p className="truncate text-sm font-medium text-[var(--md3-on-surface)]">{roadmapNode.node.name}</p>
@@ -482,25 +575,78 @@ export function AdminRoadmapTemplatesPage() {
                     )}
                 </AdminInspectorSection>
 
-                <AdminInspectorSection title="Assign Roadmap Node">
+                <AdminInspectorSection
+                  title={selectedRoadmapNode ? 'Edit Roadmap Node' : 'Assign Roadmap Node'}
+                  meta={selectedRoadmapNode && (
+                    <button
+                      type="button"
+                      onClick={resetRoadmapNodeForm}
+                      className="rounded-md px-2 py-1 text-xs font-medium text-[var(--md3-primary)] hover:bg-[var(--md3-primary-container)]"
+                    >
+                      New assignment
+                    </button>
+                  )}
+                >
                     <div className="space-y-2">
                       <input
                         type="text"
                         value={roadmapNodeForm.nodeId}
                         onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, nodeId: event.target.value })}
                         placeholder="Content node ID"
+                        disabled={selectedRoadmapNode !== null}
                         className="md3-field h-10 w-full px-3 text-sm"
                       />
-                      <select
-                        value={roadmapNodeForm.parentRoadmapNodeId ?? ''}
-                        onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, parentRoadmapNodeId: event.target.value || undefined })}
-                        className="md3-field h-10 w-full px-3 text-sm"
-                      >
-                        <option value="">Root node</option>
-                        {(activeRoadmap ? roadmapNodes : []).map((roadmapNode) => (
-                          <option key={roadmapNode.id} value={roadmapNode.id}>{roadmapNode.node.name}</option>
-                        ))}
-                      </select>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setRoadmapNodeForm({ ...roadmapNodeForm, branchRoadmapNodeId: undefined, parentRoadmapNodeId: undefined })}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                            roadmapNodeForm.branchRoadmapNodeId === undefined
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                              : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-container)]'
+                          }`}
+                        >
+                          Learning Step
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRoadmapNodeForm({ ...roadmapNodeForm, previousRoadmapNodeId: undefined, branchRoadmapNodeId: roadmapNodeForm.branchRoadmapNodeId ?? '' })}
+                          className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
+                            roadmapNodeForm.branchRoadmapNodeId !== undefined
+                              ? 'border-[var(--md3-primary)] bg-[var(--md3-primary-container)] text-[var(--md3-on-primary-container)]'
+                              : 'border-[var(--md3-outline)] text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-container)]'
+                          }`}
+                        >
+                          Branch Node
+                        </button>
+                      </div>
+                      {roadmapNodeForm.branchRoadmapNodeId === undefined ? (
+                        <select
+                          value={roadmapNodeForm.previousRoadmapNodeId ?? ''}
+                          onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, previousRoadmapNodeId: event.target.value || undefined })}
+                          className="md3-field h-10 w-full px-3 text-sm"
+                        >
+                          <option value="">Root learning step</option>
+                          {(activeRoadmap ? roadmapNodes : [])
+                            .filter((roadmapNode) => roadmapNode.id !== selectedRoadmapNode?.id)
+                            .map((roadmapNode) => (
+                              <option key={roadmapNode.id} value={roadmapNode.id}>{roadmapNode.node.name}</option>
+                            ))}
+                        </select>
+                      ) : (
+                        <select
+                          value={roadmapNodeForm.branchRoadmapNodeId}
+                          onChange={(event) => setRoadmapNodeForm({ ...roadmapNodeForm, previousRoadmapNodeId: undefined, branchRoadmapNodeId: event.target.value || '' })}
+                          className="md3-field h-10 w-full px-3 text-sm"
+                        >
+                          <option value="">Select dashed branch source</option>
+                          {(activeRoadmap ? roadmapNodes : [])
+                            .filter((roadmapNode) => roadmapNode.id !== selectedRoadmapNode?.id)
+                            .map((roadmapNode) => (
+                              <option key={roadmapNode.id} value={roadmapNode.id}>{roadmapNode.node.name}</option>
+                            ))}
+                        </select>
+                      )}
                       <div className="grid grid-cols-3 gap-2">
                         <input
                           type="number"
@@ -544,26 +690,55 @@ export function AdminRoadmapTemplatesPage() {
                           <option value="Optional">Optional</option>
                         </select>
                       </div>
+                      {technicalSkills.length > 0 && (
+                        <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-[var(--md3-outline-variant)] p-2">
+                          {technicalSkills.map((skill) => (
+                            <label key={skill.id} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-[var(--md3-on-surface)] hover:bg-[var(--md3-surface-container)]">
+                              <input
+                                type="checkbox"
+                                checked={roadmapNodeForm.technicalSkillIds?.includes(skill.id) ?? false}
+                                onChange={() => toggleTechnicalSkill(skill.id)}
+                                className="h-3.5 w-3.5"
+                              />
+                              <span className="min-w-0 flex-1 truncate">{skill.name}</span>
+                              <span className="shrink-0 text-[var(--md3-on-surface-variant)]">{skill.category}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
                       <AdminActionButton
-                        icon={Plus}
-                        label={assignNodeMutation.isPending ? 'Adding...' : 'Assign Node'}
+                        icon={selectedRoadmapNode ? Save : Plus}
+                        label={
+                          selectedRoadmapNode
+                            ? updateRoadmapNodeMutation.isPending ? 'Updating...' : 'Update Node'
+                            : assignNodeMutation.isPending ? 'Adding...' : 'Assign Node'
+                        }
                         onClick={() => {
-                          if (!roadmapNodeForm.nodeId.trim()) return;
                           if (!activeRoadmap) return;
+                          if (selectedRoadmapNode) {
+                            updateRoadmapNodeMutation.mutate({
+                              roadmapId: activeRoadmap.id,
+                              roadmapNodeId: selectedRoadmapNode.id,
+                              dto: buildRoadmapNodePayload(),
+                            });
+                            return;
+                          }
+                          if (!roadmapNodeForm.nodeId.trim()) return;
                           assignNodeMutation.mutate({
                             roadmapId: activeRoadmap.id,
                             dto: {
                               nodeId: roadmapNodeForm.nodeId.trim(),
-                              parentRoadmapNodeId: roadmapNodeForm.parentRoadmapNodeId,
-                              order: roadmapNodeForm.order,
-                              nodeType: roadmapNodeForm.nodeType,
-                              requirementType: roadmapNodeForm.requirementType,
-                              positionX: roadmapNodeForm.positionXText ? Number(roadmapNodeForm.positionXText) : undefined,
-                              positionY: roadmapNodeForm.positionYText ? Number(roadmapNodeForm.positionYText) : undefined,
+                              ...buildRoadmapNodePayload(),
                             },
                           });
                         }}
-                        disabled={!activeRoadmap || !roadmapNodeForm.nodeId.trim() || assignNodeMutation.isPending}
+                        disabled={
+                          !activeRoadmap ||
+                          (!selectedRoadmapNode && !roadmapNodeForm.nodeId.trim()) ||
+                          (roadmapNodeForm.branchRoadmapNodeId !== undefined && !roadmapNodeForm.branchRoadmapNodeId) ||
+                          assignNodeMutation.isPending ||
+                          updateRoadmapNodeMutation.isPending
+                        }
                         className="mt-2 w-full"
                       />
                     </div>
@@ -596,7 +771,8 @@ export function AdminRoadmapTemplatesPage() {
                 graphEdges={roadmapEdges}
                 selectedNodeId={selectedRoadmapNode?.id}
                 onNodeSelect={(node) => {
-                  setSelectedRoadmapNode(roadmapNodes.find((item) => item.id === node.id) ?? null);
+                  const roadmapNode = roadmapNodes.find((item) => item.id === node.id);
+                  if (roadmapNode) selectRoadmapNode(roadmapNode);
                 }}
               />
             ) : (

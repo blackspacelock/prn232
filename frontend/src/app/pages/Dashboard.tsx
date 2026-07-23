@@ -8,7 +8,8 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChar
 import { Cell } from 'recharts';
 import { useQuery } from '@apollo/client/react';
 import { useAuthStore } from '@/store/authStore';
-import { getSkillColor, hashLabel, SkillChip } from '../components/SkillChip';
+import { SkillChip } from '../components/SkillChip';
+import { getSkillColor } from '../components/skillColorUtils';
 import {
   GET_USER_BY_ID,
   GET_PERSONAL_ROADMAPS_BY_PROFILE,
@@ -57,8 +58,11 @@ export function DashboardPage() {
 
   const topSkills: Array<{ techSkill: string; trendScore: number }> =
     (topSkillsData as { topTrendingSkills?: Array<{ techSkill: string; trendScore: number }> })?.topTrendingSkills ?? [];
-  const topSkillName = topSkills[0]?.techSkill ?? '—';
-  const trendChartData = topSkills.map((s) => ({ name: s.techSkill, score: s.trendScore, color: getSkillColor(hashLabel(s.techSkill)).accent }));
+  const trendChartData = topSkills.map((s, index) => ({
+    name: s.techSkill,
+    score: s.trendScore,
+    color: getSkillColor(index).accent,
+  }));
 
   const githubRepoCount = ((githubData as { gitHubRepositoriesByProfile?: unknown[] })?.gitHubRepositoriesByProfile ?? []).length;
 
@@ -96,9 +100,9 @@ export function DashboardPage() {
           />
         ) : (
           <>
-            <div className="desktop-grid-4">
+            <div className="desktop-grid-3">
               {isLoading ? (
-                Array.from({ length: 4 }).map((_, i) => (
+                Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-32 rounded-xl" />
                 ))
               ) : (
@@ -118,13 +122,6 @@ export function DashboardPage() {
                     showProgress
                     progress={avgProgress}
                     iconBg="var(--md3-success-container)"
-                  />
-                  <StatCard
-                    icon={<TrendingUp className="w-5 h-5 text-[var(--md3-warning)]" />}
-                    title="Top Skill"
-                    value={topSkillName}
-                    subtitle="Top trending skill"
-                    iconBg="var(--md3-warning-container)"
                   />
                   <StatCard
                     icon={<Code className="w-5 h-5" style={{ color: '#7B1FA2' }} />}
@@ -156,8 +153,8 @@ export function DashboardPage() {
                         <YAxis tick={{ fontSize: 12, fill: '#5F6368' }} domain={[0, 100]} />
                         <Tooltip />
                         <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                          {trendChartData.map((entry) => (
-                            <Cell key={entry.name} fill={entry.color} />
+                          {trendChartData.map((entry, index) => (
+                            <Cell key={`${entry.name}-${index}`} fill={entry.color} />
                           ))}
                         </Bar>
                       </BarChart>
