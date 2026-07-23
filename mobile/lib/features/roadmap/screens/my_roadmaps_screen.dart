@@ -42,14 +42,14 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
         title: const Text('My Roadmaps'),
         actions: [
           IconButton(
-            tooltip: 'Create roadmap',
-            icon: const Icon(Icons.add_road_outlined),
-            onPressed: _showCreateRoadmapSheet,
+            tooltip: 'Generate personal custom roadmap',
+            icon: const Icon(Icons.add_task_outlined),
+            onPressed: _showPersonalCustomRoadmapSheet,
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateRoadmapSheet,
+        onPressed: _openGenerateRoadmapFlow,
         icon: const Icon(Icons.rocket_launch_outlined),
         label: const Text('Generate Roadmap'),
       ),
@@ -81,6 +81,11 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                _RoadmapCreateActions(
+                  onGenerateRoadmap: _openGenerateRoadmapFlow,
+                  onGeneratePersonalCustom: _showPersonalCustomRoadmapSheet,
+                ),
+                const SizedBox(height: 16),
                 SearchBar(
                   controller: _searchController,
                   hintText: 'Search roadmaps...',
@@ -104,7 +109,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
                     subtitle:
                         'Generate a personalized roadmap from an available career role to begin tracking progress.',
                     actionLabel: 'Generate Roadmap',
-                    onAction: _showCreateRoadmapSheet,
+                    onAction: _openGenerateRoadmapFlow,
                   )
                 else if (visible.isEmpty)
                   const EmptyStateView(
@@ -134,12 +139,16 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
     );
   }
 
-  Future<void> _showCreateRoadmapSheet() async {
+  void _openGenerateRoadmapFlow() {
+    context.go('/career-roles');
+  }
+
+  Future<void> _showPersonalCustomRoadmapSheet() async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => const _GenerateRoadmapSheet(),
+      builder: (_) => const _GeneratePersonalCustomRoadmapSheet(),
     );
   }
 
@@ -220,15 +229,70 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
   }
 }
 
-class _GenerateRoadmapSheet extends ConsumerStatefulWidget {
-  const _GenerateRoadmapSheet();
+class _RoadmapCreateActions extends StatelessWidget {
+  const _RoadmapCreateActions({
+    required this.onGenerateRoadmap,
+    required this.onGeneratePersonalCustom,
+  });
+
+  final VoidCallback onGenerateRoadmap;
+  final VoidCallback onGeneratePersonalCustom;
 
   @override
-  ConsumerState<_GenerateRoadmapSheet> createState() =>
-      _GenerateRoadmapSheetState();
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final generateButton = AppButton(
+          label: 'Generate Roadmap',
+          leadingIcon: const Icon(Icons.rocket_launch_outlined),
+          onPressed: onGenerateRoadmap,
+        );
+        final customButton = AppButton(
+          label: 'Personal Custom',
+          variant: AppButtonVariant.tonal,
+          leadingIcon: const Icon(Icons.add_task_outlined),
+          onPressed: onGeneratePersonalCustom,
+        );
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.outlineVariant),
+          ),
+          child: constraints.maxWidth < 360
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    generateButton,
+                    const SizedBox(height: 12),
+                    customButton,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: generateButton),
+                    const SizedBox(width: 12),
+                    Expanded(child: customButton),
+                  ],
+                ),
+        );
+      },
+    );
+  }
 }
 
-class _GenerateRoadmapSheetState extends ConsumerState<_GenerateRoadmapSheet> {
+class _GeneratePersonalCustomRoadmapSheet extends ConsumerStatefulWidget {
+  const _GeneratePersonalCustomRoadmapSheet();
+
+  @override
+  ConsumerState<_GeneratePersonalCustomRoadmapSheet> createState() =>
+      _GeneratePersonalCustomRoadmapSheetState();
+}
+
+class _GeneratePersonalCustomRoadmapSheetState
+    extends ConsumerState<_GeneratePersonalCustomRoadmapSheet> {
   CareerRoleDto? _selectedRole;
   String? _selectedRoadmapId;
   bool _isGenerating = false;
@@ -275,10 +339,13 @@ class _GenerateRoadmapSheetState extends ConsumerState<_GenerateRoadmapSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Generate Roadmap', style: AppTextStyles.titleLarge),
+              Text(
+                'Generate Personal Custom Roadmap',
+                style: AppTextStyles.titleLarge,
+              ),
               const SizedBox(height: 4),
               Text(
-                'Select a career role and roadmap template to create a personal learning path.',
+                'Select a career role and roadmap template to create a personalized learning path from this page.',
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.onSurfaceVariant,
                 ),
@@ -390,7 +457,7 @@ class _GenerateRoadmapSheetState extends ConsumerState<_GenerateRoadmapSheet> {
                   Expanded(
                     child: AppButton(
                       label:
-                          _isGenerating ? 'Generating...' : 'Generate Roadmap',
+                          _isGenerating ? 'Generating...' : 'Generate Custom',
                       isLoading: _isGenerating,
                       leadingIcon: const Icon(Icons.rocket_launch_outlined),
                       onPressed: _selectedRoadmapId == null ? null : _generate,
