@@ -84,8 +84,9 @@ class _MessagingSectionState extends State<_MessagingSection> {
           settings.authorizationStatus == AuthorizationStatus.authorized ||
               settings.authorizationStatus == AuthorizationStatus.provisional;
       if (!allowed) {
-        if (mounted)
+        if (mounted) {
           AppSnackbar.showError(context, 'Notification permission denied');
+        }
         return;
       }
 
