@@ -170,6 +170,31 @@ class NodeProgressDto {
       );
 }
 
+class RoadmapTagDto {
+  const RoadmapTagDto({
+    required this.roadmapTagId,
+    required this.personalRoadmapId,
+    required this.name,
+    required this.createdAt,
+    this.color,
+  });
+
+  final String roadmapTagId;
+  final String personalRoadmapId;
+  final String name;
+  final String createdAt;
+  final String? color;
+
+  factory RoadmapTagDto.fromJson(Map<String, dynamic> json) => RoadmapTagDto(
+        roadmapTagId: (json['roadmapTagId'] ?? json['id']).toString(),
+        personalRoadmapId: (json['personalRoadmapId'] ?? '').toString(),
+        name: (json['name'] ?? '').toString(),
+        color: json['color'] as String?,
+        createdAt:
+            (json['createdAt'] ?? DateTime.now().toIso8601String()).toString(),
+      );
+}
+
 class PersonalRoadmapDto {
   const PersonalRoadmapDto({
     required this.personalRoadmapId,
@@ -181,6 +206,7 @@ class PersonalRoadmapDto {
     this.note,
     this.careerRoadmap,
     this.nodeProgresses = const [],
+    this.tags = const [],
   });
 
   final String personalRoadmapId;
@@ -192,9 +218,11 @@ class PersonalRoadmapDto {
   final String? note;
   final CareerRoadmapDto? careerRoadmap;
   final List<NodeProgressDto> nodeProgresses;
+  final List<RoadmapTagDto> tags;
 
   factory PersonalRoadmapDto.fromJson(Map<String, dynamic> json) {
     final nodes = json['nodeProgresses'];
+    final tags = json['tags'];
     return PersonalRoadmapDto(
       personalRoadmapId: (json['personalRoadmapId'] ?? json['id']).toString(),
       profileId: (json['profileId'] ?? '').toString(),
@@ -212,6 +240,12 @@ class PersonalRoadmapDto {
           ? nodes
               .whereType<Map<String, dynamic>>()
               .map(NodeProgressDto.fromJson)
+              .toList()
+          : const [],
+      tags: tags is List
+          ? tags
+              .whereType<Map<String, dynamic>>()
+              .map(RoadmapTagDto.fromJson)
               .toList()
           : const [],
     );

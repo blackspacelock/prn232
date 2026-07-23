@@ -27,6 +27,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
   String _query = '';
   _RoadmapSort _sort = _RoadmapSort.createdNewest;
   _RoadmapFilter _filter = _RoadmapFilter.all;
+  String _tagFilter = '';
   String? _mutatingId;
 
   @override
@@ -63,6 +64,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
           onAction: () => ref.invalidate(personalRoadmapsProvider),
         ),
         data: (items) {
+          final tagOptions = _tagOptions(items);
           final visible = _applyListControls(items);
           final activeCount = items.where((roadmap) => roadmap.isActive).length;
           final averageProgress = items.isEmpty
@@ -100,8 +102,12 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
                 _RoadmapControls(
                   filter: _filter,
                   sort: _sort,
+                  tagFilter: _tagFilter,
+                  tagOptions: tagOptions,
                   onFilterChanged: (value) => setState(() => _filter = value),
                   onSortChanged: (value) => setState(() => _sort = value),
+                  onTagFilterChanged: (value) =>
+                      setState(() => _tagFilter = value),
                 ),
                 const SizedBox(height: 16),
                 if (items.isEmpty)
@@ -130,6 +136,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
                             context.go('/roadmap/${roadmap.personalRoadmapId}'),
                         onToggleActive: () => _toggleActive(roadmap),
                         onDelete: () => _deleteRoadmap(roadmap),
+                        onManageTags: () => _showTagManagerSheet(roadmap),
                       ),
                     ),
                   ),
@@ -216,16 +223,22 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
         _RoadmapFilter.inProgress => progress > 0 && progress < 100,
         _RoadmapFilter.notStarted => progress == 0,
       };
+      final matchesTag = _tagFilter.isEmpty ||
+          roadmap.tags.any(
+            (tag) => tag.name.toLowerCase() == _tagFilter.toLowerCase(),
+          );
       final title = _title(roadmap).toLowerCase();
       final description =
           (roadmap.careerRoadmap?.description ?? '').toLowerCase();
       final note = (roadmap.note ?? '').toLowerCase();
+      final tags = roadmap.tags.map((tag) => tag.name).join(' ').toLowerCase();
       final matchesSearch = _query.isEmpty ||
           title.contains(_query) ||
           description.contains(_query) ||
           note.contains(_query) ||
+          tags.contains(_query) ||
           roadmap.createdAt.contains(_query);
-      return matchesFilter && matchesSearch;
+      return matchesFilter && matchesTag && matchesSearch;
     }).toList();
 
     visible.sort((a, b) {
@@ -234,11 +247,36 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
         _RoadmapSortKey.name => _title(a).compareTo(_title(b)),
         _RoadmapSortKey.progress =>
           a.progressPercentage.compareTo(b.progressPercentage),
+        _RoadmapSortKey.tag => _firstTag(a).compareTo(_firstTag(b)),
         _RoadmapSortKey.createdAt => a.createdAt.compareTo(b.createdAt),
       };
       return result * direction;
     });
     return visible;
+  }
+
+  List<String> _tagOptions(List<PersonalRoadmapDto> roadmaps) {
+    final names = <String, String>{};
+    for (final roadmap in roadmaps) {
+      for (final tag in roadmap.tags) {
+        final name = tag.name.trim();
+        if (name.isNotEmpty) {
+          names.putIfAbsent(name.toLowerCase(), () => name);
+        }
+      }
+    }
+    final result = names.values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return result;
+  }
+
+  Future<void> _showTagManagerSheet(PersonalRoadmapDto roadmap) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _TagManagerSheet(roadmap: roadmap),
+    );
   }
 
   Future<void> _toggleActive(PersonalRoadmapDto roadmap) async {
@@ -1661,14 +1699,20 @@ class _RoadmapControls extends StatelessWidget {
   const _RoadmapControls({
     required this.filter,
     required this.sort,
+    required this.tagFilter,
+    required this.tagOptions,
     required this.onFilterChanged,
     required this.onSortChanged,
+    required this.onTagFilterChanged,
   });
 
   final _RoadmapFilter filter;
   final _RoadmapSort sort;
+  final String tagFilter;
+  final List<String> tagOptions;
   final ValueChanged<_RoadmapFilter> onFilterChanged;
   final ValueChanged<_RoadmapSort> onSortChanged;
+  final ValueChanged<String> onTagFilterChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1706,7 +1750,96 @@ class _RoadmapControls extends StatelessWidget {
               )
               .toList(),
         ),
+        DropdownMenu<String>(
+          initialSelection: tagFilter,
+          label: const Text('Tag'),
+          onSelected: (value) {
+            if (value != null) onTagFilterChanged(value);
+          },
+          dropdownMenuEntries: [
+            const DropdownMenuEntry(value: '', label: 'All Tags'),
+            ...tagOptions.map(
+              (value) => DropdownMenuEntry(value: value, label: value),
+            ),
+          ],
+        ),
       ],
+    );
+  }
+}
+
+class _RoadmapTagWrap extends StatelessWidget {
+  const _RoadmapTagWrap({required this.tags});
+
+  final List<RoadmapTagDto> tags;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tags.isEmpty) {
+      return Text(
+        'No tags',
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.onSurfaceVariant,
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: tags.map((tag) => _RoadmapTagChip(tag: tag)).toList(),
+    );
+  }
+}
+
+class _RoadmapTagChip extends StatelessWidget {
+  const _RoadmapTagChip({required this.tag, this.onDeleted});
+
+  final RoadmapTagDto tag;
+  final VoidCallback? onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _tagColor(tag.color);
+    final foreground = color ?? AppColors.onSurfaceVariant;
+    final background = color?.withValues(alpha: 0.14) ??
+        AppColors.surfaceContainerHighest.withValues(alpha: 0.7);
+    final border = color?.withValues(alpha: 0.38) ?? AppColors.outlineVariant;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(8, 4, onDeleted == null ? 8 : 4, 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.sell_outlined, size: 13, color: foreground),
+          const SizedBox(width: 4),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
+            child: Text(
+              tag.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelSmall.copyWith(color: foreground),
+            ),
+          ),
+          if (onDeleted != null) ...[
+            const SizedBox(width: 2),
+            InkWell(
+              onTap: onDeleted,
+              borderRadius: BorderRadius.circular(999),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Icon(Icons.close, size: 13, color: foreground),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -1718,6 +1851,7 @@ class _RoadmapManagementCard extends StatelessWidget {
     required this.onOpen,
     required this.onToggleActive,
     required this.onDelete,
+    required this.onManageTags,
   });
 
   final PersonalRoadmapDto roadmap;
@@ -1725,6 +1859,7 @@ class _RoadmapManagementCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onToggleActive;
   final VoidCallback onDelete;
+  final VoidCallback onManageTags;
 
   @override
   Widget build(BuildContext context) {
@@ -1807,9 +1942,20 @@ class _RoadmapManagementCard extends StatelessWidget {
                   PopupMenuButton<String>(
                     enabled: !isMutating,
                     onSelected: (value) {
+                      if (value == 'tags') onManageTags();
                       if (value == 'delete') onDelete();
                     },
                     itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'tags',
+                        child: Row(
+                          children: [
+                            Icon(Icons.sell_outlined),
+                            SizedBox(width: 8),
+                            Text('Manage Tags'),
+                          ],
+                        ),
+                      ),
                       PopupMenuItem(
                         value: 'delete',
                         child: Row(
@@ -1850,6 +1996,8 @@ class _RoadmapManagementCard extends StatelessWidget {
                   StatusChip(status: status.value, label: status.label),
                 ],
               ),
+              const SizedBox(height: 10),
+              _RoadmapTagWrap(tags: roadmap.tags),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -1887,6 +2035,208 @@ Color _progressColor(int progress) {
   return AppColors.onSurfaceVariant;
 }
 
+class _TagManagerSheet extends ConsumerStatefulWidget {
+  const _TagManagerSheet({required this.roadmap});
+
+  final PersonalRoadmapDto roadmap;
+
+  @override
+  ConsumerState<_TagManagerSheet> createState() => _TagManagerSheetState();
+}
+
+class _TagManagerSheetState extends ConsumerState<_TagManagerSheet> {
+  late List<RoadmapTagDto> _tags;
+  final _controller = TextEditingController();
+  String _selectedColor = _tagPalette.first;
+  bool _isSaving = false;
+  String? _deletingId;
+
+  @override
+  void initState() {
+    super.initState();
+    _tags = [...widget.roadmap.tags];
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addTag() async {
+    final name = _controller.text.trim();
+    if (name.isEmpty || _isSaving) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final tag = await ref.read(roadmapRepositoryProvider).addRoadmapTag(
+            widget.roadmap.personalRoadmapId,
+            name: name,
+            color: _selectedColor,
+          );
+      setState(() {
+        _tags = [..._tags, tag];
+        _controller.clear();
+      });
+      _refreshRoadmaps();
+      if (mounted) AppSnackbar.showSuccess(context, 'Tag added');
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _deleteTag(RoadmapTagDto tag) async {
+    if (_deletingId != null) return;
+
+    setState(() => _deletingId = tag.roadmapTagId);
+    try {
+      await ref.read(roadmapRepositoryProvider).deleteRoadmapTag(
+            widget.roadmap.personalRoadmapId,
+            tag.roadmapTagId,
+          );
+      setState(() {
+        _tags = _tags
+            .where((item) => item.roadmapTagId != tag.roadmapTagId)
+            .toList();
+      });
+      _refreshRoadmaps();
+      if (mounted) AppSnackbar.showSuccess(context, 'Tag removed');
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _deletingId = null);
+    }
+  }
+
+  void _refreshRoadmaps() {
+    ref.invalidate(personalRoadmapsProvider);
+    ref.invalidate(dashboardDataProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          0,
+          16,
+          MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Manage Tags', style: AppTextStyles.titleLarge),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              Text(
+                _title(widget.roadmap),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (_tags.isEmpty)
+                Text(
+                  'No tags yet.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _tags
+                      .map(
+                        (tag) => Opacity(
+                          opacity: _deletingId == tag.roadmapTagId ? 0.5 : 1,
+                          child: _RoadmapTagChip(
+                            tag: tag,
+                            onDeleted: () => _deleteTag(tag),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: _controller,
+                maxLength: 100,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Tag name',
+                  prefixIcon: Icon(Icons.sell_outlined),
+                ),
+                onSubmitted: (_) => _addTag(),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Color',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: _tagPalette.map((color) {
+                  final selected = color == _selectedColor;
+                  return InkWell(
+                    onTap: () => setState(() => _selectedColor = color),
+                    borderRadius: BorderRadius.circular(999),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: _tagColor(color),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: selected ? AppColors.onSurface : Colors.white,
+                          width: selected ? 3 : 2,
+                        ),
+                      ),
+                      child: selected
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 18,
+                            )
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 18),
+              AppButton(
+                label: _isSaving ? 'Adding...' : 'Add Tag',
+                leadingIcon: const Icon(Icons.sell_outlined),
+                onPressed: _isSaving ? null : _addTag,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RoadmapListSkeleton extends StatelessWidget {
   const _RoadmapListSkeleton();
 
@@ -1914,12 +2264,13 @@ enum _RoadmapFilter {
   final String label;
 }
 
-enum _RoadmapSortKey { name, progress, createdAt }
+enum _RoadmapSortKey { name, progress, tag, createdAt }
 
 enum _RoadmapSort {
   createdNewest('Date Added: Newest', _RoadmapSortKey.createdAt, true),
   createdOldest('Date Added: Oldest', _RoadmapSortKey.createdAt, false),
   nameAsc('Name: A-Z', _RoadmapSortKey.name, false),
+  tagAsc('Tag: A-Z', _RoadmapSortKey.tag, false),
   progressDesc('Progress: High-Low', _RoadmapSortKey.progress, true),
   progressAsc('Progress: Low-High', _RoadmapSortKey.progress, false);
 
@@ -1931,6 +2282,34 @@ enum _RoadmapSort {
 
 String _title(PersonalRoadmapDto roadmap) =>
     roadmap.careerRoadmap?.name ?? 'Personal Roadmap';
+
+String _firstTag(PersonalRoadmapDto roadmap) {
+  if (roadmap.tags.isEmpty) return 'zzzz';
+  final tags = roadmap.tags.map((tag) => tag.name.toLowerCase()).toList()
+    ..sort();
+  return tags.first;
+}
+
+const _tagPalette = [
+  '#6366f1',
+  '#8b5cf6',
+  '#ec4899',
+  '#f43f5e',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#14b8a6',
+  '#3b82f6',
+  '#64748b',
+];
+
+Color? _tagColor(String? value) {
+  final normalized = value?.trim().replaceFirst('#', '');
+  if (normalized == null || normalized.length != 6) return null;
+  final colorValue = int.tryParse(normalized, radix: 16);
+  if (colorValue == null) return null;
+  return Color(0xFF000000 | colorValue);
+}
 
 String _dateLabel(String value) {
   final parsed = DateTime.tryParse(value);
