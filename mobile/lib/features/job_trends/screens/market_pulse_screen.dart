@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,44 +5,16 @@ import 'package:intl/intl.dart';
 import '../../../core/models/job_trend_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/linear_progress_bar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../providers/market_pulse_provider.dart';
 
-enum _TrendSort { scoreDesc, scoreAsc, nameAsc, dateDesc }
-
-class MarketPulseScreen extends ConsumerStatefulWidget {
+class MarketPulseScreen extends ConsumerWidget {
   const MarketPulseScreen({super.key});
 
   @override
-  ConsumerState<MarketPulseScreen> createState() => _MarketPulseScreenState();
-}
-
-class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
-  final _searchController = TextEditingController();
-  Timer? _debounce;
-  String _query = '';
-  _TrendSort _sort = _TrendSort.scoreDesc;
-  String _sourceFilter = '';
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _query = value.trim().toLowerCase());
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final market = ref.watch(marketPulseProvider);
 
     return Scaffold(
@@ -62,28 +32,9 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
         ),
         data: (data) {
           final region = ref.watch(selectedMarketRegionProvider);
-          final sources = data.regionalTrends
-              .map((trend) => trend.source)
-              .whereType<String>()
-              .where((source) => source.isNotEmpty)
-              .toSet()
-              .toList()
-            ..sort();
-          final selectedSource =
-              sources.contains(_sourceFilter) ? _sourceFilter : '';
-          final sourceFiltered = selectedSource.isEmpty
-              ? data.regionalTrends
-              : data.regionalTrends
-                  .where((trend) => trend.source == selectedSource)
-                  .toList();
-          final list = _sorted(_filtered(sourceFiltered));
-          final topChartSkills = _query.isEmpty
-              ? data.topSkills
-              : data.topSkills
-                  .where(
-                    (trend) => trend.techSkill.toLowerCase().contains(_query),
-                  )
-                  .toList();
+          final demand = _buildDemandRows(data.regionalTrends);
+          final movers = _buildMarketMovers(data.regionalTrends);
+          final sourceCoverage = _buildSourceCoverage(data.regionalTrends);
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(marketPulseProvider);
@@ -103,37 +54,13 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
                 const SizedBox(height: 16),
                 const _RegionChips(),
                 const SizedBox(height: 16),
-                _TopTrendingSection(
-                  trends: topChartSkills.take(10).toList(),
-                  region: region,
-                ),
+                _SkillDemandSection(rows: demand, region: region),
+                const SizedBox(height: 16),
+                _MarketMoversSection(rows: movers),
                 const SizedBox(height: 16),
                 _TrendAreaSection(trends: data.regionalTrends, region: region),
                 const SizedBox(height: 16),
-                _SearchSortToolbar(
-                  controller: _searchController,
-                  sort: _sort,
-                  sources: sources,
-                  selectedSource: selectedSource,
-                  onSearchChanged: _onSearchChanged,
-                  onSortChanged: (value) => setState(() => _sort = value),
-                  onSourceChanged: (value) =>
-                      setState(() => _sourceFilter = value),
-                ),
-                const SizedBox(height: 12),
-                if (list.isEmpty)
-                  EmptyStateView(
-                    icon: Icons.search_off,
-                    title: 'No matching trends',
-                    subtitle: 'Try a different search or region.',
-                    actionLabel: 'Clear Search',
-                    onAction: () {
-                      _searchController.clear();
-                      setState(() => _query = '');
-                    },
-                  )
-                else
-                  ...list.map((trend) => TrendSkillCard(trend: trend)),
+                _SourceCoverageSection(sources: sourceCoverage),
               ],
             ),
           );
@@ -141,31 +68,12 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
       ),
     );
   }
-
-  List<JobTrendDto> _filtered(List<JobTrendDto> trends) {
-    if (_query.isEmpty) return [...trends];
-    return trends
-        .where((trend) => trend.techSkill.toLowerCase().contains(_query))
-        .toList();
-  }
-
-  List<JobTrendDto> _sorted(List<JobTrendDto> trends) {
-    return trends
-      ..sort((a, b) {
-        return switch (_sort) {
-          _TrendSort.scoreDesc => b.trendScore.compareTo(a.trendScore),
-          _TrendSort.scoreAsc => a.trendScore.compareTo(b.trendScore),
-          _TrendSort.nameAsc => a.techSkill.compareTo(b.techSkill),
-          _TrendSort.dateDesc => b.snapshotDate.compareTo(a.snapshotDate),
-        };
-      });
-  }
 }
 
 class _RegionChips extends ConsumerWidget {
   const _RegionChips();
 
-  static const regions = ['Global', 'Vietnam'];
+  static const regions = ['Vietnam', 'Singapore', 'Thailand', 'Global'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -203,18 +111,20 @@ class _RegionChips extends ConsumerWidget {
   }
 }
 
-class _TopTrendingSection extends StatelessWidget {
-  const _TopTrendingSection({required this.trends, required this.region});
+class _SkillDemandSection extends StatelessWidget {
+  const _SkillDemandSection({required this.rows, required this.region});
 
-  final List<JobTrendDto> trends;
+  final List<_DemandRow> rows;
   final String region;
 
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
-      title: 'Top Trending Skills',
+      title: 'Skill Demand Landscape',
       subtitle: region,
-      child: trends.isEmpty
+      description:
+          'Relative index: the strongest skill in the current filter is 100.',
+      child: rows.isEmpty
           ? Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: Center(
@@ -226,85 +136,178 @@ class _TopTrendingSection extends StatelessWidget {
                 ),
               ),
             )
-          : SizedBox(
-              height: 280,
-              child: BarChart(
-                BarChartData(
-                  maxY: 100,
-                  alignment: BarChartAlignment.spaceAround,
-                  gridData: FlGridData(
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) => const FlLine(
-                      color: AppColors.outlineVariant,
-                      strokeWidth: 1,
-                      dashArray: [3, 3],
+          : Column(
+              children: rows
+                  .map(
+                    (row) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _DemandBar(row: row),
                     ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    topTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 36,
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 54,
-                        getTitlesWidget: (value, meta) {
-                          final index = value.toInt();
-                          if (index < 0 || index >= trends.length) {
-                            return const SizedBox.shrink();
-                          }
-                          return SideTitleWidget(
-                            axisSide: meta.axisSide,
-                            angle: -0.72,
-                            child: SizedBox(
-                              width: 74,
-                              child: Text(
-                                trends[index].techSkill,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.labelSmall,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  barGroups: [
-                    for (var i = 0; i < trends.length; i++)
-                      BarChartGroupData(
-                        x: i,
-                        barRods: [
-                          BarChartRodData(
-                            toY: trends[i].trendScore,
-                            width: 18,
-                            borderRadius: BorderRadius.circular(4),
-                            color: _skillColor(trends[i].techSkill).accent,
-                          ),
-                        ],
-                      ),
-                  ],
-                  barTouchData: BarTouchData(
-                    touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => AppColors.surface,
-                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                        final trend = trends[group.x.toInt()];
-                        return BarTooltipItem(
-                          '${trend.techSkill}\nScore: ${rod.toY.round()}',
-                          AppTextStyles.labelSmall,
-                        );
-                      },
-                    ),
+                  )
+                  .toList(),
+            ),
+    );
+  }
+}
+
+class _DemandBar extends StatelessWidget {
+  const _DemandBar({required this.row});
+
+  final _DemandRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _skillColor(row.skill).accent;
+    return Row(
+      children: [
+        SizedBox(
+          width: 92,
+          child: Text(
+            row.skill,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: AppTextStyles.labelSmall,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  minHeight: 22,
+                  value: row.relativeScore / 100,
+                  color: color,
+                  backgroundColor: AppColors.surfaceContainer,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Raw avg: ${row.rawAverage.round()} from ${row.recordCount} record${row.recordCount == 1 ? '' : 's'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 32,
+          child: Text(
+            row.relativeScore.round().toString(),
+            textAlign: TextAlign.right,
+            style: AppTextStyles.labelSmall.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MarketMoversSection extends StatelessWidget {
+  const _MarketMoversSection({required this.rows});
+
+  final List<_MarketMoverRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      title: 'Market Movers',
+      description:
+          'Ranked skills with latest movement from the previous snapshot.',
+      child: rows.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'No market movement available yet.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
                   ),
                 ),
               ),
+            )
+          : Column(
+              children: [
+                for (var i = 0; i < rows.length; i++)
+                  _MoverRow(index: i + 1, row: rows[i]),
+              ],
             ),
+    );
+  }
+}
+
+class _MoverRow extends StatelessWidget {
+  const _MoverRow({required this.index, required this.row});
+
+  final int index;
+  final _MarketMoverRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _skillColor(row.skill).accent;
+    final positive = row.delta >= 0;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            child: Text(index.toString(), style: AppTextStyles.labelMedium),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        row.skill,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.labelLarge,
+                      ),
+                    ),
+                    Text(
+                      row.score.round().toString(),
+                      style: AppTextStyles.labelMedium.copyWith(color: color),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                LinearProgressBar(
+                  value: (row.relativeScore / 100).clamp(0, 1),
+                  height: 5,
+                  color: color,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: positive
+                  ? AppColors.successContainer
+                  : const Color(0xFFFCE8E6),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '${positive ? '+' : ''}${row.delta.round()}',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: positive ? AppColors.success : const Color(0xFFD93025),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -319,7 +322,7 @@ class _TrendAreaSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final history = _buildTrendHistory(trends);
     return _SectionCard(
-      title: 'Trend Over Time',
+      title: 'Momentum Timeline',
       subtitle: region,
       child: history.points.length < 2
           ? Padding(
@@ -407,150 +410,98 @@ class _TrendAreaSection extends StatelessWidget {
   }
 }
 
-class _SearchSortToolbar extends StatelessWidget {
-  const _SearchSortToolbar({
-    required this.controller,
-    required this.sort,
-    required this.sources,
-    required this.selectedSource,
-    required this.onSearchChanged,
-    required this.onSortChanged,
-    required this.onSourceChanged,
-  });
+class _SourceCoverageSection extends StatelessWidget {
+  const _SourceCoverageSection({required this.sources});
 
-  final TextEditingController controller;
-  final _TrendSort sort;
-  final List<String> sources;
-  final String selectedSource;
-  final ValueChanged<String> onSearchChanged;
-  final ValueChanged<_TrendSort> onSortChanged;
-  final ValueChanged<String> onSourceChanged;
+  final List<_SourceCoverageRow> sources;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: MediaQuery.sizeOf(context).width - 32,
-          child: AppTextField(
-            controller: controller,
-            label: 'Search skills',
-            prefixIcon: const Icon(Icons.search),
-            onChanged: onSearchChanged,
-          ),
-        ),
-        DropdownButton<_TrendSort>(
-          value: sort,
-          onChanged: (value) {
-            if (value != null) onSortChanged(value);
-          },
-          items: const [
-            DropdownMenuItem(
-              value: _TrendSort.scoreDesc,
-              child: Text('Score ↓'),
-            ),
-            DropdownMenuItem(
-                value: _TrendSort.scoreAsc, child: Text('Score ↑')),
-            DropdownMenuItem(
-                value: _TrendSort.nameAsc, child: Text('Name A-Z')),
-            DropdownMenuItem(value: _TrendSort.dateDesc, child: Text('Date ↓')),
-          ],
-        ),
-        if (sources.isNotEmpty)
-          DropdownButton<String>(
-            value: selectedSource,
-            onChanged: (value) {
-              if (value != null) onSourceChanged(value);
-            },
-            items: [
-              const DropdownMenuItem(value: '', child: Text('All Sources')),
-              ...sources.map(
-                (source) => DropdownMenuItem(
-                  value: source,
-                  child: Text(source),
+    final total = sources.fold<int>(0, (sum, source) => sum + source.count);
+    return _SectionCard(
+      title: 'Source Coverage',
+      description: 'How much each source contributes to this market view.',
+      child: sources.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'No source coverage available.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
               ),
-            ],
-          ),
-      ],
-    );
-  }
-}
-
-class TrendSkillCard extends StatelessWidget {
-  const TrendSkillCard({super.key, required this.trend});
-
-  final JobTrendDto trend;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = _skillColor(trend.techSkill);
-    final date = DateTime.tryParse(trend.snapshotDate);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                  child:
-                      Text(trend.techSkill, style: AppTextStyles.titleSmall)),
-              Text(
-                trend.trendScore.round().toString(),
-                style: AppTextStyles.displayMedium.copyWith(color: colors.text),
-              ),
-              Text(
-                '/100',
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.onSurfaceVariant,
+            )
+          : Column(
+              children: [
+                SizedBox(
+                  height: 190,
+                  child: PieChart(
+                    PieChartData(
+                      centerSpaceRadius: 42,
+                      sectionsSpace: 3,
+                      sections: [
+                        for (var i = 0; i < sources.length; i++)
+                          PieChartSectionData(
+                            value: sources[i].count.toDouble(),
+                            color: _sourceColors[i % _sourceColors.length],
+                            showTitle: false,
+                            radius: 42,
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            children: [
-              _Badge(label: trend.region ?? 'Global'),
-              _Badge(label: trend.source ?? 'Market', monospace: true),
-            ],
-          ),
-          const SizedBox(height: 12),
-          LinearProgressBar(
-            value: (trend.trendScore / 100).clamp(0, 1),
-            color: colors.accent,
-          ),
-          if (date != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Snapshot ${DateFormat.yMMMd().format(date)}',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.onSurfaceVariant,
-              ),
+                const SizedBox(height: 8),
+                for (var i = 0; i < sources.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: _sourceColors[i % _sourceColors.length],
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            sources[i].source,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.bodySmall,
+                          ),
+                        ),
+                        Text(
+                          total == 0
+                              ? '0'
+                              : '${sources[i].count} (${(sources[i].count / total * 100).round()}%)',
+                          style: AppTextStyles.labelMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.child, this.subtitle});
+  const _SectionCard({
+    required this.title,
+    required this.child,
+    this.subtitle,
+    this.description,
+  });
 
   final String title;
   final String? subtitle;
+  final String? description;
   final Widget child;
 
   @override
@@ -575,6 +526,15 @@ class _SectionCard extends StatelessWidget {
               ),
             ),
           ],
+          if (description != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              description!,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           child,
         ],
@@ -583,29 +543,39 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label, this.monospace = false});
+class _DemandRow {
+  const _DemandRow({
+    required this.skill,
+    required this.rawAverage,
+    required this.relativeScore,
+    required this.recordCount,
+  });
 
-  final String label;
-  final bool monospace;
+  final String skill;
+  final double rawAverage;
+  final double relativeScore;
+  final int recordCount;
+}
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.onSurfaceVariant,
-          fontFamily: monospace ? 'monospace' : null,
-        ),
-      ),
-    );
-  }
+class _MarketMoverRow {
+  const _MarketMoverRow({
+    required this.skill,
+    required this.score,
+    required this.relativeScore,
+    required this.delta,
+  });
+
+  final String skill;
+  final double score;
+  final double relativeScore;
+  final double delta;
+}
+
+class _SourceCoverageRow {
+  const _SourceCoverageRow({required this.source, required this.count});
+
+  final String source;
+  final int count;
 }
 
 class _TrendHistoryPoint {
@@ -613,6 +583,104 @@ class _TrendHistoryPoint {
 
   final String date;
   final Map<String, double> scores;
+}
+
+List<_DemandRow> _buildDemandRows(List<JobTrendDto> trends) {
+  final bySkill = <String, List<JobTrendDto>>{};
+  for (final trend in trends) {
+    if (trend.techSkill.trim().isEmpty) continue;
+    (bySkill[trend.techSkill] ??= []).add(trend);
+  }
+
+  final rawRows = bySkill.entries.map((entry) {
+    final average = entry.value.fold<double>(
+          0,
+          (sum, trend) => sum + trend.trendScore,
+        ) /
+        entry.value.length;
+    return _DemandRow(
+      skill: entry.key,
+      rawAverage: average,
+      relativeScore: average,
+      recordCount: entry.value.length,
+    );
+  }).toList()
+    ..sort((a, b) => b.rawAverage.compareTo(a.rawAverage));
+
+  final maxScore = rawRows.isEmpty ? 0 : rawRows.first.rawAverage;
+  if (maxScore <= 0) return rawRows.take(10).toList();
+
+  return rawRows
+      .take(10)
+      .map(
+        (row) => _DemandRow(
+          skill: row.skill,
+          rawAverage: row.rawAverage,
+          relativeScore: row.rawAverage / maxScore * 100,
+          recordCount: row.recordCount,
+        ),
+      )
+      .toList();
+}
+
+List<_MarketMoverRow> _buildMarketMovers(List<JobTrendDto> trends) {
+  final demandRows = _buildDemandRows(trends);
+  final relativeBySkill = {
+    for (final row in demandRows) row.skill: row.relativeScore,
+  };
+  final bySkill = <String, List<JobTrendDto>>{};
+  for (final trend in trends) {
+    if (trend.techSkill.trim().isEmpty) continue;
+    (bySkill[trend.techSkill] ??= []).add(trend);
+  }
+
+  final rows = <_MarketMoverRow>[];
+  for (final entry in bySkill.entries) {
+    final byDate = <String, List<JobTrendDto>>{};
+    for (final trend in entry.value) {
+      final dateKey = trend.snapshotDate.split('T').first;
+      (byDate[dateKey] ??= []).add(trend);
+    }
+    final dates = byDate.keys.toList()..sort();
+    if (dates.isEmpty) continue;
+
+    double averageFor(String date) =>
+        byDate[date]!.fold<double>(
+          0,
+          (sum, trend) => sum + trend.trendScore,
+        ) /
+        byDate[date]!.length;
+
+    final latest = averageFor(dates.last);
+    final previous =
+        dates.length < 2 ? latest : averageFor(dates[dates.length - 2]);
+    rows.add(
+      _MarketMoverRow(
+        skill: entry.key,
+        score: latest,
+        relativeScore: relativeBySkill[entry.key] ?? latest,
+        delta: latest - previous,
+      ),
+    );
+  }
+
+  rows.sort((a, b) => b.score.compareTo(a.score));
+  return rows.take(6).toList();
+}
+
+List<_SourceCoverageRow> _buildSourceCoverage(List<JobTrendDto> trends) {
+  final counts = <String, int>{};
+  for (final trend in trends) {
+    final source = (trend.source == null || trend.source!.trim().isEmpty)
+        ? 'Market'
+        : trend.source!.trim();
+    counts[source] = (counts[source] ?? 0) + 1;
+  }
+  final rows = counts.entries
+      .map((entry) => _SourceCoverageRow(source: entry.key, count: entry.value))
+      .toList()
+    ..sort((a, b) => b.count.compareTo(a.count));
+  return rows;
 }
 
 ({List<String> skills, List<_TrendHistoryPoint> points}) _buildTrendHistory(
@@ -636,7 +704,7 @@ class _TrendHistoryPoint {
 
   final topSkills = latestScores.entries.toList()
     ..sort((a, b) => b.value.compareTo(a.value));
-  final skills = topSkills.take(3).map((entry) => entry.key).toList();
+  final skills = topSkills.take(6).map((entry) => entry.key).toList();
   final byDate = <String, Map<String, double>>{};
   for (final trend in trends) {
     if (!skills.contains(trend.techSkill)) continue;
@@ -679,6 +747,42 @@ class _TrendHistoryPoint {
       text: const Color(0xFF8A5A00),
       accent: const Color(0xFFFBBC04),
     ),
+    (
+      background: const Color(0xFFFCE8E6),
+      border: const Color(0xFFF4B8B2),
+      text: const Color(0xFFD93025),
+      accent: const Color(0xFFD93025),
+    ),
+    (
+      background: const Color(0xFFE6F7F3),
+      border: const Color(0xFF9AD6CB),
+      text: const Color(0xFF008577),
+      accent: const Color(0xFF008577),
+    ),
+    (
+      background: const Color(0xFFEAF2D7),
+      border: const Color(0xFFC4DCA0),
+      text: const Color(0xFF689F38),
+      accent: const Color(0xFF689F38),
+    ),
+    (
+      background: const Color(0xFFFFEBDD),
+      border: const Color(0xFFFFBE8A),
+      text: const Color(0xFFF57C00),
+      accent: const Color(0xFFF57C00),
+    ),
+    (
+      background: const Color(0xFFEDE7F6),
+      border: const Color(0xFFC7B2E8),
+      text: const Color(0xFF5E35B1),
+      accent: const Color(0xFF5E35B1),
+    ),
+    (
+      background: const Color(0xFFFCE4EC),
+      border: const Color(0xFFF4A7C4),
+      text: const Color(0xFFD81B60),
+      accent: const Color(0xFFD81B60),
+    ),
   ];
   final hash = label.codeUnits.fold<int>(0, (sum, code) => sum + code);
   return palettes[hash.abs() % palettes.length];
@@ -704,5 +808,16 @@ class _MarketSkeleton extends StatelessWidget {
 const _areaSeriesColors = [
   (stroke: Color(0xFF1A73E8), fill: Color(0xFFE8F0FE)),
   (stroke: Color(0xFF34A853), fill: Color(0xFFE6F4EA)),
+  (stroke: Color(0xFFF57C00), fill: Color(0xFFFFEBDD)),
+  (stroke: Color(0xFFD93025), fill: Color(0xFFFCE8E6)),
+  (stroke: Color(0xFF008577), fill: Color(0xFFE6F7F3)),
   (stroke: Color(0xFF7B1FA2), fill: Color(0xFFF3E8FD)),
+];
+
+const _sourceColors = [
+  Color(0xFF689F38),
+  Color(0xFF9334E6),
+  Color(0xFFF57C00),
+  Color(0xFF1A73E8),
+  Color(0xFFD93025),
 ];
