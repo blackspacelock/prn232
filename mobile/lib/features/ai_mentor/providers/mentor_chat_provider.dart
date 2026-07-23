@@ -70,6 +70,24 @@ class MentorChatNotifier extends FamilyAsyncNotifier<ChatState, String?> {
     );
   }
 
+  Future<bool> deleteSession(String sessionId) async {
+    final previous = state.valueOrNull;
+    if (previous == null) return false;
+
+    await ref.read(chatRepositoryProvider).deleteSession(sessionId);
+    final activeDeleted = previous.activeSession?.chatSessionId == sessionId;
+    state = AsyncData(
+      previous.copyWith(
+        sessions: previous.sessions
+            .where((session) => session.chatSessionId != sessionId)
+            .toList(),
+        clearActiveSession: activeDeleted,
+        isSending: false,
+      ),
+    );
+    return activeDeleted;
+  }
+
   Future<void> sendMessage(String content) async {
     final current = state.valueOrNull;
     final active = current?.activeSession;

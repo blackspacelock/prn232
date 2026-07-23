@@ -38,6 +38,16 @@ public class ChatController : ControllerBase
         return Ok(result.Data);
     }
 
+    [HttpDelete("sessions/{sessionId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteSession(Guid sessionId)
+    {
+        var result = await _chatService.DeleteSessionAsync(sessionId);
+        if (!result.Success) return NotFound(result.Error);
+        return Ok();
+    }
+
     [HttpPost("sessions/{sessionId:guid}/messages")]
     [ProducesResponseType(typeof(SendMessageResultDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

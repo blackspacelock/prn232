@@ -100,9 +100,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (value == 'rename' && active != null) {
                 _showRenameDialog(active);
               }
+              if (value == 'delete' && active != null) {
+                _deleteSession(active);
+              }
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'rename', child: Text('Rename')),
+              PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
         ],
@@ -178,6 +182,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           rootContext.go('/mentor/${session.chatSessionId}');
         },
         onRename: _showRenameDialog,
+        onDelete: (session) async {
+          final activeDeleted =
+              await _deleteSession(session, navigateOnActive: false);
+          if (!sheetContext.mounted) return;
+          Navigator.of(sheetContext).pop();
+          if (activeDeleted && rootContext.mounted) {
+            rootContext.go('/mentor');
+          }
+        },
       ),
     );
   }
@@ -194,6 +207,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .renameSession(session.chatSessionId, title);
     } catch (error) {
       if (mounted) AppSnackbar.showError(context, error.toString());
+    }
+  }
+
+  Future<bool> _deleteSession(
+    ChatSessionDto session, {
+    bool navigateOnActive = true,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete session'),
+        content: Text(
+            'Delete "${session.title}"? This chat history will be removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return false;
+
+    try {
+      final activeDeleted = await ref
+          .read(mentorChatProvider(widget.sessionId).notifier)
+          .deleteSession(session.chatSessionId);
+      if (!mounted) return activeDeleted;
+      AppSnackbar.showSuccess(context, 'Session deleted');
+      if (activeDeleted && navigateOnActive) {
+        context.go('/mentor');
+      }
+      return activeDeleted;
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+      return false;
     }
   }
 }
@@ -257,12 +314,14 @@ class _SessionsSheet extends StatelessWidget {
     required this.onNewChat,
     required this.onSelect,
     required this.onRename,
+    required this.onDelete,
   });
 
   final ChatState state;
   final VoidCallback onNewChat;
   final ValueChanged<ChatSessionDto> onSelect;
   final ValueChanged<ChatSessionDto> onRename;
+  final ValueChanged<ChatSessionDto> onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -294,6 +353,22 @@ class _SessionsSheet extends StatelessWidget {
                 ),
                 subtitle: Text(_dateLabel(session.createdAt)),
                 leading: const Icon(Icons.chat_bubble_outline),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Rename',
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => onRename(session),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete',
+                      icon: const Icon(Icons.delete_outline),
+                      color: AppColors.error,
+                      onPressed: () => onDelete(session),
+                    ),
+                  ],
+                ),
                 onTap: () => onSelect(session),
                 onLongPress: () => onRename(session),
               );

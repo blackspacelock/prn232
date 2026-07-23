@@ -4,7 +4,7 @@ import { ActionButton } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import { LinearProgress } from '../components/LinearProgress';
-import { Check, Pencil, Plus, Send, Sparkles, X } from 'lucide-react';
+import { Check, Pencil, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -58,7 +58,9 @@ export function MentorPage() {
   });
 
   const sessions: ChatSession[] = (sessionsData as { chatSessionsByProfile?: ChatSession[] })?.chatSessionsByProfile ?? [];
-  const activeSession = (messagesData as { chatSessionWithMessages?: { title?: string; messages?: ChatMessage[] } })?.chatSessionWithMessages;
+  const activeSession = activeSessionId
+    ? (messagesData as { chatSessionWithMessages?: { title?: string; messages?: ChatMessage[] } })?.chatSessionWithMessages
+    : undefined;
   const messages: ChatMessage[] = useMemo(() => activeSession?.messages ?? [], [activeSession]);
 
   // Keep header title in sync with active session
@@ -105,6 +107,29 @@ export function MentorPage() {
       setSnackbar({
         open: true,
         message: getApiErrorMessage(error, 'Failed to rename session.'),
+        variant: 'error',
+      });
+    },
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: (sessionId: string) =>
+      apiClient.delete(`/api/chat/sessions/${sessionId}`),
+    onSuccess: async (_data, sessionId) => {
+      await refetchSessions();
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(null);
+        setPendingUserMessage(null);
+        setMessage('');
+      }
+      if (editingSessionId === sessionId) setEditingSessionId(null);
+      setIsEditingHeader(false);
+      setSnackbar({ open: true, message: 'Session deleted.', variant: 'success' });
+    },
+    onError: (error: unknown) => {
+      setSnackbar({
+        open: true,
+        message: getApiErrorMessage(error, 'Failed to delete session.'),
         variant: 'error',
       });
     },
@@ -188,6 +213,11 @@ export function MentorPage() {
     renameSessionMutation.mutate({ sessionId: activeSessionId, title: trimmed });
   };
 
+  const handleDeleteSession = (session: ChatSession) => {
+    if (!window.confirm(`Delete "${session.title}"? This chat history will be removed.`)) return;
+    deleteSessionMutation.mutate(session.id);
+  };
+
   return (
     <AppShell breadcrumb="AI Mentor" className="app-main--flush">
       <div className="flex h-[calc(100vh-64px)]">
@@ -238,7 +268,7 @@ export function MentorPage() {
                   <div key={session.id} className="group relative flex items-center">
                     <button
                       onClick={() => handleSelectSession(session.id)}
-                      className={`flex-1 min-w-0 p-3 pr-9 rounded-lg text-left transition-colors ${activeSessionId === session.id ? 'bg-[var(--md3-primary-container)]' : 'hover:bg-[var(--md3-surface-variant)]'}`}
+                      className={`flex-1 min-w-0 p-3 pr-16 rounded-lg text-left transition-colors ${activeSessionId === session.id ? 'bg-[var(--md3-primary-container)]' : 'hover:bg-[var(--md3-surface-variant)]'}`}
                     >
                       <div className="flex items-start gap-2">
                         <Sparkles className={`w-5 h-5 shrink-0 mt-0.5 ${activeSessionId === session.id ? 'text-[var(--md3-primary)]' : 'text-[var(--md3-on-surface-variant)]'}`} />
@@ -251,6 +281,17 @@ export function MentorPage() {
                       aria-label={`Rename "${session.title}"`}
                     >
                       <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSession(session);
+                      }}
+                      disabled={deleteSessionMutation.isPending}
+                      className="absolute right-8 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-600 transition-opacity disabled:opacity-40"
+                      aria-label={`Delete "${session.title}"`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 )
@@ -296,13 +337,26 @@ export function MentorPage() {
                   {activeSessionTitle || 'Select or create a session'}
                 </h3>
                 {activeSessionId && (
-                  <button
-                    onClick={startHeaderEdit}
-                    className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)] transition-colors"
-                    aria-label="Rename session"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
+                  <>
+                    <button
+                      onClick={startHeaderEdit}
+                      className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)] transition-colors"
+                      aria-label="Rename session"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const session = sessions.find((item) => item.id === activeSessionId);
+                        if (session) handleDeleteSession(session);
+                      }}
+                      disabled={deleteSessionMutation.isPending}
+                      className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-red-50 text-red-600 transition-colors disabled:opacity-40"
+                      aria-label="Delete session"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
                 )}
               </>
             )}

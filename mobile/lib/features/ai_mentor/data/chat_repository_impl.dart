@@ -115,6 +115,15 @@ class ChatRepositoryImpl implements ChatRepository {
     }
   }
 
+  @override
+  Future<void> deleteSession(String sessionId) async {
+    try {
+      await _dio.delete('${ApiConstants.chatSessions}/$sessionId');
+    } on DioException catch (error) {
+      _throwMapped(error);
+    }
+  }
+
   Never _throwMapped(DioException error) {
     final status = error.response?.statusCode;
     final data = error.response?.data;
