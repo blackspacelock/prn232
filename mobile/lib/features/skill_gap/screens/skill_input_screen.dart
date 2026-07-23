@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/profile_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_text_field.dart';
@@ -76,7 +77,10 @@ class _SkillInputScreenState extends ConsumerState<SkillInputScreen> {
     final skills = ref.watch(skillInputProvider);
     final technicalSkills = ref.watch(technicalSkillsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Your Skills')),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('Your Skills'),
+      ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: AppButton(

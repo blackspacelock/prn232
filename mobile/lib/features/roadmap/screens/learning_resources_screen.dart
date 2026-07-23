@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -38,7 +39,10 @@ class _LearningResourcesScreenState
     final nodeName = _nodeNameFromRoadmap(roadmap.valueOrNull);
 
     return Scaffold(
-      appBar: AppBar(title: Text(nodeName)),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: Text(nodeName),
+      ),
       body: resources.when(
         loading: () => const _ResourcesSkeleton(),
         error: (error, _) => EmptyStateView(

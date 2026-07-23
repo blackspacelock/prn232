@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/career_role_card.dart';
@@ -46,7 +47,10 @@ class _SkillGapSelectionScreenState
     final selected = ref.watch(selectedCareerRoleProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Skill Gap Analysis')),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('Skill Gap Analysis'),
+      ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: AppButton(

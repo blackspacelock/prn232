@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/chat_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_text_field.dart';
@@ -64,12 +65,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: state == null ? null : () => _showSessionsSheet(state),
-        ),
+        leading: const AppBackButton(),
         title: Text(active?.title ?? 'AI Mentor'),
         actions: [
+          IconButton(
+            tooltip: 'Sessions',
+            icon: const Icon(Icons.menu),
+            onPressed: state == null ? null : () => _showSessionsSheet(state),
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: state == null

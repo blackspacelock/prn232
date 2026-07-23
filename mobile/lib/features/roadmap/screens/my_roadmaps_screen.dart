@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -39,6 +40,7 @@ class _MyRoadmapsScreenState extends ConsumerState<MyRoadmapsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: const Text('My Roadmaps'),
         actions: [
           IconButton(

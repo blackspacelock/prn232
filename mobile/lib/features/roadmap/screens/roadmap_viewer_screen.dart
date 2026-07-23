@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_text_field.dart';
@@ -30,13 +31,9 @@ class RoadmapViewerScreen extends ConsumerWidget {
         loading: () => const _RoadmapSkeleton(),
         error: (error, _) => CustomScrollView(
           slivers: [
-            SliverAppBar(
-              title: const Text('Roadmap'),
-              leading: IconButton(
-                tooltip: 'Back',
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => _backToRoadmaps(context),
-              ),
+            const SliverAppBar(
+              title: Text('Roadmap'),
+              leading: AppBackButton(fallbackLocation: '/roadmaps'),
             ),
             SliverFillRemaining(
               child: EmptyStateView(
@@ -67,11 +64,7 @@ class RoadmapViewerScreen extends ConsumerWidget {
               SliverAppBar(
                 pinned: true,
                 expandedHeight: 210,
-                leading: IconButton(
-                  tooltip: 'Back',
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => _backToRoadmaps(context),
-                ),
+                leading: const AppBackButton(fallbackLocation: '/roadmaps'),
                 title: Text(data.careerRoadmap?.name ?? 'Roadmap'),
                 flexibleSpace: FlexibleSpaceBar(
                   background: _RoadmapHeader(
@@ -113,14 +106,6 @@ class RoadmapViewerScreen extends ConsumerWidget {
         },
       ),
     );
-  }
-
-  void _backToRoadmaps(BuildContext context) {
-    if (context.canPop()) {
-      context.pop();
-      return;
-    }
-    context.go('/roadmaps');
   }
 
   void _showNodeSheet(
@@ -1125,19 +1110,9 @@ class _RoadmapSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        SliverAppBar(
-          title: const Text('Roadmap'),
-          leading: IconButton(
-            tooltip: 'Back',
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-                return;
-              }
-              context.go('/roadmaps');
-            },
-          ),
+        const SliverAppBar(
+          title: Text('Roadmap'),
+          leading: AppBackButton(fallbackLocation: '/roadmaps'),
         ),
         SliverList.list(
           children: const [

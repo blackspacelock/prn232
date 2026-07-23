@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../data/google_sign_in_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_text_field.dart';
@@ -78,6 +79,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        leading: const AppBackButton(fallbackLocation: '/'),
+        title: const Text('Login'),
+      ),
       body: Column(
         children: [
           Expanded(

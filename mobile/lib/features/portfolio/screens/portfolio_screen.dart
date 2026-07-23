@@ -8,6 +8,7 @@ import '../../../core/models/portfolio_models.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/app_text_field.dart';
@@ -41,6 +42,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: const Text('E-Portfolio'),
         actions: [
           IconButton(
@@ -86,9 +88,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
   }
 
   void _sharePortfolio() {
-    Share.share(
-      'Check out my SECompass portfolio: ${_publicPortfolioUrl()}',
-    );
+    final url = _publicPortfolioUrl();
+    Share.share('Check out my SECompass portfolio: $url');
   }
 
   Future<void> _viewPublicPortfolio() => _openUrl(_publicPortfolioUrl());
