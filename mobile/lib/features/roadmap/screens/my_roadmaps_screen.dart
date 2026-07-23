@@ -491,13 +491,12 @@ class _RoadmapGenerationSheetState
                       SizedBox(
                         height: 192,
                         child: roles.when(
-                          loading: () => const Column(
-                            children: [
-                              SkeletonCard(height: 44),
-                              SizedBox(height: 8),
-                              SkeletonCard(height: 44),
-                              SizedBox(height: 8),
-                              SkeletonCard(height: 44),
+                          loading: () => ListView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: const [
+                              SkeletonCard(height: 40),
+                              SkeletonCard(height: 40),
+                              SkeletonCard(height: 40),
                             ],
                           ),
                           error: (error, _) => EmptyStateView(
@@ -548,10 +547,10 @@ class _RoadmapGenerationSheetState
                         const SizedBox(height: 8),
                         Expanded(
                           child: roadmaps.when(
-                            loading: () => const Column(
-                              children: [
+                            loading: () => ListView(
+                              physics: const NeverScrollableScrollPhysics(),
+                              children: const [
                                 SkeletonCard(height: 54),
-                                SizedBox(height: 8),
                                 SkeletonCard(height: 54),
                               ],
                             ),
