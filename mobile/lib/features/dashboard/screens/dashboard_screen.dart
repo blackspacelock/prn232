@@ -340,67 +340,73 @@ class _SkillGapSnapshot extends StatelessWidget {
           : InkWell(
               onTap: () => context.go('/skill-gap/select'),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
                     height: 320,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: RadarChart(
-                        RadarChartData(
-                          radarShape: RadarShape.polygon,
-                          radarBorderData: const BorderSide(
-                            color: AppColors.outlineVariant,
-                          ),
-                          tickBorderData: const BorderSide(
-                            color: AppColors.outlineVariant,
-                          ),
-                          gridBorderData: const BorderSide(
-                            color: AppColors.outlineVariant,
-                          ),
-                          tickCount: 4,
-                          ticksTextStyle: const TextStyle(
-                            color: Colors.transparent,
-                            fontSize: 0,
-                          ),
-                          titlePositionPercentageOffset: 0.12,
-                          getTitle: (index, angle) {
-                            return RadarChartTitle(
-                              text: categories[index].name,
-                              angle: angle + 90,
-                            );
-                          },
-                          titleTextStyle: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                            fontSize: 9,
-                          ),
-                          dataSets: [
-                            RadarDataSet(
-                              fillColor:
-                                  AppColors.primary.withValues(alpha: 0.22),
-                              borderColor: AppColors.primary,
-                              entryRadius: 2,
-                              dataEntries: categories
-                                  .map((category) =>
-                                      RadarEntry(value: category.current))
-                                  .toList(),
-                            ),
-                            RadarDataSet(
-                              fillColor:
-                                  AppColors.warning.withValues(alpha: 0.12),
-                              borderColor: AppColors.warning,
-                              entryRadius: 2,
-                              dataEntries: categories
-                                  .map((category) =>
-                                      RadarEntry(value: category.required))
-                                  .toList(),
-                            ),
-                          ],
+                    child: RadarChart(
+                      RadarChartData(
+                        radarShape: RadarShape.polygon,
+                        radarBorderData:
+                            const BorderSide(color: AppColors.outlineVariant),
+                        tickBorderData:
+                            const BorderSide(color: AppColors.outlineVariant),
+                        gridBorderData:
+                            const BorderSide(color: AppColors.outlineVariant),
+                        tickCount: 4,
+                        ticksTextStyle:
+                            const TextStyle(color: Colors.transparent),
+                        titlePositionPercentageOffset: 0.2,
+                        getTitle: (index, angle) {
+                          final label = categories[index].name;
+                          final displayLabel = label.length > 14
+                              ? '${label.substring(0, 12)}…'
+                              : label;
+                          return RadarChartTitle(
+                            text: displayLabel,
+                            angle: angle + 90,
+                          );
+                        },
+                        titleTextStyle: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                          fontSize: 10,
                         ),
+                        dataSets: [
+                          RadarDataSet(
+                            dataEntries: categories
+                                .map((category) =>
+                                    RadarEntry(value: category.current))
+                                .toList(),
+                            fillColor:
+                                const Color(0xFF1A73E8).withValues(alpha: 0.2),
+                            borderColor: const Color(0xFF1A73E8),
+                            borderWidth: 2,
+                          ),
+                          RadarDataSet(
+                            dataEntries: categories
+                                .map((category) =>
+                                    RadarEntry(value: category.required))
+                                .toList(),
+                            fillColor:
+                                const Color(0xFFFBBC04).withValues(alpha: 0.15),
+                            borderColor: const Color(0xFFFBBC04),
+                            borderWidth: 2,
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const _LegendRow(),
+                  const SizedBox(height: 8),
+                  const Row(
+                    children: [
+                      _LegendDot(
+                        color: Color(0xFF1A73E8),
+                        label: 'Your Skills',
+                      ),
+                      SizedBox(width: 16),
+                      _LegendDot(color: Color(0xFFFBBC04), label: 'Required'),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Tap to inspect missing skills for your active roadmap.',
@@ -412,22 +418,6 @@ class _SkillGapSnapshot extends StatelessWidget {
                 ],
               ),
             ),
-    );
-  }
-}
-
-class _LegendRow extends StatelessWidget {
-  const _LegendRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _LegendDot(color: AppColors.primary, label: 'Your Skills'),
-        SizedBox(width: 16),
-        _LegendDot(color: AppColors.warning, label: 'Required'),
-      ],
     );
   }
 }
