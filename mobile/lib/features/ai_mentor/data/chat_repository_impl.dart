@@ -111,11 +111,6 @@ class ChatRepositoryImpl implements ChatRepository {
       );
       return ChatSessionDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (error) {
-      if (error.response?.statusCode == 404) {
-        throw const ValidationException(
-          'Renaming mentor sessions is not available on this server yet.',
-        );
-      }
       _throwMapped(error);
     }
   }

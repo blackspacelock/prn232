@@ -228,6 +228,11 @@ export interface CreateChatSessionDto {
   title: string;
 }
 
+// Must match backend UpdateChatSessionDto exactly
+export interface UpdateChatSessionDto {
+  title: string;
+}
+
 export interface UpdateNodeProgressStatusDto {
   status: 0 | 1 | 2 | 3 | 4;
   note?: string;

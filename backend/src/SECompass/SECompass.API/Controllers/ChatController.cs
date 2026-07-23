@@ -22,6 +22,22 @@ public class ChatController : ControllerBase
         return CreatedAtAction(nameof(CreateSession), result.Data);
     }
 
+    [HttpPut("sessions/{sessionId:guid}")]
+    [ProducesResponseType(typeof(ChatSessionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateSession(Guid sessionId, [FromBody] UpdateChatSessionDto dto)
+    {
+        var result = await _chatService.UpdateSessionTitleAsync(sessionId, dto);
+        if (!result.Success && result.Error?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return NotFound(result.Error);
+        }
+
+        if (!result.Success) return BadRequest(result.Error);
+        return Ok(result.Data);
+    }
+
     [HttpPost("sessions/{sessionId:guid}/messages")]
     [ProducesResponseType(typeof(SendMessageResultDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

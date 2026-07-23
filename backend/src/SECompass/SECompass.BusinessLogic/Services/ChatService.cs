@@ -39,6 +39,23 @@ public class ChatService : IChatService
         return ServiceResult<ChatSessionDto>.Ok(_mapper.Map<ChatSessionDto>(session));
     }
 
+    public async Task<ServiceResult<ChatSessionDto>> UpdateSessionTitleAsync(Guid sessionId, UpdateChatSessionDto dto)
+    {
+        var title = dto.Title.Trim();
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return ServiceResult<ChatSessionDto>.Fail("Chat session title is required.");
+        }
+
+        var session = await _uow.ChatSessions.GetByIdAsync(sessionId);
+        if (session == null) return ServiceResult<ChatSessionDto>.Fail("Chat session not found.");
+
+        session.Title = title;
+        _uow.ChatSessions.Update(session);
+        await _uow.SaveChangesAsync();
+        return ServiceResult<ChatSessionDto>.Ok(_mapper.Map<ChatSessionDto>(session));
+    }
+
     public async Task<ServiceResult<SendMessageResultDto>> SendMessageAsync(Guid sessionId, SendMessageDto dto, CancellationToken cancellationToken = default)
     {
         var session = await _uow.Chat.GetSessionWithMessagesAsync(sessionId);

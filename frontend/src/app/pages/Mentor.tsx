@@ -15,10 +15,20 @@ import {
   GET_CHAT_SESSIONS_BY_PROFILE,
   GET_CHAT_SESSION_WITH_MESSAGES,
 } from '@/graphql/queries';
-import type { SendMessageDto } from '@/types/api';
+import type { SendMessageDto, UpdateChatSessionDto } from '@/types/api';
 
 interface ChatSession { id: string; title: string; summary?: string; createdAt: string }
 interface ChatMessage { id: string; sender: string; messageContent: string; createdAt: string }
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (typeof data === 'string' && data.trim()) return data;
+  if (data && typeof data === 'object' && 'message' in data) {
+    const message = (data as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
+}
 
 export function MentorPage() {
   const user = useAuthStore((s) => s.user);
@@ -75,8 +85,12 @@ export function MentorPage() {
   });
 
   const renameSessionMutation = useMutation({
-    mutationFn: ({ sessionId, title }: { sessionId: string; title: string }) =>
-      apiClient.put(`/api/chat/sessions/${sessionId}`, { title }).then((r) => r.data),
+    mutationFn: ({ sessionId, title }: { sessionId: string; title: string }) => {
+      const dto: UpdateChatSessionDto = { title };
+      return apiClient
+        .put<ChatSession>(`/api/chat/sessions/${sessionId}`, dto)
+        .then((r) => r.data);
+    },
     onSuccess: async () => {
       await refetchSessions();
       // If renaming the active session, reload its messages to get updated title
@@ -88,8 +102,11 @@ export function MentorPage() {
       setSnackbar({ open: true, message: 'Session renamed.', variant: 'success' });
     },
     onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to rename session.';
-      setSnackbar({ open: true, message: msg, variant: 'error' });
+      setSnackbar({
+        open: true,
+        message: getApiErrorMessage(error, 'Failed to rename session.'),
+        variant: 'error',
+      });
     },
   });
 
