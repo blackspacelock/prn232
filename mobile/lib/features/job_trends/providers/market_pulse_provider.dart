@@ -7,7 +7,7 @@ final jobTrendsRepositoryProvider = Provider<JobTrendsRepository>(
   (_) => JobTrendsRepositoryImpl(),
 );
 
-final selectedMarketRegionProvider = StateProvider<String>((_) => 'Vietnam');
+final selectedMarketRegionProvider = StateProvider<String>((_) => 'Global');
 
 final marketPulseProvider = FutureProvider<MarketPulseData>((ref) async {
   final region = ref.watch(selectedMarketRegionProvider);

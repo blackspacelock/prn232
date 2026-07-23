@@ -50,20 +50,6 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Market Pulse'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () => showDialog<void>(
-              context: context,
-              builder: (context) => const AlertDialog(
-                title: Text('Market Pulse'),
-                content: Text(
-                  'Trend scores summarize recent demand signals for technical skills.',
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
       body: market.when(
         loading: () => const _MarketSkeleton(),
@@ -75,6 +61,7 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
           onAction: () => ref.invalidate(marketPulseProvider),
         ),
         data: (data) {
+          final region = ref.watch(selectedMarketRegionProvider);
           final sources = data.regionalTrends
               .map((trend) => trend.source)
               .whereType<String>()
@@ -105,6 +92,8 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
+                Text('Market Pulse', style: AppTextStyles.titleLarge),
+                const SizedBox(height: 4),
                 Text(
                   'Real-time demand data for software engineering skills.',
                   style: AppTextStyles.bodyMedium.copyWith(
@@ -114,9 +103,12 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
                 const SizedBox(height: 16),
                 const _RegionChips(),
                 const SizedBox(height: 16),
-                _TopTrendingSection(trends: topChartSkills.take(10).toList()),
+                _TopTrendingSection(
+                  trends: topChartSkills.take(10).toList(),
+                  region: region,
+                ),
                 const SizedBox(height: 16),
-                _TrendAreaSection(trends: data.regionalTrends),
+                _TrendAreaSection(trends: data.regionalTrends, region: region),
                 const SizedBox(height: 16),
                 _SearchSortToolbar(
                   controller: _searchController,
@@ -173,7 +165,7 @@ class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
 class _RegionChips extends ConsumerWidget {
   const _RegionChips();
 
-  static const regions = ['Vietnam', 'Singapore', 'Thailand', 'Global'];
+  static const regions = ['Global', 'Vietnam'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -212,13 +204,13 @@ class _RegionChips extends ConsumerWidget {
 }
 
 class _TopTrendingSection extends StatelessWidget {
-  const _TopTrendingSection({required this.trends});
+  const _TopTrendingSection({required this.trends, required this.region});
 
   final List<JobTrendDto> trends;
+  final String region;
 
   @override
   Widget build(BuildContext context) {
-    final region = trends.isEmpty ? 'Global' : trends.first.region ?? 'Global';
     return _SectionCard(
       title: 'Top Trending Skills',
       subtitle: region,
@@ -318,16 +310,17 @@ class _TopTrendingSection extends StatelessWidget {
 }
 
 class _TrendAreaSection extends StatelessWidget {
-  const _TrendAreaSection({required this.trends});
+  const _TrendAreaSection({required this.trends, required this.region});
 
   final List<JobTrendDto> trends;
+  final String region;
 
   @override
   Widget build(BuildContext context) {
     final history = _buildTrendHistory(trends);
     return _SectionCard(
       title: 'Trend Over Time',
-      subtitle: trends.isEmpty ? 'Global' : trends.first.region ?? 'Global',
+      subtitle: region,
       child: history.points.length < 2
           ? Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),

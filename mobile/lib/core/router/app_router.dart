@@ -114,6 +114,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => SkillGapAnalysisScreen(
               careerRoadmapId:
                   state.uri.queryParameters['careerRoadmapId'] ?? '',
+              autoAnalyze: state.uri.queryParameters['autoAnalyze'] == 'true',
             ),
           ),
           GoRoute(

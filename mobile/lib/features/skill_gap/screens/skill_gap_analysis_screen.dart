@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/models/roadmap_models.dart';
 import '../../../core/theme/app_colors.dart';
@@ -12,15 +11,45 @@ import '../../../core/widgets/linear_progress_bar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../roadmap/providers/roadmap_providers.dart';
 
-class SkillGapAnalysisScreen extends ConsumerWidget {
-  const SkillGapAnalysisScreen({super.key, required this.careerRoadmapId});
+class SkillGapAnalysisScreen extends ConsumerStatefulWidget {
+  const SkillGapAnalysisScreen({
+    super.key,
+    required this.careerRoadmapId,
+    this.autoAnalyze = false,
+  });
 
   final String careerRoadmapId;
+  final bool autoAnalyze;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final analysis = ref.watch(skillGapAnalysisProvider(careerRoadmapId));
-    final trending = ref.watch(trendingSkillRecommendationsProvider);
+  ConsumerState<SkillGapAnalysisScreen> createState() =>
+      _SkillGapAnalysisScreenState();
+}
+
+class _SkillGapAnalysisScreenState
+    extends ConsumerState<SkillGapAnalysisScreen> {
+  bool _hasAnalyzed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hasAnalyzed = widget.autoAnalyze;
+  }
+
+  void _analyze() {
+    ref.invalidate(skillGapAnalysisProvider(widget.careerRoadmapId));
+    ref.invalidate(trendingSkillRecommendationsProvider);
+    setState(() => _hasAnalyzed = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final analysis = _hasAnalyzed
+        ? ref.watch(skillGapAnalysisProvider(widget.careerRoadmapId))
+        : null;
+    final trending = _hasAnalyzed
+        ? ref.watch(trendingSkillRecommendationsProvider)
+        : const AsyncValue<List<String>>.data([]);
     final roleName =
         ref.watch(selectedCareerRoleProvider)?.name ?? 'target role';
 
@@ -30,82 +59,85 @@ class SkillGapAnalysisScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
-            onPressed: analysis.valueOrNull == null
+            onPressed: analysis?.valueOrNull == null
                 ? null
                 : () => Share.share(
-                      _shareText(analysis.valueOrNull!, roleName),
+                      _shareText(analysis!.valueOrNull!, roleName),
                     ),
           ),
         ],
       ),
-      body: analysis.when(
-        loading: () => const _ResultSkeleton(),
-        error: (error, _) => EmptyStateView(
-          icon: Icons.error_outline,
-          title: 'Could not run analysis',
-          subtitle: error.toString(),
-          actionLabel: 'Retry',
-          onAction: () =>
-              ref.invalidate(skillGapAnalysisProvider(careerRoadmapId)),
-        ),
-        data: (data) => RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(skillGapAnalysisProvider(careerRoadmapId));
-            ref.invalidate(trendingSkillRecommendationsProvider);
-            await ref.read(skillGapAnalysisProvider(careerRoadmapId).future);
-          },
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            children: [
-              _RadarSection(data: data),
-              const SizedBox(height: 16),
-              _CoverageCard(data: data, roleName: roleName),
-              const SizedBox(height: 20),
-              _SkillChipSection(
-                title: 'Skills You Have',
-                subtitle:
-                    '${data.matchedSkills.length} of ${data.requiredSkills.length} required skills covered',
-                skills: data.matchedSkills,
-                background: AppColors.successContainer,
-                foreground: AppColors.success,
+      body: analysis == null
+          ? _AnalyzePrompt(onAnalyze: _analyze)
+          : analysis.when(
+              loading: () => const _ResultSkeleton(),
+              error: (error, _) => EmptyStateView(
+                icon: Icons.error_outline,
+                title: 'Could not run analysis',
+                subtitle: error.toString(),
+                actionLabel: 'Retry',
+                onAction: _analyze,
               ),
-              const SizedBox(height: 16),
-              _SkillChipSection(
-                title: 'Skills to Develop',
-                skills: data.missingSkills,
-                background: const Color(0xFFFCE8E6),
-                foreground: const Color(0xFFD93025),
-              ),
-              trending.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.only(top: 16),
-                  child: SkeletonCard(height: 72),
-                ),
-                error: (_, __) => const SizedBox.shrink(),
-                data: (skills) => skills.isEmpty
-                    ? const SizedBox.shrink()
-                    : Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: _SkillChipSection(
-                          title: 'Trending Recommendations',
-                          subtitle:
-                              'Also consider learning these trending skills:',
-                          skills: skills,
-                          background: AppColors.nodeStatusInProgressFill,
-                          foreground: AppColors.nodeStatusInProgressText,
-                        ),
+              data: (data) => RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(
+                      skillGapAnalysisProvider(widget.careerRoadmapId));
+                  ref.invalidate(trendingSkillRecommendationsProvider);
+                  await ref.read(
+                      skillGapAnalysisProvider(widget.careerRoadmapId).future);
+                },
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  children: [
+                    AppButton(
+                      label: 'Analyze Skill Gap',
+                      leadingIcon: const Icon(Icons.analytics_outlined),
+                      onPressed: _analyze,
+                    ),
+                    const SizedBox(height: 16),
+                    _RadarSection(data: data),
+                    const SizedBox(height: 16),
+                    _CoverageCard(data: data, roleName: roleName),
+                    const SizedBox(height: 20),
+                    _SkillChipSection(
+                      title: 'Skills You Have',
+                      subtitle:
+                          '${data.matchedSkills.length} of ${data.requiredSkills.length} required skills covered',
+                      skills: data.matchedSkills,
+                      background: AppColors.successContainer,
+                      foreground: AppColors.success,
+                    ),
+                    const SizedBox(height: 16),
+                    _SkillChipSection(
+                      title: 'Skills to Develop',
+                      skills: data.missingSkills,
+                      background: const Color(0xFFFCE8E6),
+                      foreground: const Color(0xFFD93025),
+                    ),
+                    trending.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.only(top: 16),
+                        child: SkeletonCard(height: 72),
                       ),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (skills) => skills.isEmpty
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: _SkillChipSection(
+                                title: 'Trending Recommendations',
+                                subtitle:
+                                    'Also consider learning these trending skills:',
+                                skills: skills,
+                                background: AppColors.nodeStatusInProgressFill,
+                                foreground: AppColors.nodeStatusInProgressText,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 24),
-              AppButton(
-                label: 'Go to Learning Resources',
-                leadingIcon: const Icon(Icons.menu_book_outlined),
-                onPressed: () => context.go('/career-roles'),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
@@ -114,6 +146,29 @@ class SkillGapAnalysisScreen extends ConsumerWidget {
         'Coverage: ${data.coveragePercentage.round()}%\n'
         'Skills I have: ${data.matchedSkills.join(', ')}\n'
         'Skills to develop: ${data.missingSkills.join(', ')}';
+  }
+}
+
+class _AnalyzePrompt extends StatelessWidget {
+  const _AnalyzePrompt({required this.onAnalyze});
+
+  final VoidCallback onAnalyze;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+      children: [
+        EmptyStateView(
+          icon: Icons.analytics_outlined,
+          title: 'Ready to analyze',
+          subtitle:
+              'Run a fresh comparison between your current skills and this roadmap.',
+          actionLabel: 'Analyze Skill Gap',
+          onAction: onAnalyze,
+        ),
+      ],
+    );
   }
 }
 

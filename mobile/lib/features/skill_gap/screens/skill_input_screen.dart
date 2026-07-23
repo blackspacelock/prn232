@@ -84,10 +84,10 @@ class _SkillInputScreenState extends ConsumerState<SkillInputScreen> {
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: AppButton(
-          label: 'Run Analysis',
+          label: 'Analyze Skill Gap',
           leadingIcon: const Icon(Icons.arrow_forward),
           onPressed: () => context.go(
-            '/skill-gap/result?careerRoadmapId=${widget.careerRoadmapId}',
+            '/skill-gap/result?careerRoadmapId=${widget.careerRoadmapId}&autoAnalyze=true',
           ),
         ),
       ),

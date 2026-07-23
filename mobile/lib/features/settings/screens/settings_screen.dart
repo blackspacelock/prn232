@@ -334,8 +334,8 @@ class _AccountSection extends ConsumerWidget {
   }
 
   static String _roleName(int role) => switch (role) {
+        0 => 'Admin',
         1 => 'Manager',
-        2 => 'Admin',
         _ => 'Student',
       };
 
