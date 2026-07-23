@@ -4,6 +4,7 @@ import { ActionButton } from '../components/ActionButton';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import { LinearProgress } from '../components/LinearProgress';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Check, Pencil, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { useMutation } from '@tanstack/react-query';
@@ -36,6 +37,7 @@ export function MentorPage() {
   const [message, setMessage] = useState('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
+  const [deletingSession, setDeletingSession] = useState<ChatSession | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'error' });
 
   // Rename state
@@ -114,6 +116,7 @@ export function MentorPage() {
         setMessage('');
       }
       if (editingSessionId === sessionId) setEditingSessionId(null);
+      setDeletingSession(null);
       setIsEditingHeader(false);
       setSnackbar({ open: true, message: 'Session deleted.', variant: 'success' });
     },
@@ -201,8 +204,12 @@ export function MentorPage() {
   };
 
   const handleDeleteSession = (session: ChatSession) => {
-    if (!window.confirm(`Delete "${session.title}"? This chat history will be removed.`)) return;
-    deleteSessionMutation.mutate(session.id);
+    setDeletingSession(session);
+  };
+
+  const confirmDeleteSession = () => {
+    if (!deletingSession) return;
+    deleteSessionMutation.mutate(deletingSession.id);
   };
 
   return (
@@ -430,6 +437,16 @@ export function MentorPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={deletingSession !== null}
+        title="Delete Chat Session?"
+        message={`This will permanently remove "${deletingSession?.title ?? 'this chat session'}" and its chat history.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteSession}
+        onCancel={() => setDeletingSession(null)}
+      />
 
       <Snackbar isOpen={snackbar.open} message={snackbar.message} variant={snackbar.variant} onClose={() => setSnackbar({ open: false, message: '', variant: 'error' })} />
     </AppShell>
