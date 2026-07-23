@@ -6,6 +6,7 @@ import '../../../core/storage/token_storage.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../profile/data/profile_repository_impl.dart';
+import '../../roadmap/providers/roadmap_providers.dart';
 
 final settingsProfileRepositoryProvider = Provider<ProfileRepository>(
   (_) => ProfileRepositoryImpl(),
@@ -107,6 +108,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsData> {
     final skill = await ref
         .read(settingsProfileRepositoryProvider)
         .addSkill(profileId, skillName);
+    clearSkillGapAnalysisCache();
     state = AsyncData(current.copyWith(skills: [...current.skills, skill]));
   }
 
@@ -114,6 +116,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsData> {
     final current = state.valueOrNull;
     if (current == null) return;
     await ref.read(settingsProfileRepositoryProvider).deleteSkill(skillId);
+    clearSkillGapAnalysisCache();
     state = AsyncData(current.copyWith(
       skills: current.skills.where((s) => s.skillId != skillId).toList(),
     ));

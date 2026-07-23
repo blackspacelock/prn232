@@ -37,7 +37,9 @@ class _SkillGapAnalysisScreenState
   }
 
   void _analyze() {
-    ref.invalidate(skillGapAnalysisProvider(widget.careerRoadmapId));
+    ref
+        .read(skillGapAnalysisRefreshProvider(widget.careerRoadmapId).notifier)
+        .state++;
     ref.invalidate(trendingSkillRecommendationsProvider);
     setState(() => _hasAnalyzed = true);
   }
@@ -80,8 +82,11 @@ class _SkillGapAnalysisScreenState
               ),
               data: (data) => RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(
-                      skillGapAnalysisProvider(widget.careerRoadmapId));
+                  ref
+                      .read(skillGapAnalysisRefreshProvider(
+                              widget.careerRoadmapId)
+                          .notifier)
+                      .state++;
                   ref.invalidate(trendingSkillRecommendationsProvider);
                   await ref.read(
                       skillGapAnalysisProvider(widget.careerRoadmapId).future);

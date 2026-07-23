@@ -10,11 +10,23 @@ import '../../../core/widgets/linear_progress_bar.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../providers/market_pulse_provider.dart';
 
-class MarketPulseScreen extends ConsumerWidget {
+enum _MarketSort { score, name, date }
+
+class MarketPulseScreen extends ConsumerStatefulWidget {
   const MarketPulseScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MarketPulseScreen> createState() => _MarketPulseScreenState();
+}
+
+class _MarketPulseScreenState extends ConsumerState<MarketPulseScreen> {
+  DateTime? _fromDate;
+  DateTime? _toDate;
+  _MarketSort _sort = _MarketSort.score;
+  bool _descending = true;
+
+  @override
+  Widget build(BuildContext context) {
     final market = ref.watch(marketPulseProvider);
 
     return Scaffold(
@@ -32,9 +44,15 @@ class MarketPulseScreen extends ConsumerWidget {
         ),
         data: (data) {
           final region = ref.watch(selectedMarketRegionProvider);
-          final demand = _buildDemandRows(data.regionalTrends);
-          final movers = _buildMarketMovers(data.regionalTrends);
-          final sourceCoverage = _buildSourceCoverage(data.regionalTrends);
+          final filteredTrends = _filterByDate(data.regionalTrends);
+          final demand = _buildDemandRows(
+            filteredTrends,
+            sort: _sort,
+            descending: _descending,
+          );
+          final movers = _buildMarketMovers(filteredTrends);
+          final sourceCoverage = _buildSourceCoverage(filteredTrends);
+          final summary = _buildSummary(filteredTrends, demand, region);
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(marketPulseProvider);
@@ -54,11 +72,29 @@ class MarketPulseScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 const _RegionChips(),
                 const SizedBox(height: 16),
+                _SummaryGrid(summary: summary),
+                const SizedBox(height: 16),
+                _MarketControls(
+                  fromDate: _fromDate,
+                  toDate: _toDate,
+                  sort: _sort,
+                  descending: _descending,
+                  onPickFrom: () => _pickDate(isFrom: true),
+                  onPickTo: () => _pickDate(isFrom: false),
+                  onClearDates: () => setState(() {
+                    _fromDate = null;
+                    _toDate = null;
+                  }),
+                  onSortChanged: (value) => setState(() => _sort = value),
+                  onDirectionChanged: () =>
+                      setState(() => _descending = !_descending),
+                ),
+                const SizedBox(height: 16),
                 _SkillDemandSection(rows: demand, region: region),
                 const SizedBox(height: 16),
                 _MarketMoversSection(rows: movers),
                 const SizedBox(height: 16),
-                _TrendAreaSection(trends: data.regionalTrends, region: region),
+                _TrendAreaSection(trends: filteredTrends, region: region),
                 const SizedBox(height: 16),
                 _SourceCoverageSection(sources: sourceCoverage),
               ],
@@ -68,12 +104,53 @@ class MarketPulseScreen extends ConsumerWidget {
       ),
     );
   }
+
+  List<JobTrendDto> _filterByDate(List<JobTrendDto> trends) {
+    return trends.where((trend) {
+      final parsed = DateTime.tryParse(trend.snapshotDate);
+      if (parsed == null) return true;
+      final day = DateTime(parsed.year, parsed.month, parsed.day);
+      if (_fromDate != null && day.isBefore(_dateOnly(_fromDate!))) {
+        return false;
+      }
+      if (_toDate != null && day.isAfter(_dateOnly(_toDate!))) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  DateTime _dateOnly(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
+
+  Future<void> _pickDate({required bool isFrom}) async {
+    final now = DateTime.now();
+    final initial = isFrom ? _fromDate : _toDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial ?? now,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 1),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isFrom) {
+        _fromDate = picked;
+        if (_toDate != null && _toDate!.isBefore(picked)) _toDate = picked;
+      } else {
+        _toDate = picked;
+        if (_fromDate != null && _fromDate!.isAfter(picked)) {
+          _fromDate = picked;
+        }
+      }
+    });
+  }
 }
 
 class _RegionChips extends ConsumerWidget {
   const _RegionChips();
 
-  static const regions = ['Vietnam', 'Singapore', 'Thailand', 'Global'];
+  static const regions = ['Global', 'Vietnam'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -106,6 +183,220 @@ class _RegionChips extends ConsumerWidget {
               )
               .toList(),
         ),
+      ),
+    );
+  }
+}
+
+class _SummaryGrid extends StatelessWidget {
+  const _SummaryGrid({required this.summary});
+
+  final _MarketSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 1.48,
+      children: [
+        _SummaryCard(
+          icon: Icons.trending_up,
+          label: 'Leading Signal',
+          value: summary.leadingSkill,
+          detail: summary.leadingDetail,
+        ),
+        _SummaryCard(
+          icon: Icons.storage_outlined,
+          label: 'Trend Records',
+          value: summary.recordCount.toString(),
+          detail: '${summary.uniqueSkillCount} unique skills',
+        ),
+        _SummaryCard(
+          icon: Icons.show_chart,
+          label: 'Average Raw Score',
+          value: '${summary.averageRawScore.round()}/100',
+          detail: 'Raw scrape score before normalization',
+        ),
+        _SummaryCard(
+          icon: Icons.calendar_month_outlined,
+          label: 'Latest Snapshot',
+          value: summary.latestSnapshot,
+          detail: summary.region,
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.detail,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: const Color(0xFFE8F0FE),
+            child: Icon(icon, color: const Color(0xFF1A73E8), size: 19),
+          ),
+          const Spacer(),
+          Text(
+            label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            detail,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarketControls extends StatelessWidget {
+  const _MarketControls({
+    required this.fromDate,
+    required this.toDate,
+    required this.sort,
+    required this.descending,
+    required this.onPickFrom,
+    required this.onPickTo,
+    required this.onClearDates,
+    required this.onSortChanged,
+    required this.onDirectionChanged,
+  });
+
+  final DateTime? fromDate;
+  final DateTime? toDate;
+  final _MarketSort sort;
+  final bool descending;
+  final VoidCallback onPickFrom;
+  final VoidCallback onPickTo;
+  final VoidCallback onClearDates;
+  final ValueChanged<_MarketSort> onSortChanged;
+  final VoidCallback onDirectionChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateFormat = DateFormat('MM/dd/yyyy');
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onPickFrom,
+                  icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                  label: Text(
+                    fromDate == null ? 'From' : dateFormat.format(fromDate!),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onPickTo,
+                  icon: const Icon(Icons.event_outlined, size: 16),
+                  label: Text(
+                    toDate == null ? 'To' : dateFormat.format(toDate!),
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Clear dates',
+                onPressed:
+                    fromDate == null && toDate == null ? null : onClearDates,
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownMenu<_MarketSort>(
+                  width: double.infinity,
+                  initialSelection: sort,
+                  label: const Text('Sort by'),
+                  onSelected: (value) {
+                    if (value != null) onSortChanged(value);
+                  },
+                  dropdownMenuEntries: const [
+                    DropdownMenuEntry(
+                      value: _MarketSort.score,
+                      label: 'Trend Score',
+                    ),
+                    DropdownMenuEntry(
+                      value: _MarketSort.name,
+                      label: 'Skill Name',
+                    ),
+                    DropdownMenuEntry(
+                      value: _MarketSort.date,
+                      label: 'Snapshot Date',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: descending ? 'Descending' : 'Ascending',
+                onPressed: onDirectionChanged,
+                icon: Icon(
+                  descending ? Icons.south_outlined : Icons.north_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -549,12 +840,14 @@ class _DemandRow {
     required this.rawAverage,
     required this.relativeScore,
     required this.recordCount,
+    required this.latestSnapshot,
   });
 
   final String skill;
   final double rawAverage;
   final double relativeScore;
   final int recordCount;
+  final String latestSnapshot;
 }
 
 class _MarketMoverRow {
@@ -578,6 +871,26 @@ class _SourceCoverageRow {
   final int count;
 }
 
+class _MarketSummary {
+  const _MarketSummary({
+    required this.leadingSkill,
+    required this.leadingDetail,
+    required this.recordCount,
+    required this.uniqueSkillCount,
+    required this.averageRawScore,
+    required this.latestSnapshot,
+    required this.region,
+  });
+
+  final String leadingSkill;
+  final String leadingDetail;
+  final int recordCount;
+  final int uniqueSkillCount;
+  final double averageRawScore;
+  final String latestSnapshot;
+  final String region;
+}
+
 class _TrendHistoryPoint {
   const _TrendHistoryPoint({required this.date, required this.scores});
 
@@ -585,7 +898,11 @@ class _TrendHistoryPoint {
   final Map<String, double> scores;
 }
 
-List<_DemandRow> _buildDemandRows(List<JobTrendDto> trends) {
+List<_DemandRow> _buildDemandRows(
+  List<JobTrendDto> trends, {
+  _MarketSort sort = _MarketSort.score,
+  bool descending = true,
+}) {
   final bySkill = <String, List<JobTrendDto>>{};
   for (final trend in trends) {
     if (trend.techSkill.trim().isEmpty) continue;
@@ -598,16 +915,31 @@ List<_DemandRow> _buildDemandRows(List<JobTrendDto> trends) {
           (sum, trend) => sum + trend.trendScore,
         ) /
         entry.value.length;
+    final latest = entry.value
+        .map((trend) => trend.snapshotDate)
+        .reduce((a, b) => a.compareTo(b) > 0 ? a : b);
     return _DemandRow(
       skill: entry.key,
       rawAverage: average,
       relativeScore: average,
       recordCount: entry.value.length,
+      latestSnapshot: latest,
     );
-  }).toList()
-    ..sort((a, b) => b.rawAverage.compareTo(a.rawAverage));
+  }).toList();
 
-  final maxScore = rawRows.isEmpty ? 0 : rawRows.first.rawAverage;
+  rawRows.sort((a, b) {
+    final result = switch (sort) {
+      _MarketSort.score => a.rawAverage.compareTo(b.rawAverage),
+      _MarketSort.name => a.skill.compareTo(b.skill),
+      _MarketSort.date => a.latestSnapshot.compareTo(b.latestSnapshot),
+    };
+    return descending ? -result : result;
+  });
+
+  final maxScore = rawRows.fold<double>(
+    0,
+    (max, row) => row.rawAverage > max ? row.rawAverage : max,
+  );
   if (maxScore <= 0) return rawRows.take(10).toList();
 
   return rawRows
@@ -618,6 +950,7 @@ List<_DemandRow> _buildDemandRows(List<JobTrendDto> trends) {
           rawAverage: row.rawAverage,
           relativeScore: row.rawAverage / maxScore * 100,
           recordCount: row.recordCount,
+          latestSnapshot: row.latestSnapshot,
         ),
       )
       .toList();
@@ -681,6 +1014,41 @@ List<_SourceCoverageRow> _buildSourceCoverage(List<JobTrendDto> trends) {
       .toList()
     ..sort((a, b) => b.count.compareTo(a.count));
   return rows;
+}
+
+_MarketSummary _buildSummary(
+  List<JobTrendDto> trends,
+  List<_DemandRow> demandRows,
+  String region,
+) {
+  final strongest = [...demandRows]
+    ..sort((a, b) => b.rawAverage.compareTo(a.rawAverage));
+  final leading = strongest.isEmpty ? null : strongest.first;
+  final uniqueSkills = trends.map((trend) => trend.techSkill).toSet().length;
+  final average = trends.isEmpty
+      ? 0.0
+      : trends.fold<double>(0, (sum, trend) => sum + trend.trendScore) /
+          trends.length;
+  final latestRaw = trends.isEmpty
+      ? null
+      : trends
+          .map((trend) => trend.snapshotDate)
+          .reduce((a, b) => a.compareTo(b) > 0 ? a : b);
+  final latestDate = latestRaw == null ? null : DateTime.tryParse(latestRaw);
+
+  return _MarketSummary(
+    leadingSkill: leading?.skill ?? 'No data',
+    leadingDetail: leading == null
+        ? 'No records in filter'
+        : 'Index ${leading.relativeScore.round()} · raw ${leading.rawAverage.round()}/100',
+    recordCount: trends.length,
+    uniqueSkillCount: uniqueSkills,
+    averageRawScore: average,
+    latestSnapshot: latestDate == null
+        ? 'No data'
+        : DateFormat('M/d/yyyy').format(latestDate),
+    region: region,
+  );
 }
 
 ({List<String> skills, List<_TrendHistoryPoint> points}) _buildTrendHistory(

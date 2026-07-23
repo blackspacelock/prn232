@@ -80,11 +80,13 @@ class SkillInputNotifier extends AsyncNotifier<List<SkillDto>> {
   Future<void> addSkill(String skillName) async {
     final profileId = await ref.read(profileIdProvider.future);
     await ref.read(profileRepositoryProvider).addSkill(profileId, skillName);
+    clearSkillGapAnalysisCache();
     ref.invalidateSelf();
   }
 
   Future<void> removeSkill(String skillId) async {
     await ref.read(profileRepositoryProvider).deleteSkill(skillId);
+    clearSkillGapAnalysisCache();
     ref.invalidateSelf();
   }
 }
@@ -98,13 +100,33 @@ final technicalSkillsProvider = FutureProvider<List<TechnicalSkillDto>>((ref) {
   return ref.watch(profileRepositoryProvider).getTechnicalSkills();
 });
 
+final _skillGapAnalysisCache = <String, SkillGapAnalysisDto>{};
+final _skillGapAnalysisCacheVersion = <String, int>{};
+
+void clearSkillGapAnalysisCache() {
+  _skillGapAnalysisCache.clear();
+  _skillGapAnalysisCacheVersion.clear();
+}
+
+final skillGapAnalysisRefreshProvider =
+    StateProvider.family<int, String>((ref, careerRoadmapId) => 0);
+
 final skillGapAnalysisProvider =
     FutureProvider.family<SkillGapAnalysisDto, String>(
         (ref, careerRoadmapId) async {
   final profileId = await ref.watch(profileIdProvider.future);
-  return ref
+  final refresh = ref.watch(skillGapAnalysisRefreshProvider(careerRoadmapId));
+  final cacheKey = '$profileId:$careerRoadmapId';
+  final cached = _skillGapAnalysisCache[cacheKey];
+  if (cached != null && _skillGapAnalysisCacheVersion[cacheKey] == refresh) {
+    return cached;
+  }
+  final analysis = await ref
       .watch(roadmapRepositoryProvider)
       .getSkillGapAnalysis(profileId, careerRoadmapId);
+  _skillGapAnalysisCache[cacheKey] = analysis;
+  _skillGapAnalysisCacheVersion[cacheKey] = refresh;
+  return analysis;
 });
 
 final trendingSkillRecommendationsProvider =
