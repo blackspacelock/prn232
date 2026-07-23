@@ -11,7 +11,7 @@ class ApiConstants {
   static const graphqlEndpoint = '$baseUrl/graphql';
   static const webBaseUrl = String.fromEnvironment(
     'WEB_BASE_URL',
-    defaultValue: 'https://prn232.vercel.app',
+    defaultValue: 'https://prn232-nine.vercel.app',
   );
   static const googleServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
