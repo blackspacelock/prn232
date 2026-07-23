@@ -4,7 +4,7 @@ import { LoginPage } from "./pages/Login";
 import { RegisterPage } from "./pages/Register";
 import { DashboardPage } from "./pages/Dashboard";
 import { RoadmapsPage } from "./pages/Roadmaps";
-import { RoadmapCanvasPage } from "./pages/RoadmapCanvas";
+import { RoadmapCanvasPage, SharedRoadmapCanvasPage } from "./pages/RoadmapCanvas";
 import { MentorPage } from "./pages/Mentor";
 import { SkillGapPage } from "./pages/SkillGap";
 import { MarketPulsePage } from "./pages/MarketPulse";
@@ -53,6 +53,7 @@ export const router = createBrowserRouter([
       { path: "/dashboard", Component: DashboardPage },
       { path: "/roadmaps", Component: RoadmapsPage },
       { path: "/roadmap/:id", Component: RoadmapCanvasPage },
+      { path: "/shared-roadmap/:id", Component: SharedRoadmapCanvasPage },
       { path: "/mentor", Component: MentorPage },
       { path: "/skill-gap", Component: SkillGapPage },
       { path: "/market", Component: MarketPulsePage },

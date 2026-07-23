@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router';
 import { AppShell, PageHeader } from '../components/AppShell';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ActionButton } from '../components/ActionButton';
-import { SkillChip, getSkillCategoryColorIndex } from '../components/SkillChip';
+import { SkillChip } from '../components/SkillChip';
+import { getSkillCategoryColorIndex } from '../components/skillColorUtils';
 import { Skeleton } from '../components/Skeleton';
 import { Snackbar } from '../components/Snackbar';
 import {
@@ -88,11 +89,10 @@ export function SettingsPage() {
 
   const existingSkillIds = new Set(skills.map((s) => s.technicalSkillId));
   const skillQuery = newSkill.trim().toLowerCase();
-  const skillSuggestions = skillQuery
-    ? technicalSkills
-        .filter((ts) => !existingSkillIds.has(ts.id) && ts.name.toLowerCase().includes(skillQuery))
-        .slice(0, 8)
-    : [];
+  const skillSuggestions = technicalSkills
+    .filter((ts) => !existingSkillIds.has(ts.id))
+    .filter((ts) => !skillQuery || ts.name.toLowerCase().includes(skillQuery))
+    .slice(0, 8);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

@@ -11,6 +11,7 @@ using SECompass.BusinessLogic.DTOs.NodeProgress;
 using SECompass.BusinessLogic.DTOs.PersonalRoadmap;
 using SECompass.BusinessLogic.DTOs.Profile;
 using SECompass.BusinessLogic.DTOs.PublicPortfolio;
+using SECompass.BusinessLogic.DTOs.RoadmapTag;
 using SECompass.BusinessLogic.DTOs.Skill;
 using SECompass.BusinessLogic.DTOs.User;
 using SECompass.BusinessLogic.Interfaces;
@@ -90,10 +91,29 @@ public class Query
         return result.Success ? result.Data! : new();
     }
 
+    public async Task<List<PersonalRoadmapDto>> GetSharedPersonalRoadmaps([Service] IPersonalRoadmapService service)
+    {
+        var result = await service.GetSharedAsync();
+        return result.Success ? result.Data! : new();
+    }
+
     public async Task<PersonalRoadmapDetailDto?> GetPersonalRoadmapWithProgress([Service] IPersonalRoadmapService service, Guid personalRoadmapId)
     {
         var result = await service.GetWithProgressAsync(personalRoadmapId);
         return result.Success ? result.Data : null;
+    }
+
+    public async Task<PersonalRoadmapDetailDto?> GetSharedPersonalRoadmapWithProgress([Service] IPersonalRoadmapService service, Guid personalRoadmapId)
+    {
+        var result = await service.GetSharedWithProgressAsync(personalRoadmapId);
+        return result.Success ? result.Data : null;
+    }
+
+    // Roadmap Tags
+    public async Task<List<RoadmapTagDto>> GetTagsByRoadmap([Service] IRoadmapTagService tagService, Guid personalRoadmapId)
+    {
+        var result = await tagService.GetByRoadmapAsync(personalRoadmapId);
+        return result.Success ? result.Data! : new();
     }
 
     // Nodes
@@ -187,9 +207,9 @@ public class Query
     }
 
     // Skill Gap
-    public async Task<SkillGapAnalysisDto?> GetSkillGapAnalysis([Service] ISkillGapService service, Guid profileId, Guid? careerRoadmapId = null)
+    public async Task<SkillGapAnalysisDto?> GetSkillGapAnalysis([Service] ISkillGapService service, Guid profileId)
     {
-        var result = await service.AnalyzeSkillGapAsync(profileId, careerRoadmapId);
+        var result = await service.AnalyzeSkillGapAsync(profileId);
         return result.Success ? result.Data : null;
     }
 

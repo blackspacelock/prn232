@@ -30,6 +30,7 @@ public class UnitOfWork : IUnitOfWork
     private IPersonalRoadmapRepository? _personalRoadmaps;
     private INodeProgressRepository? _nodeProgresses;
     private IChatRepository? _chat;
+    private IRepository<RoadmapTag>? _roadmapTags;
 
     public UnitOfWork(AppDbContext context) => _context = context;
 
@@ -55,6 +56,7 @@ public class UnitOfWork : IUnitOfWork
     public IPersonalRoadmapRepository PersonalRoadmaps => _personalRoadmaps ??= new PersonalRoadmapRepository(_context);
     public INodeProgressRepository NodeProgresses => _nodeProgresses ??= new NodeProgressRepository(_context);
     public IChatRepository Chat => _chat ??= new ChatRepository(_context);
+    public IRepository<RoadmapTag> RoadmapTags => _roadmapTags ??= new GenericRepository<RoadmapTag>(_context);
 
     public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
 

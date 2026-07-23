@@ -523,6 +523,11 @@ namespace SECompass.DataAccess.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("IsShared")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
@@ -533,6 +538,9 @@ namespace SECompass.DataAccess.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(5,2)")
                         .HasDefaultValue(0m);
+
+                    b.Property<DateTime?>("SharedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -772,6 +780,39 @@ namespace SECompass.DataAccess.Migrations
                         .IsUnique();
 
                     b.ToTable("RoadmapNodeEdges", (string)null);
+                });
+
+            modelBuilder.Entity("SECompass.DataAccess.Entities.RoadmapTag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("RoadmapTagId");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("PersonalRoadmapId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonalRoadmapId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("RoadmapTags", (string)null);
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.TechnicalSkill", b =>
@@ -1128,6 +1169,17 @@ namespace SECompass.DataAccess.Migrations
                     b.Navigation("ToRoadmapNode");
                 });
 
+            modelBuilder.Entity("SECompass.DataAccess.Entities.RoadmapTag", b =>
+                {
+                    b.HasOne("SECompass.DataAccess.Entities.PersonalRoadmap", "PersonalRoadmap")
+                        .WithMany("Tags")
+                        .HasForeignKey("PersonalRoadmapId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.Navigation("PersonalRoadmap");
+                });
+
             modelBuilder.Entity("SECompass.DataAccess.Entities.UserRefreshToken", b =>
                 {
                     b.HasOne("SECompass.DataAccess.Entities.User", "User")
@@ -1172,6 +1224,8 @@ namespace SECompass.DataAccess.Migrations
             modelBuilder.Entity("SECompass.DataAccess.Entities.PersonalRoadmap", b =>
                 {
                     b.Navigation("NodeProgresses");
+
+                    b.Navigation("Tags");
                 });
 
             modelBuilder.Entity("SECompass.DataAccess.Entities.Profile", b =>
