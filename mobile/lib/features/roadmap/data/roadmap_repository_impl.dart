@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../../../core/api/api_constants.dart';
 import '../../../core/api/dio_client.dart';
 import '../../../core/api/graphql_api.dart';
+import '../../../core/models/app_exception.dart';
 import '../../../core/models/roadmap_models.dart';
 import 'roadmap_repository.dart';
 
@@ -232,6 +233,25 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
     String profileId,
     String careerRoadmapId,
   ) async {
+    if (careerRoadmapId.isEmpty) {
+      return _getActiveRoadmapSkillGapAnalysis(profileId);
+    }
+
+    try {
+      return await _getSelectedRoadmapSkillGapAnalysis(
+        profileId,
+        careerRoadmapId,
+      );
+    } on ValidationException catch (error) {
+      if (!error.message.contains('careerRoadmapId')) rethrow;
+      return _getActiveRoadmapSkillGapAnalysis(profileId);
+    }
+  }
+
+  Future<SkillGapAnalysisDto> _getSelectedRoadmapSkillGapAnalysis(
+    String profileId,
+    String careerRoadmapId,
+  ) async {
     final data = await _graphQL.queryField<Map<String, dynamic>?>(
       'skillGapAnalysis',
       r'''
@@ -268,6 +288,46 @@ class RoadmapRepositoryImpl implements RoadmapRepository {
         'profileId': profileId,
         if (careerRoadmapId.isNotEmpty) 'careerRoadmapId': careerRoadmapId,
       },
+    );
+    return SkillGapAnalysisDto.fromJson(data ?? const {});
+  }
+
+  Future<SkillGapAnalysisDto> _getActiveRoadmapSkillGapAnalysis(
+    String profileId,
+  ) async {
+    final data = await _graphQL.queryField<Map<String, dynamic>?>(
+      'skillGapAnalysis',
+      r'''
+      query GetSkillGapAnalysis($profileId: UUID!) {
+        skillGapAnalysis(profileId: $profileId) {
+          profileId
+          careerRoadmapId
+          requiredSkills {
+            id
+            name
+            category
+          }
+          coveragePercentage
+          matchedSkills {
+            id
+            name
+            category
+          }
+          missingSkills {
+            id
+            name
+            category
+          }
+          categoryBreakdown {
+            category
+            yourLevel
+            requiredLevel
+          }
+          summary
+        }
+      }
+      ''',
+      variables: {'profileId': profileId},
     );
     return SkillGapAnalysisDto.fromJson(data ?? const {});
   }
