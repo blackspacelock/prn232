@@ -343,55 +343,59 @@ class _SkillGapSnapshot extends StatelessWidget {
                 children: [
                   SizedBox(
                     height: 320,
-                    child: RadarChart(
-                      RadarChartData(
-                        radarShape: RadarShape.polygon,
-                        radarBorderData:
-                            const BorderSide(color: AppColors.outlineVariant),
-                        tickBorderData:
-                            const BorderSide(color: AppColors.outlineVariant),
-                        gridBorderData:
-                            const BorderSide(color: AppColors.outlineVariant),
-                        tickCount: 4,
-                        ticksTextStyle: const TextStyle(
-                          color: Colors.transparent,
-                          fontSize: 0,
-                        ),
-                        titlePositionPercentageOffset: 0.16,
-                        getTitle: (index, angle) {
-                          final name = categories[index].name;
-                          final label = _compactRadarLabel(name);
-                          return RadarChartTitle(
-                            text: label,
-                            angle: angle + 90,
-                          );
-                        },
-                        titleTextStyle: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                          fontSize: 9,
-                        ),
-                        dataSets: [
-                          RadarDataSet(
-                            fillColor:
-                                AppColors.primary.withValues(alpha: 0.22),
-                            borderColor: AppColors.primary,
-                            entryRadius: 2,
-                            dataEntries: categories
-                                .map((category) =>
-                                    RadarEntry(value: category.current))
-                                .toList(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: RadarChart(
+                        RadarChartData(
+                          radarShape: RadarShape.polygon,
+                          radarBorderData: const BorderSide(
+                            color: AppColors.outlineVariant,
                           ),
-                          RadarDataSet(
-                            fillColor:
-                                AppColors.warning.withValues(alpha: 0.12),
-                            borderColor: AppColors.warning,
-                            entryRadius: 2,
-                            dataEntries: categories
-                                .map((category) =>
-                                    RadarEntry(value: category.required))
-                                .toList(),
+                          tickBorderData: const BorderSide(
+                            color: AppColors.outlineVariant,
                           ),
-                        ],
+                          gridBorderData: const BorderSide(
+                            color: AppColors.outlineVariant,
+                          ),
+                          tickCount: 4,
+                          ticksTextStyle: const TextStyle(
+                            color: Colors.transparent,
+                            fontSize: 0,
+                          ),
+                          titlePositionPercentageOffset: 0.12,
+                          getTitle: (index, angle) {
+                            return RadarChartTitle(
+                              text: categories[index].name,
+                              angle: angle + 90,
+                            );
+                          },
+                          titleTextStyle: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 9,
+                          ),
+                          dataSets: [
+                            RadarDataSet(
+                              fillColor:
+                                  AppColors.primary.withValues(alpha: 0.22),
+                              borderColor: AppColors.primary,
+                              entryRadius: 2,
+                              dataEntries: categories
+                                  .map((category) =>
+                                      RadarEntry(value: category.current))
+                                  .toList(),
+                            ),
+                            RadarDataSet(
+                              fillColor:
+                                  AppColors.warning.withValues(alpha: 0.12),
+                              borderColor: AppColors.warning,
+                              entryRadius: 2,
+                              dataEntries: categories
+                                  .map((category) =>
+                                      RadarEntry(value: category.required))
+                                  .toList(),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -426,20 +430,6 @@ class _LegendRow extends StatelessWidget {
       ],
     );
   }
-}
-
-String _compactRadarLabel(String label) {
-  final trimmed = label.trim();
-  if (trimmed.length <= 10) return trimmed;
-  final words = trimmed.split(RegExp(r'\s+|&'));
-  if (words.length > 1) {
-    final acronym = words
-        .where((word) => word.trim().isNotEmpty)
-        .map((word) => word.trim()[0].toUpperCase())
-        .join();
-    if (acronym.length >= 2 && acronym.length <= 5) return acronym;
-  }
-  return '${trimmed.substring(0, 8)}…';
 }
 
 class _LegendDot extends StatelessWidget {
