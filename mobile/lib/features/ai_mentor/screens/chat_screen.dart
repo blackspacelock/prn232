@@ -183,33 +183,71 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _showRenameDialog(ChatSessionDto session) async {
-    final controller = TextEditingController(text: session.title);
     final title = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename session'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Title'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (_) => _RenameSessionDialog(initialTitle: session.title),
     );
-    controller.dispose();
-    if (title == null || title.isEmpty) return;
-    await ref
-        .read(mentorChatProvider(widget.sessionId).notifier)
-        .renameSession(session.chatSessionId, title);
+    if (!mounted || title == null || title.isEmpty) return;
+    try {
+      await ref
+          .read(mentorChatProvider(widget.sessionId).notifier)
+          .renameSession(session.chatSessionId, title);
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, error.toString());
+    }
+  }
+}
+
+class _RenameSessionDialog extends StatefulWidget {
+  const _RenameSessionDialog({required this.initialTitle});
+
+  final String initialTitle;
+
+  @override
+  State<_RenameSessionDialog> createState() => _RenameSessionDialogState();
+}
+
+class _RenameSessionDialogState extends State<_RenameSessionDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rename session'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(labelText: 'Title'),
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    Navigator.of(context).pop(_controller.text.trim());
   }
 }
 

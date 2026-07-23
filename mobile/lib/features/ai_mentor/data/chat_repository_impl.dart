@@ -104,11 +104,20 @@ class ChatRepositoryImpl implements ChatRepository {
   @override
   Future<ChatSessionDto> renameSession(
       String sessionId, String newTitle) async {
-    final response = await _dio.put(
-      '${ApiConstants.chatSessions}/$sessionId',
-      data: {'title': newTitle},
-    );
-    return ChatSessionDto.fromJson(response.data as Map<String, dynamic>);
+    try {
+      final response = await _dio.put(
+        '${ApiConstants.chatSessions}/$sessionId',
+        data: {'title': newTitle},
+      );
+      return ChatSessionDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        throw const ValidationException(
+          'Renaming mentor sessions is not available on this server yet.',
+        );
+      }
+      _throwMapped(error);
+    }
   }
 
   Never _throwMapped(DioException error) {
