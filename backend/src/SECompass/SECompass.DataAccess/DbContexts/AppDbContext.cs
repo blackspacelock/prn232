@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<JobTrend> JobTrends { get; set; }
     public DbSet<JobScrapingSetting> JobScrapingSettings { get; set; }
     public DbSet<JobScrapingSource> JobScrapingSources { get; set; }
+    public DbSet<RoadmapTag> RoadmapTags { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -161,6 +162,11 @@ public class AppDbContext : DbContext
             case PersonalRoadmap personalRoadmap:
                 await CascadeRangeAsync(
                     NodeProgresses.Where(p => p.PersonalRoadmapId == personalRoadmap.Id),
+                    queue,
+                    queued,
+                    cancellationToken);
+                await CascadeRangeAsync(
+                    RoadmapTags.Where(t => t.PersonalRoadmapId == personalRoadmap.Id),
                     queue,
                     queued,
                     cancellationToken);

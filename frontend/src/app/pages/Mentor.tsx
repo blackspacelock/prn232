@@ -58,9 +58,7 @@ export function MentorPage() {
   });
 
   const sessions: ChatSession[] = (sessionsData as { chatSessionsByProfile?: ChatSession[] })?.chatSessionsByProfile ?? [];
-  const activeSession = activeSessionId
-    ? (messagesData as { chatSessionWithMessages?: { title?: string; messages?: ChatMessage[] } })?.chatSessionWithMessages
-    : undefined;
+  const activeSession = (messagesData as { chatSessionWithMessages?: { title?: string; messages?: ChatMessage[] } })?.chatSessionWithMessages;
   const messages: ChatMessage[] = useMemo(() => activeSession?.messages ?? [], [activeSession]);
 
   // Keep header title in sync with active session
@@ -89,9 +87,7 @@ export function MentorPage() {
   const renameSessionMutation = useMutation({
     mutationFn: ({ sessionId, title }: { sessionId: string; title: string }) => {
       const dto: UpdateChatSessionDto = { title };
-      return apiClient
-        .put<ChatSession>(`/api/chat/sessions/${sessionId}`, dto)
-        .then((r) => r.data);
+      return apiClient.put<ChatSession>(`/api/chat/sessions/${sessionId}`, dto).then((r) => r.data);
     },
     onSuccess: async () => {
       await refetchSessions();
@@ -104,17 +100,12 @@ export function MentorPage() {
       setSnackbar({ open: true, message: 'Session renamed.', variant: 'success' });
     },
     onError: (error: unknown) => {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to rename session.'),
-        variant: 'error',
-      });
+      setSnackbar({ open: true, message: getApiErrorMessage(error, 'Failed to rename session.'), variant: 'error' });
     },
   });
 
   const deleteSessionMutation = useMutation({
-    mutationFn: (sessionId: string) =>
-      apiClient.delete(`/api/chat/sessions/${sessionId}`),
+    mutationFn: (sessionId: string) => apiClient.delete(`/api/chat/sessions/${sessionId}`),
     onSuccess: async (_data, sessionId) => {
       await refetchSessions();
       if (activeSessionId === sessionId) {
@@ -127,11 +118,7 @@ export function MentorPage() {
       setSnackbar({ open: true, message: 'Session deleted.', variant: 'success' });
     },
     onError: (error: unknown) => {
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, 'Failed to delete session.'),
-        variant: 'error',
-      });
+      setSnackbar({ open: true, message: getApiErrorMessage(error, 'Failed to delete session.'), variant: 'error' });
     },
   });
 
@@ -268,7 +255,7 @@ export function MentorPage() {
                   <div key={session.id} className="group relative flex items-center">
                     <button
                       onClick={() => handleSelectSession(session.id)}
-                      className={`flex-1 min-w-0 p-3 pr-16 rounded-lg text-left transition-colors ${activeSessionId === session.id ? 'bg-[var(--md3-primary-container)]' : 'hover:bg-[var(--md3-surface-variant)]'}`}
+                      className={`flex-1 min-w-0 p-3 pr-9 rounded-lg text-left transition-colors ${activeSessionId === session.id ? 'bg-[var(--md3-primary-container)]' : 'hover:bg-[var(--md3-surface-variant)]'}`}
                     >
                       <div className="flex items-start gap-2">
                         <Sparkles className={`w-5 h-5 shrink-0 mt-0.5 ${activeSessionId === session.id ? 'text-[var(--md3-primary)]' : 'text-[var(--md3-on-surface-variant)]'}`} />
@@ -277,7 +264,7 @@ export function MentorPage() {
                     </button>
                     <button
                       onClick={(e) => startSidebarEdit(session, e)}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)] transition-opacity"
+                      className="absolute right-8 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-[var(--md3-surface-variant)] text-[var(--md3-on-surface-variant)] transition-opacity"
                       aria-label={`Rename "${session.title}"`}
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -288,7 +275,7 @@ export function MentorPage() {
                         handleDeleteSession(session);
                       }}
                       disabled={deleteSessionMutation.isPending}
-                      className="absolute right-8 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-600 transition-opacity disabled:opacity-40"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-600 transition-opacity disabled:opacity-40"
                       aria-label={`Delete "${session.title}"`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
