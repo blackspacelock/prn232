@@ -76,7 +76,10 @@ class PortfolioNotifier extends AsyncNotifier<PortfolioState> {
       final profileId = await _getProfileId();
       final analysis =
           await ref.read(portfolioRepositoryProvider).runAnalysis(profileId);
+      final repos =
+          await ref.read(portfolioRepositoryProvider).getRepos(profileId);
       state = AsyncData(state.value!.copyWith(
+        repos: repos,
         analysis: analysis,
         isAnalyzing: false,
       ));
