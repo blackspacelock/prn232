@@ -175,8 +175,18 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
         if (mounted) AppSnackbar.showSuccess(context, 'Repository updated');
       } else {
         final user = ref.read(authProvider).valueOrNull;
-        final profileId =
-            user?.profileId ?? await TokenStorage.getProfileId() ?? '';
+        final profileId = _firstNonEmpty([
+          user?.profileId,
+          user?.id,
+          await TokenStorage.getProfileId(),
+          await TokenStorage.getUserId(),
+        ]);
+        if (profileId.isEmpty) {
+          if (mounted) {
+            AppSnackbar.showError(context, 'Please sign in again');
+          }
+          return;
+        }
         await ref.read(portfolioProvider.notifier).addRepo(
               CreateRepoDto(
                 profileId: profileId,
@@ -191,6 +201,13 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     } on AppException catch (e) {
       if (mounted) AppSnackbar.showError(context, e.message);
     }
+  }
+
+  String _firstNonEmpty(Iterable<String?> values) {
+    for (final value in values) {
+      if (value != null && value.trim().isNotEmpty) return value.trim();
+    }
+    return '';
   }
 }
 
